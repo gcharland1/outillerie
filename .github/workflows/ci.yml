@@ -25,13 +25,13 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
-          cache-dependency-path: 'backend/pyproject.toml'
+          cache-dependency-path: 'application/pyproject.toml'
 
       - name: Install dependencies
-        working-directory: backend
+        working-directory: application
         run: uv sync --locked
 
       - name: Run unit tests
-        working-directory: backend
+        working-directory: application
         run: uv run --locked pytest tests
 
