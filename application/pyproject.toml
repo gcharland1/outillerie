@@ -6,5 +6,11 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "flask",
-    "pytest"
+    "flask_sqlalchemy",
+    "flask_login",
+    "flask_migrate",
+    "pytest",
+    "werkzeug",
+    "python-dotenv>=1.2.4",
+    "psycopg[binary]>=3.3.6",
 ]
