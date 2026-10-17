@@ -23,7 +23,10 @@ def create_app():
 
     @app.route("/")
     def index():
-        return render_template("index.html", username=current_user.username)
+        username=None
+        if current_user.is_authenticated:
+            username=current_user.username
+        return render_template("index.html", username=username)
 
     @app.route("/register", methods=["GET", "POST"])
     def register():
