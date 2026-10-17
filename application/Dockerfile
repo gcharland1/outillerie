@@ -19,7 +19,6 @@ RUN useradd --create-home outillerie \
     && chown -R outillerie:outillerie /app
 USER outillerie
 
-
 # Installer les dépendances avant de copier le code
 # pour profiter du cache Docker
 COPY pyproject.toml uv.lock ./
@@ -33,5 +32,4 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 EXPOSE 5000
 
-CMD ["uv", "run", "main.py"]
-
+CMD ["sh", "-c", "uv run flask db upgrade && uv run main.py"]
