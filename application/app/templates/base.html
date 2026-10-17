@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Outillerie</title>
+
+        <!-- Framework générique CSS -->
+        <link rel="stylesheet" href="https://unpkg.com/chota@latest">
+    </head>
+    <body>
+
+        <!-- Barre de navigation -->
+        <nav class="nav container">
+            <div class="nav-left">
+                <a class="brand" href="/"><strong>🛠️ L'Outillerie</strong></a>
+            </div>
+
+            <div class="nav-right">
+                <a href="/login">Connexion</a>
+                <a href="/register">Inscription</a>
+            </div>
+        </nav>
+
+        <!-- Messages d'erreur -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+        <div class="alert alert-danger" style="color: red;">
+            {{ message }}
+        </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+
+        <!-- Zone dynamique qui changera sur chaque page -->
+        <main class="container">
+            {% block content %}
+            <!-- Le contenu des autres templates s'injectera ici -->
+            {% endblock %}
+        </main>
+    </body>
+</html>
