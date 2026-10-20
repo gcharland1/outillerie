@@ -1,7 +1,7 @@
 
 # syntax=docker/dockerfile:1
 
-FROM python:3.12-slim
+FROM python:3.13-slim
 
 # Installer uv depuis son image officielle, en version fixe
 COPY --from=ghcr.io/astral-sh/uv:0.9.5 /uv /uvx /bin/
