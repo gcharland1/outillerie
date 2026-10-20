@@ -1,10 +1,30 @@
 [project]
 name = "outillerie"
 version = "0.1.0"
-description = "Add your description here"
+description = "Site communautaire de partage d'outils entre voisins"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "flask",
-    "pytest"
 ]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+default = true

@@ -12,6 +12,26 @@ permissions:
 jobs:
   tests:
     runs-on: ubuntu-latest
+
+    services:
+      db:
+        image: postgres:17
+        env:
+          POSTGRES_DB: outillerie
+          POSTGRES_USER: outillerie
+          POSTGRES_PASSWORD: outillerie
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U outillerie -d outillerie"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql+psycopg://outillerie:outillerie@localhost:5432/outillerie
+      FLASK_SECRET_KEY: ci-only-secret
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,19 +39,40 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version-file: application/.python-version
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
-          cache-dependency-path: 'application/pyproject.toml'
+          cache-dependency-glob: application/uv.lock
 
       - name: Install dependencies
         working-directory: application
         run: uv sync --locked
 
+      - name: Lint
+        working-directory: application
+        run: |
+          uv run --locked ruff check .
+          uv run --locked ruff format --check .
+
       - name: Run unit tests
         working-directory: application
-        run: uv run --locked pytest tests
+        run: uv run --locked pytest
 
+  specs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate OpenSpec specs
+        env:
+          OPENSPEC_TELEMETRY: 0
+        run: npx -y @fission-ai/openspec@1.14.3 validate --all --no-interactive
