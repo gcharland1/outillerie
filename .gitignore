@@ -52,3 +52,5 @@ venv.bak/
 # Claude Code (personnel)
 .claude/settings.local.json
 CLAUDE.local.md
+.claude/*.local
+docs/sessions/.local/

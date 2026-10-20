@@ -33,6 +33,8 @@ en écrire un nouveau qui les remplace. Index : @docs/decisions/README.md
 
 ## Conventions
 
+- Contraintes du poste, non versionnées et prioritaires : `CLAUDE.local.md` (chargé automatiquement s'il existe).
+
 - Commits en français, format `Thème - Description` (ex. `Login - Finaliser la création de compte`).
   Ajouter le trailer `Session: <8 premiers caractères du session_id>` ; l'ID est le nom du `.jsonl`
   le plus récent de `~/.claude/projects/<chemin du projet, / remplacés par ->/`.

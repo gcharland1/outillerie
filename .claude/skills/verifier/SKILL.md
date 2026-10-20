@@ -18,6 +18,7 @@ Depuis la racine :
 
 6. `openspec validate --all --no-interactive`
 7. `git status --short` : signaler les fichiers non suivis inattendus.
+8. Si `.claude/forbidden-terms.local` existe : `git grep -inEf .claude/forbidden-terms.local` sur les fichiers suivis et `git log main..HEAD --format=%B%n%ae | grep -iEf .claude/forbidden-terms.local` doivent être vides. Ne jamais citer les termes trouvés dans un fichier suivi.
 
 Ne rien corriger pendant la vérification. Rendre un tableau :
 
