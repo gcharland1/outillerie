@@ -60,3 +60,19 @@ jobs:
       - name: Run unit tests
         working-directory: application
         run: uv run --locked pytest
+
+  specs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate OpenSpec specs
+        env:
+          OPENSPEC_TELEMETRY: 0
+        run: npx -y @fission-ai/openspec@1.14.3 validate --all --no-interactive
