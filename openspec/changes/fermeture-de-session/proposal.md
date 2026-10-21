@@ -50,7 +50,9 @@ _Aucune._
 **Hors périmètre**
 
 - Validation des formulaires et jeton CSRF : issue #12 (WTForms). D'ici là, `SameSite=Lax`
-  empêche un site tiers de déclencher la déconnexion par un `POST`.
+  empêche un site tiers de déclencher la déconnexion par un `POST`, mais pas un CSRF de connexion
+  sur `/login` (risque décrit dans le design).
+- Cacher à l'inscription qu'un nom d'utilisateur est déjà pris.
 - Vérification de la confirmation du mot de passe et règles de mot de passe : issue #12.
 - Révocation côté serveur d'un cookie de session copié.
 - Avertissement avant l'expiration (compte à rebours, bouton « Rester connecté ») : il

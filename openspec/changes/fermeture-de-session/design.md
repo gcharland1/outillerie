@@ -116,6 +116,15 @@ Les confirmations (déconnexion, expiration) passent par la page `/logged-out`, 
   données sensibles.
 - [Sans jeton CSRF, la protection du `POST /logout` repose sur `SameSite=Lax`, que tous les
   navigateurs récents appliquent] → le jeton CSRF arrive avec l'issue #12.
+- [`SameSite=Lax` ne protège pas `POST /login` ni `POST /register` d'un CSRF de connexion : un
+  site tiers peut soumettre le formulaire de connexion avec les identifiants de l'attaquant et
+  connecter la victime à son compte, puisque la réponse pose le cookie] → accepté jusqu'aux
+  jetons CSRF de l'issue #12, où le risque est consigné.
+- [L'inscription révèle qu'un nom d'utilisateur existe, par son message « déjà utilisé » et par
+  une réponse plus rapide (aucun hachage dans ce cas) : la vérification factice de la connexion
+  ne protège que la connexion] → compromis accepté : le nom d'utilisateur est un identifiant
+  public sur un site communautaire, et le cacher demanderait une inscription par courriel
+  vérifié ; à revoir avec l'issue #12.
 - [Le rafraîchissement peut arriver en retard (onglet en arrière-plan, ordinateur en veille)] →
   sans conséquence : la redirection arrive plus tard, et le serveur a déjà fermé la session.
 - [Un onglet inactif est renvoyé vers `/` même quand un autre onglet a gardé la session vivante :

@@ -10,7 +10,8 @@ volontairement ou après une période d'inactivité, sans exposer son mot de pas
 ### Requirement: Création de compte
 Le système SHALL créer un compte à partir d'un nom d'utilisateur, d'un mot de passe, d'un prénom,
 d'un nom et d'un courriel soumis sur la page `/register`, puis rediriger vers la page de connexion.
-Le nom d'utilisateur MUST être unique.
+Le nom d'utilisateur MUST être unique. Signaler un nom déjà pris révèle qu'il existe : la protection
+contre l'énumération des comptes ne vaut que pour la connexion.
 
 #### Scenario: Inscription réussie
 - **WHEN** un visiteur soumet le formulaire d'inscription avec un nom d'utilisateur libre et tous les champs remplis

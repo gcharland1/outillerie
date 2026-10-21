@@ -13,5 +13,5 @@ class User(UserMixin, db.Model):
     last_name = db.Column(db.String(250), nullable=False)
 
     # Champs facultatifs
-    adress = db.Column(db.String(250), nullable=True)
+    address = db.Column(db.String(250), nullable=True)
     phone = db.Column(db.String(11), nullable=True)
