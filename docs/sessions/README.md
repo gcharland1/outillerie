@@ -8,7 +8,9 @@ par le hook `SessionEnd` (`.claude/hooks/export-transcript.sh`, via `claude-code
 * Fichier `AAAA-MM-JJ-<8 premiers caractères du session_id>.md`. Une session reprise réécrit son fichier d'origine.
 * L'export tourne en arrière-plan : le fichier apparaît quelques secondes après la fin de la session.
 * Les motifs de secrets connus (`PASSWORD=`, `SECRET…=`, `TOKEN=`, `user:pass@` dans une URL) sont
-  masqués par `.claude/hooks/redact.sed`. **Relire le fichier avant de le commiter.**
+  masqués par `.claude/hooks/redact.sed`, puis chaque regex de `.claude/forbidden-terms.local`
+  (non versionné, facultatif) est remplacée par `[masqué]`. Si un terme subsiste, le fichier va
+  dans `docs/sessions/.local/` (ignoré par git). **Relire le fichier avant de le commiter.**
 
 ## Lier une session au travail
 
@@ -19,5 +21,5 @@ par le hook `SessionEnd` (`.claude/hooks/export-transcript.sh`, via `claude-code
 ## Exporter à la main
 
 ```sh
-uvx claude-code-log ~/.claude/projects/<projet>/<session_id>.jsonl --format md --compact -o docs/sessions/<fichier>.md
+uvx claude-code-log ~/.claude/projects/<chemin du projet, / remplacés par ->/<session_id>.jsonl --format md --compact -o docs/sessions/<fichier>.md
 ```

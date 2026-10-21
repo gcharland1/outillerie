@@ -24,11 +24,20 @@ target=${existing:-"$out_dir/$(date +%F)-$short_id.md"}
   trap 'rm -f "$tmp"' EXIT
   uvx --quiet claude-code-log "$transcript" --format md --compact \
     --image-export-mode placeholder -o "$tmp" >/dev/null 2>&1 || exit 0
+  sed -E -i -f "$script_dir/redact.sed" "$tmp"
   terms="$project_dir/.claude/forbidden-terms.local"
-  if [[ -s "$terms" ]] && grep -qiEf "$terms" "$tmp"; then
-    mkdir -p "$out_dir/.local"
-    target="$out_dir/.local/$(basename "$target")"
+  if [[ -s "$terms" ]]; then
+    # \x01 as delimiter: the regexes may contain any printable character.
+    mask=$(grep -v '^$' "$terms" | while IFS= read -r re; do
+      printf 's\x01%s\x01[masqué]\x01Ig\n' "$re"
+    done)
+    sed -E -i "$mask" "$tmp"
+    # Overlapping patterns can survive masking: quarantine rather than publish.
+    if grep -qiEf <(grep -v '^$' "$terms") "$tmp"; then
+      mkdir -p "$out_dir/.local"
+      target="$out_dir/.local/$(basename "$target")"
+    fi
   fi
-  sed -E -f "$script_dir/redact.sed" "$tmp" > "$target"
+  cp "$tmp" "$target"
 ) </dev/null >/dev/null 2>&1 &
 disown
