@@ -76,9 +76,9 @@ def test_loan_ending_before_it_starts_is_refused(mock_app, tool_id, borrower_id)
         add_loan(tool_id, borrower_id, 5, 3)
 
 
-def test_loan_status_defaults_to_demande(mock_app, tool_id, borrower_id):
+def test_loan_status_defaults_to_requested(mock_app, tool_id, borrower_id):
     with mock_app.app_context():
-        assert add_loan(tool_id, borrower_id, 3, 5).status is LoanStatus.DEMANDE
+        assert add_loan(tool_id, borrower_id, 3, 5).status is LoanStatus.REQUESTED
         db.session.execute(
             text(
                 "INSERT INTO loan (tool_id, borrower_id, start_date, end_date) "
@@ -90,13 +90,13 @@ def test_loan_status_defaults_to_demande(mock_app, tool_id, borrower_id):
             db.session.execute(
                 text("SELECT status FROM loan WHERE start_date = '2026-11-10'")
             ).scalar_one()
-            == "demande"
+            == "requested"
         )
 
 
 def test_unknown_status_is_refused_by_the_orm(mock_app, tool_id, borrower_id):
     with mock_app.app_context(), pytest.raises(StatementError):
-        add_loan(tool_id, borrower_id, 3, 5, status="en_cours")
+        add_loan(tool_id, borrower_id, 3, 5, status="in_progress")
 
 
 def test_unknown_status_is_refused_by_the_database(mock_app, tool_id, borrower_id):
@@ -104,7 +104,7 @@ def test_unknown_status_is_refused_by_the_database(mock_app, tool_id, borrower_i
         db.session.execute(
             text(
                 "INSERT INTO loan (tool_id, borrower_id, start_date, end_date, status) "
-                "VALUES (:tool, :borrower, '2026-11-03', '2026-11-05', 'en_cours')"
+                "VALUES (:tool, :borrower, '2026-11-03', '2026-11-05', 'in_progress')"
             ),
             {"tool": tool_id, "borrower": borrower_id},
         )
@@ -112,39 +112,39 @@ def test_unknown_status_is_refused_by_the_database(mock_app, tool_id, borrower_i
 
 def test_overlapping_committed_loans_are_refused(mock_app, tool_id, borrower_id):
     with mock_app.app_context():
-        add_loan(tool_id, borrower_id, 3, 5, LoanStatus.ACCEPTE)
+        add_loan(tool_id, borrower_id, 3, 5, LoanStatus.ACCEPTED)
         with pytest.raises(IntegrityError, match="excl_loan_tool_dates"):
-            add_loan(tool_id, borrower_id, 5, 7, LoanStatus.ACCEPTE)
+            add_loan(tool_id, borrower_id, 5, 7, LoanStatus.ACCEPTED)
 
 
 def test_consecutive_committed_loans_are_stored(mock_app, tool_id, borrower_id):
     with mock_app.app_context():
-        add_loan(tool_id, borrower_id, 3, 5, LoanStatus.REMIS)
-        add_loan(tool_id, borrower_id, 6, 8, LoanStatus.ACCEPTE)
+        add_loan(tool_id, borrower_id, 3, 5, LoanStatus.LENT)
+        add_loan(tool_id, borrower_id, 6, 8, LoanStatus.ACCEPTED)
         assert Loan.query.count() == 2
 
 
 def test_requests_may_overlap(mock_app, tool_id, borrower_id):
     with mock_app.app_context():
-        add_loan(tool_id, borrower_id, 3, 5, LoanStatus.ACCEPTE)
-        add_loan(tool_id, borrower_id, 4, 6, LoanStatus.DEMANDE)
-        add_loan(tool_id, borrower_id, 4, 6, LoanStatus.DEMANDE)
+        add_loan(tool_id, borrower_id, 3, 5, LoanStatus.ACCEPTED)
+        add_loan(tool_id, borrower_id, 4, 6, LoanStatus.REQUESTED)
+        add_loan(tool_id, borrower_id, 4, 6, LoanStatus.REQUESTED)
         assert Loan.query.count() == 3
 
 
 def test_accepting_an_overlapping_request_is_refused(mock_app, tool_id, borrower_id):
     with mock_app.app_context():
-        add_loan(tool_id, borrower_id, 3, 5, LoanStatus.ACCEPTE)
-        request = add_loan(tool_id, borrower_id, 4, 6, LoanStatus.DEMANDE)
-        request.status = LoanStatus.ACCEPTE
+        add_loan(tool_id, borrower_id, 3, 5, LoanStatus.ACCEPTED)
+        request = add_loan(tool_id, borrower_id, 4, 6, LoanStatus.REQUESTED)
+        request.status = LoanStatus.ACCEPTED
         with pytest.raises(IntegrityError, match="excl_loan_tool_dates"):
             db.session.commit()
 
 
 def test_returned_loan_frees_its_dates(mock_app, tool_id, borrower_id):
     with mock_app.app_context():
-        add_loan(tool_id, borrower_id, 3, 5, LoanStatus.RENDU)
-        add_loan(tool_id, borrower_id, 3, 5, LoanStatus.ACCEPTE)
+        add_loan(tool_id, borrower_id, 3, 5, LoanStatus.RETURNED)
+        add_loan(tool_id, borrower_id, 3, 5, LoanStatus.ACCEPTED)
         assert Loan.query.count() == 2
 
 
@@ -153,14 +153,14 @@ def test_committed_loans_of_different_tools_may_share_dates(
 ):
     with mock_app.app_context():
         other_tool_id = make_tool(owner_id, name="Scie").id
-        add_loan(tool_id, borrower_id, 3, 5, LoanStatus.ACCEPTE)
-        add_loan(other_tool_id, borrower_id, 3, 5, LoanStatus.ACCEPTE)
+        add_loan(tool_id, borrower_id, 3, 5, LoanStatus.ACCEPTED)
+        add_loan(other_tool_id, borrower_id, 3, 5, LoanStatus.ACCEPTED)
         assert Loan.query.count() == 2
 
 
 def test_lent_tool_cannot_be_deleted(mock_app, tool_id, borrower_id):
     with mock_app.app_context():
-        add_loan(tool_id, borrower_id, 3, 5, LoanStatus.RENDU)
+        add_loan(tool_id, borrower_id, 3, 5, LoanStatus.RETURNED)
         db.session.expunge_all()
         db.session.delete(db.session.get(Tool, tool_id))
         with pytest.raises(IntegrityError):

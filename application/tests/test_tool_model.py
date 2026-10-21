@@ -46,22 +46,22 @@ def test_tool_without_name_or_description_is_refused(mock_app, owner_id, missing
         assert Tool.query.count() == 0
 
 
-def test_tool_condition_defaults_to_fonctionnel(mock_app, owner_id):
+def test_tool_condition_defaults_to_functional(mock_app, owner_id):
     with mock_app.app_context():
-        assert make_tool(owner_id).condition is ToolCondition.FONCTIONNEL
+        assert make_tool(owner_id).condition is ToolCondition.FUNCTIONAL
         db.session.execute(
             text("INSERT INTO tool (owner_id, name, description) VALUES (:owner, 'Scie', 'Ronde')"),
             {"owner": owner_id},
         )
         assert (
             db.session.execute(text("SELECT condition FROM tool WHERE name = 'Scie'")).scalar_one()
-            == "fonctionnel"
+            == "functional"
         )
 
 
 def test_unknown_condition_is_refused_by_the_orm(mock_app, owner_id):
     with mock_app.app_context():
-        db.session.add(Tool(owner_id=owner_id, name="Scie", description="Ronde", condition="neuf"))
+        db.session.add(Tool(owner_id=owner_id, name="Scie", description="Ronde", condition="new"))
         with pytest.raises(StatementError):
             db.session.commit()
 
@@ -71,7 +71,7 @@ def test_unknown_condition_is_refused_by_the_database(mock_app, owner_id):
         db.session.execute(
             text(
                 "INSERT INTO tool (owner_id, name, description, condition) "
-                "VALUES (:owner, 'Scie', 'Ronde', 'neuf')"
+                "VALUES (:owner, 'Scie', 'Ronde', 'new')"
             ),
             {"owner": owner_id},
         )
@@ -107,7 +107,7 @@ def test_retired_tool_keeps_its_photo_and_loans(mock_app, owner_id):
                 borrower=make_user("bob", "bob@example.com"),
                 start_date=a_day(3),
                 end_date=a_day(5),
-                status=LoanStatus.RENDU,
+                status=LoanStatus.RETURNED,
             )
         )
         tool.is_active = False

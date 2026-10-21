@@ -11,13 +11,13 @@ schéma de persistance est le seul contrat, et c'est lui qu'il faut encadrer.
 
 ## What Changes
 
-- Table `tool` : propriétaire, nom, description publique, état fonctionnel (`fonctionnel`,
-  `a_reparer`, `hors_service`), notes privées réservées au propriétaire et indicateur `is_active`
+- Table `tool` : propriétaire, nom, description publique, état fonctionnel (`functional`,
+  `needs_repair`, `out_of_order`), notes privées réservées au propriétaire et indicateur `is_active`
   pour retirer un outil de la circulation sans le supprimer.
 - Table `tool_photo` : au plus une photo par outil, stockée en `bytea` avec son type de contenu.
-- Table `loan` : outil, emprunteur, dates de début et de fin, statut (`demande`, `accepte`,
-  `refuse`, `annule`, `remis`, `rendu`). Le prêteur est le propriétaire de l'outil, sans colonne
-  à part. Postgres refuse deux prêts `accepte` ou `remis` qui se chevauchent sur un même outil.
+- Table `loan` : outil, emprunteur, dates de début et de fin, statut (`requested`, `accepted`,
+  `refused`, `canceled`, `lent`, `returned`). Le prêteur est le propriétaire de l'outil, sans colonne
+  à part. Postgres refuse deux prêts `accepted` ou `lent` qui se chevauchent sur un même outil.
 - Table `user` : courriel unique sans égard à la casse ; téléphone élargi à 20 caractères.
   L'inscription refuse un courriel déjà utilisé avec un message au lieu d'une erreur 500.
 - Convention de nommage des contraintes SQLAlchemy, et renommage des contraintes existantes de
@@ -62,13 +62,13 @@ schéma de persistance est le seul contrat, et c'est lui qu'il faut encadrer.
   changement crée la table et l'ADR qui les encadrent.
 - Pages des outils, formulaires de prêt, transitions de statut et leurs règles (qui peut accepter,
   remettre, annuler ; un propriétaire n'emprunte pas son propre outil ; dates passées ; prêt d'un
-  outil `hors_service`) : changements suivants.
+  outil `out_of_order`) : changements suivants.
 - Notes privées jamais présentées à un autre que le propriétaire : exigence et test avec les pages
   d'outil.
 - Commentaires et avis des emprunteurs.
 - Normalisation du numéro de téléphone (format E.164) et champ téléphone à l'inscription.
 - Plusieurs photos par outil.
-- L'action de retrait d'un outil et ses règles (prêts `accepte` ou `remis` en cours, demandes
+- L'action de retrait d'un outil et ses règles (prêts `accepted` ou `lent` en cours, demandes
   refusées pour un outil retiré) : exigences et tests avec les pages d'outil et les prêts.
 - Suppression de compte : bloquée par les clés étrangères tant qu'un compte possède un outil ou
   figure dans un prêt. Provisoire : le changement de suppression de compte décidera du sort des

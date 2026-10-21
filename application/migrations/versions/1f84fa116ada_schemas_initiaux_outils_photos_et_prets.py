@@ -16,8 +16,8 @@ down_revision = "a0989299c569"
 branch_labels = None
 depends_on = None
 
-TOOL_CONDITIONS = ("fonctionnel", "a_reparer", "hors_service")
-LOAN_STATUSES = ("demande", "accepte", "refuse", "annule", "remis", "rendu")
+TOOL_CONDITIONS = ("functional", "needs_repair", "out_of_order")
+LOAN_STATUSES = ("requested", "accepted", "refused", "canceled", "lent", "returned")
 
 
 def enum_type(values, name):
@@ -63,7 +63,7 @@ def upgrade():
         sa.Column(
             "condition",
             enum_type(TOOL_CONDITIONS, "tool_condition"),
-            server_default="fonctionnel",
+            server_default="functional",
             nullable=False,
         ),
         sa.Column("private_notes", sa.Text(), nullable=True),
@@ -92,7 +92,7 @@ def upgrade():
         sa.Column(
             "status",
             enum_type(LOAN_STATUSES, "loan_status"),
-            server_default="demande",
+            server_default="requested",
             nullable=False,
         ),
         sa.Column(
@@ -104,7 +104,7 @@ def upgrade():
         postgresql.ExcludeConstraint(
             (sa.column("tool_id"), "="),
             (sa.literal_column("daterange(start_date, end_date, '[]')"), "&&"),
-            where=sa.text("status IN ('accepte', 'remis')"),
+            where=sa.text("status IN ('accepted', 'lent')"),
             using="gist",
             name="excl_loan_tool_dates",
         ),

@@ -80,15 +80,16 @@ l'autogénération ne sait pas nommer un `CHECK` sans convention.
 
 ### Énumérations : `StrEnum` Python stocké en `VARCHAR` + `CHECK`
 
-`ToolCondition` (`fonctionnel`, `a_reparer`, `hors_service`) et `LoanStatus` (`demande`, `accepte`,
-`refuse`, `annule`, `remis`, `rendu`) sont des `enum.StrEnum`, mappés par
+`ToolCondition` (`functional`, `needs_repair`, `out_of_order`) et `LoanStatus` (`requested`, `accepted`,
+`refused`, `canceled`, `lent`, `returned`) sont des `enum.StrEnum` aux valeurs en anglais,
+comme tout identifiant du code ; les libellés français viendront des gabarits. Elles sont mappées par
 `db.Enum(..., name="tool_condition" | "loan_status", native_enum=False, create_constraint=True,
 values_callable=...)` : la base stocke la
-valeur (`a_reparer`), pas le nom du membre Python, et un `CHECK` nommé refuse le reste. La colonne
+valeur (`needs_repair`), pas le nom du membre Python, et un `CHECK` nommé refuse le reste. La colonne
 est un `VARCHAR(20)` plutôt que la longueur de la plus longue valeur : ajouter une valeur ne
 modifie que le `CHECK`, pas le type. Défaut en
 Python et côté serveur (`server_default`), pour qu'un `INSERT` SQL direct obtienne aussi
-`fonctionnel` ou `demande`.
+`functional` ou `requested`.
 
 Alternative écartée : type `ENUM` natif de Postgres. Retirer ou renommer une valeur demande de
 recréer le type, et l'autogénération d'Alembic ne détecte pas les changements de valeurs.
@@ -114,7 +115,7 @@ qu'un index d'expression couvre.
 | `owner_id` | `Integer` | FK `user.id`, NOT NULL, indexée |
 | `name` | `String(250)` | NOT NULL |
 | `description` | `Text` | NOT NULL |
-| `condition` | `VARCHAR` + `CHECK` | NOT NULL, défaut `fonctionnel` |
+| `condition` | `VARCHAR` + `CHECK` | NOT NULL, défaut `functional` |
 | `private_notes` | `Text` | nullable |
 | `is_active` | `Boolean` | NOT NULL, défaut `true` |
 | `created_at` | `DateTime(timezone=True)` | NOT NULL, défaut `now()` |
@@ -129,7 +130,7 @@ et de ses prêts (retrait, anonymisation). Postgres n'indexe pas les clés étra
 `is_active` retire un outil de la circulation sans le supprimer, ce que les clés étrangères des
 prêts interdisent. Booléen choisi pour sa simplicité ; un horodatage `retired_at` dirait aussi
 *quand*, et pourra le remplacer en *expand/contract*. L'état `condition` reste indépendant : un
-outil `fonctionnel` peut être retiré et revenir sans perdre son état. Refuser une demande pour un
+outil `functional` peut être retiré et revenir sans perdre son état. Refuser une demande pour un
 outil retiré est une règle applicative (un `CHECK` ne lit pas une autre table), portée par le
 changement qui crée les demandes.
 
@@ -174,7 +175,7 @@ MinIO/S3 dès maintenant (service, dépendance et secrets en plus pour quelques 
 | `tool_id` | `Integer` | FK `tool.id`, NOT NULL, indexée |
 | `borrower_id` | `Integer` | FK `user.id`, NOT NULL, indexée |
 | `start_date`, `end_date` | `Date` | NOT NULL, `ck_loan_end_after_start` : `end_date >= start_date` |
-| `status` | `VARCHAR` + `CHECK` | NOT NULL, défaut `demande` |
+| `status` | `VARCHAR` + `CHECK` | NOT NULL, défaut `requested` |
 | `created_at` | `DateTime(timezone=True)` | NOT NULL, défaut `now()` |
 
 Pas de `lender_id` : le prêteur est `tool.owner_id`, une seule source. Le jour où un outil peut
@@ -188,11 +189,11 @@ Le non-chevauchement est une contrainte d'exclusion Postgres, déclarée dans le
 ```sql
 CONSTRAINT excl_loan_tool_dates EXCLUDE USING gist
   (tool_id WITH =, daterange(start_date, end_date, '[]') WITH &&)
-  WHERE (status IN ('accepte', 'remis'))
+  WHERE (status IN ('accepted', 'lent'))
 ```
 
 Elle exige l'extension `btree_gist` (égalité sur un entier dans un index GiST). Postgres la vérifie
-à chaque `INSERT` et `UPDATE`, y compris le passage d'une `demande` à `accepte`, sans condition de
+à chaque `INSERT` et `UPDATE`, y compris le passage de `requested` à `accepted`, sans condition de
 course entre deux acceptations simultanées. La borne `'[]'` inclut le jour de fin : un outil rendu
 le 5 ne peut être promis à un autre que le 6.
 

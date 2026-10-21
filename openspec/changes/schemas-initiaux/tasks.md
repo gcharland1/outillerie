@@ -18,14 +18,14 @@
 
 ## 4. Outils et photos
 
-- [x] 4.1 Créer le modèle `Tool` et l'énumération `ToolCondition` (`StrEnum`, `VARCHAR` + `CHECK`, défauts Python et serveur) selon design.md ; vérifier par des tests pytest les scénarios des exigences « Outil rattaché à un propriétaire » et « État fonctionnel de l'outil », dont un `INSERT` SQL direct avec l'état `neuf` refusé par la base
+- [x] 4.1 Créer le modèle `Tool` et l'énumération `ToolCondition` (`StrEnum`, `VARCHAR` + `CHECK`, défauts Python et serveur) selon design.md ; vérifier par des tests pytest les scénarios des exigences « Outil rattaché à un propriétaire » et « État fonctionnel de l'outil », dont un `INSERT` SQL direct avec l'état `new` refusé par la base
 - [x] 4.2 Ajouter `private_notes` (nullable) et `is_active` (NOT NULL, défauts Python et serveur `true`) ; vérifier par des tests pytest qu'un outil sans notes est conservé, et les scénarios « Nouvel outil en circulation » et « Outil retiré conservé »
 - [x] 4.3 Créer le modèle `ToolPhoto` (PK `tool_id`, `ON DELETE CASCADE`) et la relation `Tool.photo` à chargement différé ; vérifier par des tests pytest les scénarios « Photo enregistrée », « Seconde photo refusée » et « Suppression de l'outil », et que charger un outil n'émet aucune requête sur `tool_photo`
 
 ## 5. Prêts
 
-- [x] 5.1 Créer le modèle `Loan` et l'énumération `LoanStatus`, avec `ck_loan_end_after_start` et la propriété `lender` (propriétaire de l'outil) ; vérifier par des tests pytest les exigences « Prêt d'un outil à un emprunteur », « Dates du prêt » et « Statut du prêt », dont un `INSERT` SQL direct avec le statut `en_cours` refusé
-- [x] 5.2 Ajouter la contrainte d'exclusion `excl_loan_tool_dates` (`ExcludeConstraint`, GiST, `WHERE status IN ('accepte', 'remis')`) ; vérifier par des tests pytest les six scénarios de « Aucun chevauchement des prêts engagés », dont l'acceptation d'une demande qui chevauche
+- [x] 5.1 Créer le modèle `Loan` et l'énumération `LoanStatus`, avec `ck_loan_end_after_start` et la propriété `lender` (propriétaire de l'outil) ; vérifier par des tests pytest les exigences « Prêt d'un outil à un emprunteur », « Dates du prêt » et « Statut du prêt », dont un `INSERT` SQL direct avec le statut `in_progress` refusé
+- [x] 5.2 Ajouter la contrainte d'exclusion `excl_loan_tool_dates` (`ExcludeConstraint`, GiST, `WHERE status IN ('accepted', 'lent')`) ; vérifier par des tests pytest les six scénarios de « Aucun chevauchement des prêts engagés », dont l'acceptation d'une demande qui chevauche
 - [x] 5.3 Vérifier par des tests pytest les scénarios de « Historique des prêts conservé » (suppression d'un outil prêté refusée)
 
 ## 6. Migration

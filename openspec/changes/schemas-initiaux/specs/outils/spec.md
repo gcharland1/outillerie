@@ -25,15 +25,15 @@ l'outil.
 - **THEN** l'enregistrement est refusé et aucun outil n'est créé
 
 ### Requirement: État fonctionnel de l'outil
-Le système SHALL enregistrer l'état d'un outil parmi `fonctionnel`, `a_reparer` et `hors_service`,
-et MUST refuser toute autre valeur. Un outil enregistré sans état est `fonctionnel`.
+Le système SHALL enregistrer l'état d'un outil parmi `functional`, `needs_repair` et `out_of_order`,
+et MUST refuser toute autre valeur. Un outil enregistré sans état est `functional`.
 
 #### Scenario: État par défaut
 - **WHEN** un outil est enregistré sans état
-- **THEN** son état est `fonctionnel`
+- **THEN** son état est `functional`
 
 #### Scenario: État inconnu refusé
-- **WHEN** un outil est enregistré avec l'état `neuf`
+- **WHEN** un outil est enregistré avec l'état `new`
 - **THEN** l'enregistrement est refusé
 
 ### Requirement: Notes privées du propriétaire
@@ -53,7 +53,7 @@ outil retiré reste enregistré avec sa photo et ses prêts.
 - **THEN** l'outil est en circulation
 
 #### Scenario: Outil retiré conservé
-- **WHEN** un outil qui a un prêt `rendu` est retiré de la circulation
+- **WHEN** un outil qui a un prêt `returned` est retiré de la circulation
 - **THEN** l'outil et son prêt restent enregistrés
 
 ### Requirement: Photo de l'outil

@@ -8,12 +8,12 @@ from models.tool import enum_values
 
 
 class LoanStatus(StrEnum):
-    DEMANDE = "demande"
-    ACCEPTE = "accepte"
-    REFUSE = "refuse"
-    ANNULE = "annule"
-    REMIS = "remis"
-    RENDU = "rendu"
+    REQUESTED = "requested"
+    ACCEPTED = "accepted"
+    REFUSED = "refused"
+    CANCELED = "canceled"
+    LENT = "lent"
+    RETURNED = "returned"
 
 
 class Loan(db.Model):
@@ -32,8 +32,8 @@ class Loan(db.Model):
             length=20,
         ),
         nullable=False,
-        default=LoanStatus.DEMANDE,
-        server_default=LoanStatus.DEMANDE.value,
+        default=LoanStatus.REQUESTED,
+        server_default=LoanStatus.REQUESTED.value,
     )
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, server_default=func.now())
 
@@ -48,7 +48,7 @@ class Loan(db.Model):
             (literal_column("daterange(start_date, end_date, '[]')"), "&&"),
             name="excl_loan_tool_dates",
             using="gist",
-            where=text("status IN ('accepte', 'remis')"),
+            where=text("status IN ('accepted', 'lent')"),
         ),
     )
 

@@ -34,50 +34,50 @@ jours entiers, et les deux bornes font partie du prêt : un prêt peut commencer
 - **THEN** l'enregistrement est refusé
 
 ### Requirement: Statut du prêt
-Le système SHALL enregistrer le statut d'un prêt parmi `demande`, `accepte`, `refuse`, `annule`,
-`remis` et `rendu`, et MUST refuser toute autre valeur. Un prêt enregistré sans statut est une
-`demande`.
+Le système SHALL enregistrer le statut d'un prêt parmi `requested`, `accepted`, `refused`, `canceled`,
+`lent` et `returned`, et MUST refuser toute autre valeur. Un prêt enregistré sans statut a le
+statut `requested`.
 
 #### Scenario: Statut par défaut
 - **WHEN** un prêt est enregistré sans statut
-- **THEN** son statut est `demande`
+- **THEN** son statut est `requested`
 
 #### Scenario: Statut inconnu refusé
-- **WHEN** un prêt est enregistré avec le statut `en_cours`
+- **WHEN** un prêt est enregistré avec le statut `in_progress`
 - **THEN** l'enregistrement est refusé
 
 ### Requirement: Aucun chevauchement des prêts engagés
-Le système MUST refuser que deux prêts d'un même outil aux statuts `accepte` ou `remis` partagent un
+Le système MUST refuser que deux prêts d'un même outil aux statuts `accepted` ou `lent` partagent un
 jour, même quand deux enregistrements arrivent en même temps. Les demandes peuvent se chevaucher
 entre elles et avec un prêt engagé ; les prêts refusés, annulés ou rendus ne bloquent aucune date.
 
 #### Scenario: Prêts engagés qui se chevauchent
-- **WHEN** un outil a un prêt `accepte` du 3 au 5 novembre
-- **AND** un second prêt `accepte` du 5 au 7 novembre est enregistré pour cet outil
+- **WHEN** un outil a un prêt `accepted` du 3 au 5 novembre
+- **AND** un second prêt `accepted` du 5 au 7 novembre est enregistré pour cet outil
 - **THEN** l'enregistrement du second prêt est refusé
 
 #### Scenario: Prêts engagés consécutifs
-- **WHEN** un outil a un prêt `remis` du 3 au 5 novembre
-- **AND** un prêt `accepte` du 6 au 8 novembre est enregistré pour cet outil
+- **WHEN** un outil a un prêt `lent` du 3 au 5 novembre
+- **AND** un prêt `accepted` du 6 au 8 novembre est enregistré pour cet outil
 - **THEN** le second prêt est conservé
 
 #### Scenario: Demandes concurrentes
-- **WHEN** un outil a un prêt `accepte` du 3 au 5 novembre
-- **AND** deux prêts `demande` du 4 au 6 novembre sont enregistrés pour cet outil
+- **WHEN** un outil a un prêt `accepted` du 3 au 5 novembre
+- **AND** deux prêts `requested` du 4 au 6 novembre sont enregistrés pour cet outil
 - **THEN** les deux demandes sont conservées
 
 #### Scenario: Acceptation d'une demande qui chevauche
-- **WHEN** un outil a un prêt `accepte` du 3 au 5 novembre et une `demande` du 4 au 6 novembre
-- **AND** la demande passe au statut `accepte`
+- **WHEN** un outil a un prêt `accepted` du 3 au 5 novembre et un prêt `requested` du 4 au 6 novembre
+- **AND** ce prêt passe au statut `accepted`
 - **THEN** le changement de statut est refusé
 
 #### Scenario: Prêt rendu libère ses dates
-- **WHEN** un outil a un prêt `rendu` du 3 au 5 novembre
-- **AND** un prêt `accepte` du 3 au 5 novembre est enregistré pour cet outil
+- **WHEN** un outil a un prêt `returned` du 3 au 5 novembre
+- **AND** un prêt `accepted` du 3 au 5 novembre est enregistré pour cet outil
 - **THEN** le second prêt est conservé
 
 #### Scenario: Outils différents
-- **WHEN** deux outils ont chacun un prêt `accepte` du 3 au 5 novembre
+- **WHEN** deux outils ont chacun un prêt `accepted` du 3 au 5 novembre
 - **THEN** les deux prêts sont conservés
 
 ### Requirement: Historique des prêts conservé
@@ -86,5 +86,5 @@ son statut, pour que l'historique des prêts reste complet. Le retrait de la cir
 alors la suppression.
 
 #### Scenario: Outil déjà prêté
-- **WHEN** la suppression d'un outil qui a un prêt `rendu` est demandée
+- **WHEN** la suppression d'un outil qui a un prêt `returned` est demandée
 - **THEN** la suppression est refusée et l'outil et son prêt sont conservés

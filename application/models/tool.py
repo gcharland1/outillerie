@@ -6,14 +6,14 @@ from app.extensions import db
 
 
 def enum_values(enum_class):
-    """Store an enum's values (`a_reparer`) rather than its member names (`A_REPARER`)"""
+    """Store an enum's values (`needs_repair`) rather than its member names (`NEEDS_REPAIR`)"""
     return [member.value for member in enum_class]
 
 
 class ToolCondition(StrEnum):
-    FONCTIONNEL = "fonctionnel"
-    A_REPARER = "a_reparer"
-    HORS_SERVICE = "hors_service"
+    FUNCTIONAL = "functional"
+    NEEDS_REPAIR = "needs_repair"
+    OUT_OF_ORDER = "out_of_order"
 
 
 class Tool(db.Model):
@@ -31,8 +31,8 @@ class Tool(db.Model):
             length=20,
         ),
         nullable=False,
-        default=ToolCondition.FONCTIONNEL,
-        server_default=ToolCondition.FONCTIONNEL.value,
+        default=ToolCondition.FUNCTIONAL,
+        server_default=ToolCondition.FUNCTIONAL.value,
     )
     # Shown to the owner only; public information goes in description.
     private_notes = db.Column(db.Text, nullable=True)
