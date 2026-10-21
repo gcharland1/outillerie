@@ -26,4 +26,4 @@ structure de l'app, outil de dev, convention transverse. Un détail d'implément
 | 0003 | [uv et Docker Compose pour le développement](0003-uv-et-docker-compose.md) | accepted |
 | 0004 | [OpenSpec pour le développement piloté par spec](0004-openspec.md) | accepted |
 | 0005 | [Archiver les sessions Claude dans le dépôt](0005-archiver-les-sessions-claude.md) | accepted |
-| 0006 | [Sessions dans le cookie signé de Flask, expiration d'inactivité](0006-sessions-dans-le-cookie-signe-de-flask.md) | proposed |
+| 0006 | [Sessions dans le cookie signé de Flask, expiration d'inactivité](0006-sessions-dans-le-cookie-signe-de-flask.md) | accepted |
