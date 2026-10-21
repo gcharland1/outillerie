@@ -16,6 +16,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "paracelsus>=0.15.0",
     "pytest",
     "ruff",
 ]
@@ -34,3 +35,8 @@ testpaths = ["tests"]
 name = "pypi"
 url = "https://pypi.org/simple"
 default = true
+
+[tool.paracelsus]
+base = "models:Base"
+imports = ["models"]
+column_sort = "preserve-order"

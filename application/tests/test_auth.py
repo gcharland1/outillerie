@@ -53,6 +53,15 @@ def test_register_with_taken_username_shows_error(mock_app, client, user):
         assert User.query.filter_by(username=user).count() == 1
 
 
+def test_register_with_taken_email_in_another_case_shows_error(mock_app, client, user):
+    response = client.post("/register", data={**SIGN_UP_FORM, "email": "Alice@Example.com"})
+
+    assert response.status_code == 200
+    assert "Le courriel est déjà utilisé" in page_text(response)
+    with mock_app.app_context():
+        assert User.query.filter_by(username="bob").count() == 0
+
+
 def test_login_with_valid_credentials(client, user):
     response = log_in(client, user, USER_PASSWORD)
 

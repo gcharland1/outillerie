@@ -4,6 +4,7 @@ from datetime import timedelta
 from dotenv import load_dotenv
 from flask import Flask, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_user, logout_user
+from sqlalchemy import func
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.extensions import db, login_manager, migrate
@@ -41,6 +42,10 @@ def create_app(test_config=None):
 
             if User.query.filter_by(username=username).first():
                 flash("Le nom d'utilisateur est déjà utilisé")
+                return render_template("sign_up.html")
+
+            if User.query.filter(func.lower(User.email) == func.lower(email)).first():
+                flash("Le courriel est déjà utilisé")
                 return render_template("sign_up.html")
 
             hashed_password = generate_password_hash(password, method="pbkdf2:sha256")

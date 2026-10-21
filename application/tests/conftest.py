@@ -1,6 +1,7 @@
 import os
 
 import pytest
+from sqlalchemy import text
 from werkzeug.security import generate_password_hash
 
 from app import create_app
@@ -11,19 +12,25 @@ CI_DATABASE_URL = "postgresql+psycopg://outillerie:outillerie@localhost:5432/out
 USER_PASSWORD = "secret123"
 
 
+def app_config():
+    """Configuration of every app the tests create"""
+    return {
+        "TESTING": True,
+        "SQLALCHEMY_DATABASE_URI": os.getenv("TEST_DATABASE_URL", CI_DATABASE_URL),
+        "SECRET_KEY": "test",
+    }
+
+
 @pytest.fixture
 def mock_app():
     """Create an app instance for testing"""
-    app = create_app(
-        {
-            "TESTING": True,
-            "SQLALCHEMY_DATABASE_URI": os.getenv("TEST_DATABASE_URL", CI_DATABASE_URL),
-            "SECRET_KEY": "test",
-        }
-    )
+    app = create_app(app_config())
     # The app context wraps only setup and teardown: requests made while it is active would
     # share its `g`, where Flask-Login caches the current user across requests.
     with app.app_context():
+        # Needed by the GiST exclusion constraint on loan; the Alembic revision creates it too.
+        db.session.execute(text("CREATE EXTENSION IF NOT EXISTS btree_gist"))
+        db.session.commit()
         db.create_all()
     yield app
     with app.app_context():

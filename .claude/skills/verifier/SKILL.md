@@ -13,12 +13,13 @@ Depuis `application/` :
 3. `uv run ruff format --check .`
 4. `uv run pytest -q`
 5. Si `application/migrations/` existe : `uv run flask db check` (aucune migration manquante). Requiert Postgres (`docker compose up -d db`) et `DATABASE_URL` ; si la base est indisponible, marquer l'étape « non vérifiée », pas « OK ».
+6. `uv run paracelsus inject ../docs/schema.md --check` : le diagramme du schéma est à jour (ADR 0009).
 
 Depuis la racine :
 
-6. `openspec validate --all --no-interactive`
-7. `git status --short` : signaler les fichiers non suivis inattendus.
-8. Si `.claude/forbidden-terms.local` existe : `git grep -inEf .claude/forbidden-terms.local` sur les fichiers suivis et `git log main..HEAD --format=%B%n%ae | grep -iEf .claude/forbidden-terms.local` doivent être vides. Ne jamais citer les termes trouvés dans un fichier suivi.
+7. `openspec validate --all --no-interactive`
+8. `git status --short` : signaler les fichiers non suivis inattendus.
+9. Si `.claude/forbidden-terms.local` existe : `git grep -inEf .claude/forbidden-terms.local` sur les fichiers suivis et `git log main..HEAD --format=%B%n%ae | grep -iEf .claude/forbidden-terms.local` doivent être vides. Ne jamais citer les termes trouvés dans un fichier suivi.
 
 Ne rien corriger pendant la vérification. Rendre un tableau :
 

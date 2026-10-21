@@ -57,9 +57,22 @@ jobs:
           uv run --locked ruff check .
           uv run --locked ruff format --check .
 
+      # Runs first, on a database that has never seen btree_gist or any table.
+      - name: Check migrations
+        working-directory: application
+        run: |
+          uv run --locked flask db upgrade
+          uv run --locked flask db downgrade base
+          uv run --locked flask db upgrade
+          uv run --locked flask db check
+
       - name: Run unit tests
         working-directory: application
         run: uv run --locked pytest
+
+      - name: Check schema diagram
+        working-directory: application
+        run: uv run --locked paracelsus inject ../docs/schema.md --check
 
   specs:
     runs-on: ubuntu-latest
