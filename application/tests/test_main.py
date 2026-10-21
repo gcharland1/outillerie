@@ -1,25 +1,4 @@
-import pytest
 from flask import template_rendered
-
-from app import create_app
-
-
-@pytest.fixture
-def mock_app():
-    """Create an app instance for testing"""
-    app = create_app()
-    app.config.update(
-        {
-            "TESTING": True,
-        }
-    )
-    yield app
-
-
-@pytest.fixture
-def client(mock_app):
-    """An app client to send requests"""
-    return mock_app.test_client()
 
 
 def test_home_page_returns_correct_template(mock_app, client):

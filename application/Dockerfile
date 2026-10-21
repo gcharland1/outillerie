@@ -14,6 +14,11 @@ ENV UV_COMPILE_BYTECODE=1 \
     UV_NO_DEV=1 \
     PATH="/app/.venv/bin:$PATH"
 
+# Ne pas exécuter l'application comme root
+RUN useradd --create-home outillerie \
+    && chown -R outillerie:outillerie /app
+USER outillerie
+
 # Installer les dépendances avant de copier le code
 # pour profiter du cache Docker
 COPY pyproject.toml uv.lock ./
@@ -25,12 +30,6 @@ COPY . .
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-editable
 
-# Ne pas exécuter l'application comme root
-RUN useradd --create-home outillerie \
-    && chown -R outillerie:outillerie /app
-USER outillerie
-
 EXPOSE 5000
 
-CMD ["uv", "run", "main.py"]
-
+CMD ["sh", "-c", "uv run flask db upgrade && uv run main.py"]

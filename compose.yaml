@@ -3,10 +3,16 @@ services:
     build:
       context: ./application 
       dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      FLASK_SECRET_KEY: ${FLASK_SECRET_KEY}
     ports:
       - "8080:5000"
     networks:
       - outillerie-network
+    depends_on:
+      db:
+        condition: service_healthy
 
   db:
     image: postgres:17
