@@ -27,3 +27,6 @@ structure de l'app, outil de dev, convention transverse. Un détail d'implément
 | 0004 | [OpenSpec pour le développement piloté par spec](0004-openspec.md) | accepted |
 | 0005 | [Archiver les sessions Claude dans le dépôt](0005-archiver-les-sessions-claude.md) | accepted |
 | 0006 | [Sessions dans le cookie signé de Flask, expiration d'inactivité](0006-sessions-dans-le-cookie-signe-de-flask.md) | accepted |
+| 0007 | [Règles d'évolution du schéma de persistance](0007-regles-d-evolution-du-schema-de-persistance.md) | accepted |
+| 0008 | [Photos des outils en `bytea`](0008-photos-des-outils-en-bytea.md) | accepted |
+| 0009 | [Diagramme du schéma généré par paracelsus](0009-diagramme-du-schema-genere-par-paracelsus.md) | accepted |
