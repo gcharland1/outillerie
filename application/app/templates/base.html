@@ -4,6 +4,9 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Outillerie</title>
+        {% if current_user.is_authenticated %}
+        <meta http-equiv="refresh" content="{{ config.PERMANENT_SESSION_LIFETIME.total_seconds() | int + 5 }};url=/logged-out?reason=inactivity">
+        {% endif %}
 
         <!-- Framework générique CSS -->
         <link rel="stylesheet" href="https://unpkg.com/chota@latest">
@@ -17,8 +20,15 @@
             </div>
 
             <div class="nav-right">
+                {% if current_user.is_authenticated %}
+                <span style="display: flex; align-items: center; padding: 1rem 2rem; color: var(--color-darkGrey)">{{ current_user.username }}</span>
+                <form action="/logout" method="post" style="display: flex; align-items: center">
+                    <button type="submit" class="button" style="background-color: #e8e8e8; color: #000">Me déconnecter</button>
+                </form>
+                {% else %}
                 <a href="/login">Connexion</a>
                 <a href="/register">Inscription</a>
+                {% endif %}
             </div>
         </nav>
 

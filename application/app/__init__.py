@@ -1,11 +1,15 @@
 import os
+from datetime import timedelta
 
 from dotenv import load_dotenv
-from flask import Flask, flash, redirect, render_template, request, url_for
-from flask_login import current_user, login_user
+from flask import Flask, flash, redirect, render_template, request, session, url_for
+from flask_login import current_user, login_user, logout_user
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.extensions import db, login_manager, migrate
+
+# Checked when the username is unknown, so a failed login takes the same time either way.
+_DUMMY_PASSWORD_HASH = generate_password_hash("dummy-password", method="pbkdf2:sha256")
 
 
 def create_app(test_config=None):
@@ -36,7 +40,8 @@ def create_app(test_config=None):
             email = request.form.get("email")
 
             if User.query.filter_by(username=username).first():
-                return render_template("sign_up.html", error="Le nom d'usager est déjà utilisé")
+                flash("Le nom d'utilisateur est déjà utilisé")
+                return render_template("sign_up.html")
 
             hashed_password = generate_password_hash(password, method="pbkdf2:sha256")
 
@@ -62,14 +67,35 @@ def create_app(test_config=None):
             password = request.form.get("password")
 
             user = User.query.filter_by(username=username).first()
+            password_hash = user.password if user else _DUMMY_PASSWORD_HASH
 
-            if user and check_password_hash(user.password, password):
+            if check_password_hash(password_hash, password) and user:
+                session.permanent = True
                 login_user(user)
                 return redirect(url_for("index"))
-            else:
-                flash("Le nom d'utilisateur ou le mot de passe sont invalide")
+            flash("Le nom d'utilisateur ou le mot de passe est invalide")
 
         return render_template("login.html")
+
+    @app.route("/logout", methods=["POST"])
+    def logout():
+        logout_user()
+        session.clear()
+        return redirect(url_for("logged_out"))
+
+    @app.route("/logged-out")
+    def logged_out():
+        if current_user.is_authenticated:
+            return redirect(url_for("index"))
+        expired = request.args.get("reason") == "inactivity"
+        minutes = int(app.permanent_session_lifetime.total_seconds() // 60)
+        return render_template("logged_out.html", expired=expired, minutes=minutes)
+
+    @app.after_request
+    def prevent_caching_for_logged_in_user(response):
+        if current_user.is_authenticated:
+            response.headers["Cache-Control"] = "no-store"
+        return response
 
     @login_manager.user_loader
     def load_user(user_id):
@@ -82,6 +108,8 @@ def _initialize_app(test_config):
     """Initializes and configures the app reading from .env file, or from test_config if given"""
     app = Flask(__name__)
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=30)
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
     if test_config is not None:
         app.config.from_mapping(test_config)

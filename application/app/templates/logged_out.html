@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row is-center" style="margin-top: 10%">
+    <div class="col-12 col-8-md card">
+        <header>
+            <h3>Session terminée</h3>
+        </header>
+        {% if expired %}
+        <p>Votre session a expiré après {{ minutes }} minutes d'inactivité</p>
+        {% else %}
+        <p>Vous êtes déconnecté</p>
+        {% endif %}
+        <p><a href="/login">Se reconnecter</a></p>
+    </div>
+</div>
+{% endblock %}
