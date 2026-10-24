@@ -2,7 +2,7 @@
 
 ## 1. Décisions
 
-- [x] 1.1 Faire accepter par l'utilisateur les ADR 0010 « Protection CSRF par Flask-WTF » et 0011 « Une Blueprint par fonctionnalité » ; vérifier que leur `status` et l'index `docs/decisions/README.md` indiquent `accepted`
+- [x] 1.1 Faire accepter par l'utilisateur les ADR 0010 « Protection CSRF par Flask-WTF » et 0011 « Une Blueprint par fonctionnalité » ; vérifier que leur `status` et l'index `docs/decisions/README.md` indiquent `accepted` (0010 depuis remplacé par 0012, « Protection CSRF par Flask-WTF, jeton lié à la session »)
 
 ## 2. Blueprint `auth` (déplacement sans changement de comportement)
 
@@ -13,7 +13,7 @@
 
 - [x] 3.1 `uv add flask-wtf` ; créer `csrf = CSRFProtect()` dans `app/extensions.py` et l'initialiser dans `create_app()` ; poser `WTF_CSRF_TIME_LIMIT = None` dans `_initialize_app()` et `WTF_CSRF_ENABLED: False` dans `app_config()` de `tests/conftest.py` ; vérifier que `uv.lock` est modifié et que `uv run pytest` passe
 - [x] 3.2 Ajouter le champ caché `csrf_token` aux formulaires de `login.html`, `sign_up.html` et au bouton de déconnexion de `base.html` ; ajouter `@app.errorhandler(CSRFError)` qui rend `csrf_error.html` avec le message de la spec et le statut 400 ; vérifier par des tests pytest que `/login`, `/register` et une page connectée contiennent un champ `csrf_token`
-- [x] 3.3 Écrire `tests/test_csrf.py` (app créée avec `WTF_CSRF_ENABLED: True`) pour les scénarios de la spec `protection-csrf` hors outils : connexion et déconnexion sans jeton refusées sans effet, message affiché, connexion acceptée avec le jeton extrait de la page `/login`, acceptée 20 minutes plus tard et refusée avec le message 31 minutes plus tard (fixture `clock` déplacée dans `tests/conftest.py`) ; vérifier que les tests passent
+- [x] 3.3 Écrire `tests/test_csrf.py` (fixture `csrf_client`, `WTF_CSRF_ENABLED = True`) pour les scénarios de la spec `protection-csrf` hors outils : connexion et déconnexion sans jeton refusées sans effet, message affiché, connexion acceptée avec le jeton extrait de la page `/login`, acceptée 20 minutes plus tard et refusée avec le message 31 minutes plus tard (fixture `clock` déplacée dans `tests/conftest.py`) ; vérifier que les tests passent
 
 ## 4. Blueprint `tools` et navigation
 

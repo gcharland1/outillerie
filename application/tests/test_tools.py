@@ -71,9 +71,6 @@ def tool_form(**fields):
     }
 
 
-# Liste de mes outils
-
-
 def test_visitor_is_sent_to_login_with_a_french_message(client):
     response = client.get("/tools/mine")
 
@@ -131,9 +128,6 @@ def test_condition_is_shown_in_french(mock_app, logged_in_client, alice_id):
     assert "À réparer" in page_text(logged_in_client.get("/tools/mine"))
 
 
-# Formulaire d'outil
-
-
 def test_form_values_are_cleaned():
     values, error = _read_tool_form(
         tool_form(name="  Perceuse ", description=" Sans fil ", private_notes="   ")
@@ -157,16 +151,14 @@ def test_form_accepts_a_name_of_250_characters():
     [
         ({"name": "   "}, "Le nom et la description sont obligatoires"),
         ({"description": ""}, "Le nom et la description sont obligatoires"),
+        ({"description": "   "}, "Le nom et la description sont obligatoires"),
         ({"name": "a" * 251}, "Le nom ne doit pas dépasser 250 caractères"),
         ({"condition": "new"}, "L'état choisi est invalide"),
     ],
-    ids=["blank-name", "no-description", "name-too-long", "unknown-condition"],
+    ids=["blank-name", "no-description", "blank-description", "name-too-long", "unknown-condition"],
 )
 def test_form_refusals(fields, message):
     assert _read_tool_form(tool_form(**fields))[1] == message
-
-
-# Enregistrement
 
 
 def test_new_tool_is_recorded(mock_app, logged_in_client, alice_id):
@@ -226,9 +218,6 @@ def test_invalid_new_tool_is_refused(mock_app, logged_in_client, fields, message
     assert tool_count(mock_app) == 0
 
 
-# Modification
-
-
 def test_edit_form_is_prefilled(mock_app, logged_in_client, alice_id):
     tool_id = add_tool(
         mock_app,
@@ -281,9 +270,6 @@ def test_edit_is_not_found(mock_app, logged_in_client, alice_id, bob_id, case):
     assert logged_in_client.post(f"/tools/{tool_id}/edit", data=tool_form()).status_code == 404
 
 
-# Retrait
-
-
 def test_confirmation_page_changes_nothing(mock_app, logged_in_client, alice_id):
     tool_id = add_tool(mock_app, alice_id)
 
@@ -309,11 +295,17 @@ def test_confirmed_retire_keeps_the_tool_recorded(mock_app, logged_in_client, al
     assert "Perceuse" not in page_text(logged_in_client.get("/tools/mine"))
 
 
-def test_retiring_bobs_tool_is_not_found(mock_app, logged_in_client, bob_id):
+@pytest.mark.parametrize("method", ["get", "post"])
+def test_retiring_bobs_tool_is_not_found(mock_app, logged_in_client, bob_id, method):
     tool_id = add_tool(mock_app, bob_id)
 
-    assert logged_in_client.post(f"/tools/{tool_id}/retire").status_code == 404
+    assert getattr(logged_in_client, method)(f"/tools/{tool_id}/retire").status_code == 404
     assert stored(mock_app, tool_id)["is_active"] is True
+
+
+@pytest.mark.parametrize("action", ["retire", "restore"])
+def test_unknown_tool_is_not_found(logged_in_client, action):
+    assert logged_in_client.post(f"/tools/999999/{action}").status_code == 404
 
 
 def test_checked_box_erases_the_notes(mock_app, logged_in_client, alice_id):
@@ -337,7 +329,10 @@ def test_confirmation_offers_the_box_only_with_notes(mock_app, logged_in_client,
     with_notes = add_tool(mock_app, alice_id, private_notes="Code 1234")
     without_notes = add_tool(mock_app, alice_id, "Scie")
 
-    assert ERASE_NOTES in page_text(logged_in_client.get(f"/tools/{with_notes}/retire"))
+    with_box = page_text(logged_in_client.get(f"/tools/{with_notes}/retire"))
+    assert ERASE_NOTES in with_box
+    assert re.search(r'<input type="checkbox" name="erase_private_notes"[^>]*>', with_box)
+    assert "checked" not in re.search(r'<input type="checkbox"[^>]*>', with_box)[0]
     assert ERASE_NOTES not in page_text(logged_in_client.get(f"/tools/{without_notes}/retire"))
 
 
@@ -364,9 +359,6 @@ def test_second_submit_changes_nothing(mock_app, logged_in_client, alice_id):
     assert (tool["is_active"], tool["private_notes"]) == (False, "Code 1234")
 
 
-# Outils retirés et remise en circulation
-
-
 def test_retired_list_shows_only_retired_tools(mock_app, logged_in_client, alice_id):
     add_tool(mock_app, alice_id, "Ponceuse", is_active=False)
     add_tool(mock_app, alice_id, "Perceuse")
@@ -377,6 +369,22 @@ def test_retired_list_shows_only_retired_tools(mock_app, logged_in_client, alice
     assert "Perceuse" not in text
     assert "Remettre en circulation" in text
     assert 'href="/tools/mine"' in text
+
+
+def test_retired_list_is_sorted_by_name_regardless_of_case(mock_app, logged_in_client, alice_id):
+    for name in ["scie", "Perceuse", "marteau"]:
+        add_tool(mock_app, alice_id, name, is_active=False)
+
+    text = page_text(logged_in_client.get("/tools/mine/retired"))
+
+    assert text.index("marteau") < text.index("Perceuse") < text.index("scie")
+
+
+def test_restoring_a_tool_in_circulation_is_not_found(mock_app, logged_in_client, alice_id):
+    tool_id = add_tool(mock_app, alice_id)
+
+    assert logged_in_client.post(f"/tools/{tool_id}/restore").status_code == 404
+    assert stored(mock_app, tool_id)["is_active"] is True
 
 
 def test_no_retired_tool(logged_in_client):
@@ -411,9 +419,6 @@ def test_restoring_bobs_tool_is_not_found(mock_app, logged_in_client, bob_id):
 
     assert logged_in_client.post(f"/tools/{tool_id}/restore").status_code == 404
     assert stored(mock_app, tool_id)["is_active"] is False
-
-
-# Jeton CSRF des formulaires d'outils
 
 
 def test_every_post_form_of_the_tool_pages_carries_a_token(mock_app, logged_in_client, alice_id):

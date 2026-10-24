@@ -20,7 +20,10 @@ def test_navigation_for_a_visitor(client):
 def test_navigation_for_a_logged_in_user(logged_in_client, user):
     text = page_text(logged_in_client.get("/"))
 
-    assert f">{user}</span>" in text
+    assert (
+        '<span style="display: flex; align-items: center; padding: 1rem 2rem; '
+        f'color: var(--color-darkGrey)">{user}</span>'
+    ) in text
     assert 'action="/logout" method="post"' in text
     assert "Me déconnecter" in text
     assert '<a href="/tools/mine">Gérer mes outils</a>' in text

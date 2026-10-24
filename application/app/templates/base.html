@@ -22,7 +22,7 @@
             <div class="nav-right">
                 {% if current_user.is_authenticated %}
                 <a href="{{ url_for('tools.mine') }}">Gérer mes outils</a>
-                <spanstyle="display: flex; align-items: center; padding: 1rem 2rem; color: var(--color-darkGrey)">{{ current_user.username }}</span>
+                <span style="display: flex; align-items: center; padding: 1rem 2rem; color: var(--color-darkGrey)">{{ current_user.username }}</span>
                 <form action="/logout" method="post" style="display: flex; align-items: center">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="button" style="background-color: #e8e8e8; color: #000">Me déconnecter</button>

@@ -3,7 +3,7 @@ from html import unescape
 
 import pytest
 
-from models import Tool
+from models import Tool, User
 from tests.conftest import MINUTE, USER_PASSWORD
 
 CSRF_FIELD = 'name="csrf_token"'
@@ -53,6 +53,23 @@ def test_login_without_token_is_refused(csrf_client, user):
     assert not is_logged_in(csrf_client)
 
 
+def test_register_without_token_creates_no_account(mock_app, csrf_client):
+    response = csrf_client.post(
+        "/register",
+        data={
+            "username": "bob",
+            "password": "motdepasse",
+            "first_name": "Bob",
+            "last_name": "Gagnon",
+            "email": "bob@example.com",
+        },
+    )
+
+    assert response.status_code == 400
+    with mock_app.app_context():
+        assert User.query.count() == 0
+
+
 def test_logout_without_token_keeps_the_session(csrf_client, user):
     log_in_with_page_token(csrf_client, user, USER_PASSWORD)
 
@@ -79,6 +96,7 @@ def test_login_page_open_twenty_minutes_is_accepted(clock, csrf_client, user):
     )
 
     assert response.status_code == 302
+    assert response.headers["Location"] == "/"
     assert is_logged_in(csrf_client)
 
 

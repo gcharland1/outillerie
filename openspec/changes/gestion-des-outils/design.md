@@ -154,8 +154,9 @@ qu'une page de connexion reste valable au-delà de 30 minutes. Du code et un ADR
 message de refus (« Rechargez la page ») couvre.
 
 Tests : `app_config()` de `tests/conftest.py` pose `WTF_CSRF_ENABLED: False`, pour que les tests
-existants continuent d'envoyer leurs formulaires sans jeton. `tests/test_csrf.py` crée son app
-avec `WTF_CSRF_ENABLED: True`, vérifie les refus de la spec et soumet un formulaire avec le jeton
+existants continuent d'envoyer leurs formulaires sans jeton. La fixture `csrf_client` de
+`tests/test_csrf.py` pose `WTF_CSRF_ENABLED = True` sur l'app de test (Flask-WTF relit le drapeau
+à chaque requête), vérifie les refus de la spec et soumet un formulaire avec le jeton
 extrait de la page servie ; les scénarios du formulaire ouvert 20 et 31 minutes avancent
 l'horloge de signature avec la fixture `clock`, déplacée de `tests/test_session.py` vers
 `tests/conftest.py`.
