@@ -1,21 +1,11 @@
 from datetime import timedelta
 from html import unescape
 
-import pytest
-
-from tests.conftest import USER_PASSWORD
-
 REFRESH_TAG = 'http-equiv="refresh"'
 
 
 def page_text(response):
     return unescape(response.get_data(as_text=True))
-
-
-@pytest.fixture
-def logged_in_client(client, user):
-    client.post("/login", data={"username": user, "password": USER_PASSWORD})
-    return client
 
 
 def test_navigation_for_a_visitor(client):
@@ -24,6 +14,7 @@ def test_navigation_for_a_visitor(client):
     assert "Connexion" in text
     assert "Inscription" in text
     assert "Me déconnecter" not in text
+    assert "Gérer mes outils" not in text
 
 
 def test_navigation_for_a_logged_in_user(logged_in_client, user):
@@ -32,6 +23,7 @@ def test_navigation_for_a_logged_in_user(logged_in_client, user):
     assert f">{user}</span>" in text
     assert 'action="/logout" method="post"' in text
     assert "Me déconnecter" in text
+    assert '<a href="/tools/mine">Gérer mes outils</a>' in text
     assert ">Connexion<" not in text
     assert ">Inscription<" not in text
 

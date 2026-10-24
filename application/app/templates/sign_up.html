@@ -10,6 +10,7 @@
 
         <!-- TODO: Ajouter des validateurs WTForm -->
         <form action="/register" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label for="username">Nom d'utilisateur:</label>
             <input type="text" name="username" required />
 

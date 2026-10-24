@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row is-center">
+    <div class="col-12 col-8-md card">
+        <header>
+            <h3>Retirer « {{ tool.name }} » de la circulation ?</h3>
+        </header>
+        <p>L'outil restera enregistré ; vous pourrez le remettre en circulation depuis « Mes outils retirés ».</p>
+        <form action="{{ url_for('tools.retire', tool_id=tool.id) }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if tool.private_notes %}
+            <label>
+                <input type="checkbox" name="erase_private_notes" value="1" />
+                Effacer définitivement mes notes privées
+            </label>
+            {% endif %}
+            <div class="row">
+                <div class="col text-right">
+                    <a class="button outline" href="{{ url_for('tools.mine') }}">Annuler</a>
+                    <button type="submit" class="button error">Confirmer le retrait</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

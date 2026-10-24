@@ -57,8 +57,9 @@ aucune de ses exigences.
 - Tests : nouveaux tests pytest des pages d'outils et du CSRF ; `tests/test_auth.py` vise
   `app.auth.check_password_hash` au lieu de `app.check_password_hash` ; la configuration de test
   désactive le CSRF, sauf dans les tests qui le vérifient.
-- ADR : nouveaux 0010 « Protection CSRF par Flask-WTF » et 0011 « Une Blueprint par
-  fonctionnalité » (`proposed`, à accepter avant l'implémentation). ADR concernés : 0001 (rendu
+- ADR : nouveaux 0010 « Protection CSRF par Flask-WTF », remplacé par 0012 « Protection CSRF par
+  Flask-WTF, jeton lié à la session » (durée réelle du jeton d'un visiteur), et 0011 « Une
+  Blueprint par fonctionnalité ». ADR concernés : 0001 (rendu
   serveur Jinja, sans JavaScript), 0006 (le jeton CSRF vit dans le cookie de session), 0007
   (aucune révision requise), 0008 (photo hors périmètre).
 

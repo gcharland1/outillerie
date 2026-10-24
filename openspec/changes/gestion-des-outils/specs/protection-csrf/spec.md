@@ -28,15 +28,17 @@ tous les formulaires, y compris l'inscription, la connexion et la déconnexion.
 - **AND** aucun outil n'est enregistré
 
 ### Requirement: Formulaires du site acceptés
-Chaque formulaire `POST` servi par le site SHALL inclure un jeton valide, de sorte qu'un voisin
-qui le soumet depuis la page reçue n'est jamais refusé pour cette raison.
+Chaque formulaire `POST` servi par le site SHALL inclure un jeton valide aussi longtemps que la
+session de navigateur qui l'a reçu, de sorte qu'un voisin qui le soumet dans ce délai n'est pas
+refusé pour cette raison. La session d'un visiteur, comme celle d'un utilisateur connecté, expire
+après 30 minutes sans être renouvelée.
 
 #### Scenario: Connexion depuis la page de connexion
 - **WHEN** un visiteur ouvre `/login` et soumet le formulaire avec des identifiants valides et le jeton de la page
 - **THEN** il est connecté et redirigé vers `/`
 
-#### Scenario: Formulaire ouvert longtemps
-- **WHEN** un visiteur soumet le formulaire de connexion deux heures après avoir ouvert `/login`, dans la même session de navigateur
+#### Scenario: Formulaire ouvert vingt minutes
+- **WHEN** un visiteur soumet le formulaire de connexion 20 minutes après avoir ouvert `/login`
 - **THEN** il est connecté et redirigé vers `/`
 
 ### Requirement: Message au refus
@@ -46,3 +48,8 @@ Une requête refusée pour un jeton absent ou invalide SHALL afficher, dans la m
 #### Scenario: Formulaire expiré
 - **WHEN** une requête `POST` est refusée faute de jeton valide
 - **THEN** la page affiche « Le formulaire a expiré ou est invalide. Rechargez la page et réessayez. »
+
+#### Scenario: Page de connexion ouverte trop longtemps
+- **WHEN** un visiteur soumet le formulaire de connexion 31 minutes après avoir ouvert `/login`
+- **THEN** le système répond 400 et aucune session n'est ouverte
+- **AND** la page affiche « Le formulaire a expiré ou est invalide. Rechargez la page et réessayez. »

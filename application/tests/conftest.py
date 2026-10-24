@@ -1,6 +1,7 @@
 import os
 
 import pytest
+from itsdangerous import TimestampSigner
 from sqlalchemy import text
 from werkzeug.security import generate_password_hash
 
@@ -10,6 +11,7 @@ from models.user import User
 
 CI_DATABASE_URL = "postgresql+psycopg://outillerie:outillerie@localhost:5432/outillerie"
 USER_PASSWORD = "secret123"
+MINUTE = 60
 
 
 def app_config():
@@ -18,6 +20,7 @@ def app_config():
         "TESTING": True,
         "SQLALCHEMY_DATABASE_URI": os.getenv("TEST_DATABASE_URL", CI_DATABASE_URL),
         "SECRET_KEY": "test",
+        "WTF_CSRF_ENABLED": False,
     }
 
 
@@ -59,3 +62,43 @@ def user(mock_app):
         )
         db.session.commit()
     return "alice"
+
+
+@pytest.fixture
+def bob(mock_app):
+    """Username of a second registered user, for checks across accounts"""
+    with mock_app.app_context():
+        db.session.add(
+            User(
+                username="bob",
+                password=generate_password_hash(USER_PASSWORD, method="pbkdf2:sha256"),
+                first_name="Bob",
+                last_name="Gagnon",
+                email="bob@example.com",
+            )
+        )
+        db.session.commit()
+    return "bob"
+
+
+@pytest.fixture
+def logged_in_client(client, user):
+    """A client logged in as `user`"""
+    client.post("/login", data={"username": user, "password": USER_PASSWORD})
+    return client
+
+
+class FakeClock:
+    def __init__(self):
+        self.now = 1_000_000_000
+
+    def advance(self, seconds):
+        self.now += seconds
+
+
+@pytest.fixture
+def clock(monkeypatch):
+    """Controls the clock used to sign session cookies and to check their age"""
+    fake = FakeClock()
+    monkeypatch.setattr(TimestampSigner, "get_timestamp", lambda self: fake.now)
+    return fake

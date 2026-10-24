@@ -23,7 +23,7 @@ Voir proposal.md pour la motivation et specs/ pour les exigences. État actuel :
   enregistrer.
 - Une seule requête par page, filtrée par propriétaire en SQL : aucun outil d'un autre compte
   n'est chargé puis rejeté en Python.
-- Protection CSRF active par défaut pour toute route `POST`, présente et future (ADR 0010).
+- Protection CSRF active par défaut pour toute route `POST`, présente et future (ADR 0012).
 
 **Non-Goals:**
 - Classes de formulaire WTForms : la validation reste écrite dans la route (issue #12).
@@ -140,16 +140,25 @@ visiteur reçoit donc un cookie de session dès qu'une page affiche un formulair
 la spec et le statut 400.
 
 `_initialize_app()` pose `WTF_CSRF_TIME_LIMIT = None` : le jeton vaut autant que la session qui
-le porte, soit 30 minutes d'inactivité pour un utilisateur connecté (ADR 0006) et jusqu'à la
-fermeture du navigateur pour un visiteur. La durée par défaut de Flask-WTF (une heure) refuserait
-une page de connexion ouverte plus longtemps, ce que la spec exclut. Le jeton reste lié à la
-session : il disparaît avec elle à la déconnexion (`session.clear()`) ou à l'expiration.
+le porte. Flask refuse tout cookie de session signé depuis plus de `PERMANENT_SESSION_LIFETIME`,
+permanent ou non (`flask/sessions.py`, `open_session`) : 30 minutes d'inactivité pour un
+utilisateur connecté (ADR 0006), dont le cookie est re-signé à chaque requête, et 30 minutes depuis
+l'ouverture de `/login` ou `/register` pour un visiteur, dont le cookie n'est signé qu'à la création
+du jeton. Sans limite propre, le jeton d'une page rendue il y a plus d'une heure reste valable
+quand un autre onglet a gardé la session ouverte ; la durée par défaut de Flask-WTF (une heure) le
+refuserait. Le jeton disparaît avec la session, à la déconnexion (`session.clear()`) ou à
+l'expiration.
+
+Alternative écartée : une interface de session propre aux visiteurs, à durée plus longue, pour
+qu'une page de connexion reste valable au-delà de 30 minutes. Du code et un ADR pour un cas que le
+message de refus (« Rechargez la page ») couvre.
 
 Tests : `app_config()` de `tests/conftest.py` pose `WTF_CSRF_ENABLED: False`, pour que les tests
 existants continuent d'envoyer leurs formulaires sans jeton. `tests/test_csrf.py` crée son app
 avec `WTF_CSRF_ENABLED: True`, vérifie les refus de la spec et soumet un formulaire avec le jeton
-extrait de la page servie ; le scénario du formulaire ouvert deux heures avance l'horloge de
-signature comme la fixture `clock` de `tests/test_session.py`.
+extrait de la page servie ; les scénarios du formulaire ouvert 20 et 31 minutes avancent
+l'horloge de signature avec la fixture `clock`, déplacée de `tests/test_session.py` vers
+`tests/conftest.py`.
 
 Alternative écartée : désactiver le CSRF pour `/login` et `/register`. Un CSRF de connexion
 ouvrirait la session de l'attaquant dans le navigateur de la victime, qui enregistrerait alors ses

@@ -1,6 +1,7 @@
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
+from flask_wtf.csrf import CSRFProtect
 from sqlalchemy import MetaData
 
 # Stable names let later revisions drop or alter a constraint (ADR 0007).
@@ -17,4 +18,7 @@ db = SQLAlchemy(metadata=MetaData(naming_convention=NAMING_CONVENTION))
 migrate = Migrate(compare_server_default=True)
 
 login_manager = LoginManager()
-login_manager.login_view = "login"
+login_manager.login_view = "auth.login"
+login_manager.login_message = "Veuillez vous connecter pour accéder à cette page."
+
+csrf = CSRFProtect()

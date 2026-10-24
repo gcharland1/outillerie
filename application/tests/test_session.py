@@ -1,12 +1,7 @@
 from datetime import timedelta
 from html import unescape
 
-import pytest
-from itsdangerous import TimestampSigner
-
-from tests.conftest import USER_PASSWORD
-
-MINUTE = 60
+from tests.conftest import MINUTE, USER_PASSWORD
 
 
 def page_text(response):
@@ -15,28 +10,6 @@ def page_text(response):
 
 def is_logged_in(client):
     return "Rebonjour" in page_text(client.get("/"))
-
-
-@pytest.fixture
-def logged_in_client(client, user):
-    client.post("/login", data={"username": user, "password": USER_PASSWORD})
-    return client
-
-
-class FakeClock:
-    def __init__(self):
-        self.now = 1_000_000_000
-
-    def advance(self, seconds):
-        self.now += seconds
-
-
-@pytest.fixture
-def clock(monkeypatch):
-    """Controls the clock used to sign session cookies and to check their age"""
-    fake = FakeClock()
-    monkeypatch.setattr(TimestampSigner, "get_timestamp", lambda self: fake.now)
-    return fake
 
 
 def test_session_cookie_is_httponly_and_samesite_lax(client, user):
