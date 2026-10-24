@@ -30,3 +30,5 @@ structure de l'app, outil de dev, convention transverse. Un détail d'implément
 | 0007 | [Règles d'évolution du schéma de persistance](0007-regles-d-evolution-du-schema-de-persistance.md) | accepted |
 | 0008 | [Photos des outils en `bytea`](0008-photos-des-outils-en-bytea.md) | accepted |
 | 0009 | [Diagramme du schéma généré par paracelsus](0009-diagramme-du-schema-genere-par-paracelsus.md) | accepted |
+| 0010 | [Protection CSRF par Flask-WTF](0010-protection-csrf-par-flask-wtf.md) | accepted |
+| 0011 | [Une Blueprint par fonctionnalité](0011-une-blueprint-par-fonctionnalite.md) | accepted |
