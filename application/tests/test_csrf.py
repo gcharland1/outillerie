@@ -111,3 +111,32 @@ def test_tool_form_with_a_tampered_token_is_refused(mock_app, csrf_client, user)
     assert response.status_code == 400
     with mock_app.app_context():
         assert Tool.query.count() == 0
+
+
+HTTPS_PROXY = {"X-Forwarded-Proto": "https"}
+
+
+def test_login_relayed_over_https_with_same_origin_referrer(csrf_client, user):
+    token = token_in(csrf_client.get("/login", headers=HTTPS_PROXY))
+
+    response = csrf_client.post(
+        "/login",
+        data={"username": user, "password": USER_PASSWORD, "csrf_token": token},
+        headers={**HTTPS_PROXY, "Referer": "https://localhost/login"},
+    )
+
+    assert response.status_code == 302
+    assert response.headers["Location"] == "/"
+
+
+def test_login_relayed_over_https_without_referrer_is_refused(csrf_client, user):
+    token = token_in(csrf_client.get("/login", headers=HTTPS_PROXY))
+
+    response = csrf_client.post(
+        "/login",
+        data={"username": user, "password": USER_PASSWORD, "csrf_token": token},
+        headers=HTTPS_PROXY,
+    )
+
+    assert response.status_code == 400
+    assert REFUSAL_MESSAGE in page_text(response)

@@ -6,8 +6,9 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       FLASK_SECRET_KEY: ${FLASK_SECRET_KEY}
+      FLASK_ENVIRONMENT: ${FLASK_ENVIRONMENT:-development}
     ports:
-      - "8080:5000"
+      - "127.0.0.1:8080:5000"
     networks:
       - outillerie-network
     depends_on:
@@ -23,7 +24,7 @@ services:
     volumes:
       - ${POSTGRES_DATA_PATH}:/var/lib/postgresql/data
     ports:
-      - "5430:5432"
+      - "127.0.0.1:5430:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s

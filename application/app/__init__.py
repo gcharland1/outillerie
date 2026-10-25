@@ -6,6 +6,7 @@ from flask import Flask, render_template, request
 from flask_login import current_user
 from flask_wtf.csrf import CSRFError
 from werkzeug.exceptions import RequestEntityTooLarge
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from app.extensions import csrf, db, login_manager, migrate
 
@@ -14,6 +15,8 @@ def create_app(test_config=None):
     """Creates an app and sets it's routes, using test_config instead of the environment if given"""
 
     app = _initialize_app(test_config)
+    # Trust only the scheme set by the single proxy in front of the app (ADR 0015).
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=0, x_proto=1)
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
@@ -58,10 +61,13 @@ def create_app(test_config=None):
 
 def _initialize_app(test_config):
     """Initializes and configures the app reading from .env file, or from test_config if given"""
+    environment = os.getenv("FLASK_ENVIRONMENT", "development")
     app = Flask(__name__)
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=30)
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    # Behind Cloudflare Tunnel, the browser only ever talks HTTPS (ADR 0015).
+    app.config["SESSION_COOKIE_SECURE"] = environment != "development"
     # The token lives as long as the session that holds it (ADR 0012).
     app.config["WTF_CSRF_TIME_LIMIT"] = None
     # Safety cap on any request; the photo's own 10 MB limit is checked by the view (ADR 0014).
@@ -71,7 +77,7 @@ def _initialize_app(test_config):
         app.config.from_mapping(test_config)
         return app
 
-    if os.getenv("FLASK_ENVIRONMENT", "development") == "development":
+    if environment == "development":
         load_dotenv()
 
     app.config["SQLALCHEMY_DATABASE_URI"] = os.environ["DATABASE_URL"]
