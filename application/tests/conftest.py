@@ -29,6 +29,12 @@ def app_config():
     }
 
 
+@pytest.fixture(autouse=True)
+def development_environment(monkeypatch):
+    """Keeps a FLASK_ENVIRONMENT set in the shell from changing the apps the tests build"""
+    monkeypatch.delenv("FLASK_ENVIRONMENT", raising=False)
+
+
 @pytest.fixture
 def mock_app():
     """Create an app instance for testing"""

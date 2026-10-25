@@ -16,7 +16,8 @@ uv run flask db migrate -m "<message>"    # nouvelle révision Alembic
 uv run flask db upgrade
 ```
 
-Depuis la racine : `docker compose up --build` (app sur :8080, Postgres sur :5430).
+Depuis la racine : `docker compose up --build` (app sur `127.0.0.1:8080`, Postgres sur `127.0.0.1:5430`).
+`FLASK_ENVIRONMENT` : `development` par défaut, `production` sur le serveur (cookie de session `Secure`).
 Les variables à fournir sont dans `.env.example` ; ne jamais lire ni afficher `.env`.
 
 ## Workflow

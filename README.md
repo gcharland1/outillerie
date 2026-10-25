@@ -38,6 +38,11 @@ uv run main.py                    # app sur :5000
 
 Ou tout dans Docker : `docker compose up --build` (app sur :8080, migrations appliquées au démarrage).
 
+Compose publie ses ports sur `127.0.0.1` seulement : `localhost:8080` et `localhost:5430` répondent
+sur le poste, pas depuis une autre machine ([ADR 0015](docs/decisions/0015-exposer-la-production-par-cloudflare-tunnel.md)).
+`FLASK_ENVIRONMENT` vaut `development` par défaut ; toute autre valeur (`production` sur le serveur)
+marque le cookie de session `Secure`.
+
 ### Base existante
 
 Le schéma vient uniquement des migrations Alembic. Après un `git pull`, `uv run flask db upgrade`
