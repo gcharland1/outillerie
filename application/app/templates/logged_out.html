@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="row is-center" style="margin-top: 10%">
+<div class="row is-center landing">
     <div class="col-12 col-8-md card">
         <header>
             <h3>Session terminée</h3>
@@ -11,7 +11,9 @@
         {% else %}
         <p>Vous êtes déconnecté</p>
         {% endif %}
-        <p><a href="/login">Se reconnecter</a></p>
+        <div class="actions">
+            <a class="button primary" href="/login">Se reconnecter</a>
+        </div>
     </div>
 </div>
 {% endblock %}

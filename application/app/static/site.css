@@ -1,0 +1,126 @@
+/* UI rules of L'Outillerie (.claude/rules/templates.md), layered over Chota. */
+
+:root {
+    --gap: 1rem;
+}
+
+/* Chota buttons have a transparent border; outline them so none vanishes on white. */
+.button,
+button,
+[type="button"],
+[type="reset"],
+[type="submit"] {
+    border-color: rgba(0, 0, 0, 0.25);
+}
+
+.site-header {
+    border-bottom: 1px solid var(--color-lightGrey);
+    box-shadow: 0 1px 3px var(--color-lightGrey);
+    margin-bottom: calc(var(--gap) * 2);
+}
+
+.nav-right {
+    align-items: center;
+    gap: var(--gap);
+}
+
+.nav .button {
+    margin: 0;
+}
+
+.account-menu {
+    position: relative;
+}
+
+.account-menu summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 1rem 2rem;
+    color: var(--color-darkGrey);
+}
+
+.account-menu summary::-webkit-details-marker {
+    display: none;
+}
+
+.account-menu summary::after {
+    content: " ▾";
+}
+
+.account-menu[open] summary::after {
+    content: " ▴";
+}
+
+.account-menu-items {
+    position: absolute;
+    right: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    min-width: 16rem;
+    padding: calc(var(--gap) / 2) 0;
+    background: var(--bg-color);
+    border-radius: 4px;
+    box-shadow: 0 1px 3px var(--color-grey);
+}
+
+.nav .account-menu-items a,
+.menu-item-upcoming {
+    padding: calc(var(--gap) / 2) var(--gap);
+}
+
+.menu-item-upcoming {
+    color: var(--color-grey);
+    cursor: default;
+}
+
+.nav .account-menu-items a:hover {
+    background: var(--color-lightGrey);
+    opacity: 1;
+}
+
+.flash {
+    color: var(--color-error);
+    border: 1px solid var(--color-error);
+    border-radius: 4px;
+    padding: var(--gap);
+    margin-bottom: var(--gap);
+}
+
+.card {
+    margin-bottom: var(--gap);
+}
+
+.landing {
+    margin-top: 10vh;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--gap);
+    margin-top: var(--gap);
+}
+
+.actions form,
+td .actions {
+    margin: 0;
+}
+
+.actions .button + .button {
+    margin-left: 0;
+}
+
+.page-actions {
+    justify-content: flex-start;
+    margin-bottom: var(--gap);
+}
+
+.checkbox {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--gap) / 2);
+    margin: var(--gap) 0;
+}

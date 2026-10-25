@@ -8,44 +8,50 @@
         <meta http-equiv="refresh" content="{{ config.PERMANENT_SESSION_LIFETIME.total_seconds() | int + 5 }};url=/logged-out?reason=inactivity">
         {% endif %}
 
-        <!-- Framework générique CSS -->
-        <link rel="stylesheet" href="https://unpkg.com/chota@latest">
+        <!-- Framework générique CSS, puis les règles du site -->
+        <link rel="stylesheet" href="https://unpkg.com/chota@0.9.2">
+        <link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
     </head>
     <body>
 
         <!-- Barre de navigation -->
-        <nav class="nav container">
-            <div class="nav-left">
-                <a class="brand" href="/"><strong>🛠️ L'Outillerie</strong></a>
-            </div>
+        <header class="site-header">
+            <nav class="nav container">
+                <div class="nav-left">
+                    <a class="brand" href="/"><strong>🛠️ L'Outillerie</strong></a>
+                </div>
 
-            <div class="nav-right">
-                {% if current_user.is_authenticated %}
-                <span style="display: flex; align-items: center; padding: 1rem 2rem; color: var(--color-darkGrey)">{{ current_user.username }}</span>
-                <form action="/logout" method="post" style="display: flex; align-items: center">
-                    <button type="submit" class="button" style="background-color: #e8e8e8; color: #000">Me déconnecter</button>
-                </form>
-                {% else %}
-                <a href="/login">Connexion</a>
-                <a href="/register">Inscription</a>
-                {% endif %}
-            </div>
-        </nav>
-
-        <!-- Messages d'erreur -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-        <div class="alert alert-danger" style="color: red;">
-            {{ message }}
-        </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-
+                <div class="nav-right">
+                    {% if current_user.is_authenticated %}
+                    <details class="account-menu">
+                        <summary>{{ current_user.username }}</summary>
+                        <div class="account-menu-items">
+                            <span class="menu-item-upcoming" aria-disabled="true">Mon profil</span>
+                            <a href="{{ url_for('tools.mine') }}">Gérer mes outils</a>
+                            <span class="menu-item-upcoming" aria-disabled="true">Préférences</span>
+                        </div>
+                    </details>
+                    <form action="/logout" method="post">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="button">Me déconnecter</button>
+                    </form>
+                    {% else %}
+                    <a class="button" href="/login">Connexion</a>
+                    <a class="button primary" href="/register">Inscription</a>
+                    {% endif %}
+                </div>
+            </nav>
+        </header>
 
         <!-- Zone dynamique qui changera sur chaque page -->
         <main class="container">
+            <!-- Messages d'erreur -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, message in messages %}
+            <div class="flash">{{ message }}</div>
+                {% endfor %}
+            {% endwith %}
+
             {% block content %}
             <!-- Le contenu des autres templates s'injectera ici -->
             {% endblock %}

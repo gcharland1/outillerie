@@ -9,8 +9,8 @@ def a_day(day):
     return date(2026, 11, day)
 
 
-def make_tool(owner_id, name="Perceuse", description="Perceuse sans fil"):
-    tool = Tool(owner_id=owner_id, name=name, description=description)
+def make_tool(owner_id, name="Perceuse", description="Perceuse sans fil", **fields):
+    tool = Tool(owner_id=owner_id, name=name, description=description, **fields)
     db.session.add(tool)
     db.session.commit()
     return tool

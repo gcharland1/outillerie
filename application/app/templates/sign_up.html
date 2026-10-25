@@ -2,7 +2,7 @@
 
 {% block content %}
 
-<div class="row is-center" style="margin-top: 10%">
+<div class="row is-center landing">
     <div class="col-12 col-8-md card">
         <header>
             <h3>Créer un compte utilisateur</h3>
@@ -10,6 +10,7 @@
 
         <!-- TODO: Ajouter des validateurs WTForm -->
         <form action="/register" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label for="username">Nom d'utilisateur:</label>
             <input type="text" name="username" required />
 
@@ -42,10 +43,8 @@
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col text-right">
-                    <button type="submit">Créer mon compte</button>
-                </div>
+            <div class="actions">
+                <button type="submit">Créer mon compte</button>
             </div>
         </form>
     </div>

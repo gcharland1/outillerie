@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>Mes outils</h2>
+    <div class="actions page-actions">
+        <a class="button primary" href="{{ url_for('tools.new') }}">Enregistrer un outil</a>
+        <a class="button" href="{{ url_for('tools.retired') }}">Voir mes outils retirés</a>
+    </div>
+{% if tools %}
+    <table>
+        <thead>
+            <tr><th>Nom</th><th>État</th><th></th></tr>
+        </thead>
+        <tbody>
+        {% for tool in tools %}
+            <tr>
+                <td>{{ tool.name }}</td>
+                <td>{{ condition_labels[tool.condition] }}</td>
+                <td>
+                    <div class="actions">
+                        <a class="button" href="{{ url_for('tools.edit', tool_id=tool.id) }}">Modifier</a>
+                        <a class="button error" href="{{ url_for('tools.confirm_retire', tool_id=tool.id) }}">Retirer</a>
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>Vous n'avez encore enregistré aucun outil</p>
+{% endif %}
+{% endblock %}

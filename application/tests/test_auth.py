@@ -1,9 +1,10 @@
+import re
 from html import unescape
 
 import pytest
 from werkzeug.security import check_password_hash
 
-import app as app_module
+from app import auth as auth_module
 from models.user import User
 from tests.conftest import USER_PASSWORD
 
@@ -19,6 +20,11 @@ SIGN_UP_FORM = {
 
 def page_text(response):
     return unescape(response.get_data(as_text=True))
+
+
+def without_csrf_token(response):
+    """Page body with the CSRF token masked: its signature embeds the current second"""
+    return re.sub(rb'name="csrf_token" value="[^"]*"', b'name="csrf_token"', response.get_data())
 
 
 def log_in(client, username, password):
@@ -85,13 +91,13 @@ def test_login_with_invalid_credentials(client, user, username, password):
 
 def test_unknown_username_is_indistinguishable_from_wrong_password(client, user, monkeypatch):
     checked_hashes = []
-    real_check = app_module.check_password_hash
+    real_check = auth_module.check_password_hash
 
     def spy(password_hash, password):
         checked_hashes.append(password_hash)
         return real_check(password_hash, password)
 
-    monkeypatch.setattr(app_module, "check_password_hash", spy)
+    monkeypatch.setattr(auth_module, "check_password_hash", spy)
 
     unknown = log_in(client, "inconnu", "mauvais")
     wrong_password = log_in(client, user, "mauvais")
@@ -99,4 +105,4 @@ def test_unknown_username_is_indistinguishable_from_wrong_password(client, user,
     assert len(checked_hashes) == 2
     assert checked_hashes[0].split("$")[0] == checked_hashes[1].split("$")[0]
     assert unknown.status_code == wrong_password.status_code
-    assert unknown.get_data() == wrong_password.get_data()
+    assert without_csrf_token(unknown) == without_csrf_token(wrong_password)
