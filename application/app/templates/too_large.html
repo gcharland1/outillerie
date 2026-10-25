@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row is-center landing">
+    <div class="col-12 col-8-md card">
+        <header>
+            <h3>Envoi trop volumineux</h3>
+        </header>
+        <p>Le formulaire envoyé dépasse la taille permise et n'a pas été enregistré. Revenez en arrière et allégez-le : une image plus légère ou un texte plus court.</p>
+        <div class="actions">
+            <a class="button" href="{{ url_for('tools.mine') }}">Retour à mes outils</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

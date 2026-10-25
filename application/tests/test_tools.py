@@ -3,10 +3,9 @@ from html import unescape
 
 import pytest
 
-from app.extensions import db
 from app.tools import _read_tool_form
-from models import Tool, ToolCondition, User
-from tests.factories import make_tool
+from models import Tool, ToolCondition
+from tests.conftest import add_tool, stored, tool_count, tool_form
 
 ALREADY_RETIRED = "Cet outil est déjà retiré"
 STAYS_RECORDED = (
@@ -18,57 +17,6 @@ ERASE_NOTES = "Effacer définitivement mes notes privées"
 
 def page_text(response):
     return unescape(response.get_data(as_text=True))
-
-
-def user_id(mock_app, username):
-    with mock_app.app_context():
-        return User.query.filter_by(username=username).one().id
-
-
-@pytest.fixture
-def alice_id(mock_app, user):
-    return user_id(mock_app, user)
-
-
-@pytest.fixture
-def bob_id(mock_app, bob):
-    return user_id(mock_app, bob)
-
-
-def add_tool(mock_app, owner_id, name="Perceuse", **fields):
-    with mock_app.app_context():
-        return make_tool(owner_id, name=name, **fields).id
-
-
-def stored(mock_app, tool_id):
-    """The tool's fields as the database holds them, or None if it is gone"""
-    with mock_app.app_context():
-        tool = db.session.get(Tool, tool_id)
-        if tool is None:
-            return None
-        return {
-            "owner_id": tool.owner_id,
-            "name": tool.name,
-            "description": tool.description,
-            "condition": tool.condition,
-            "private_notes": tool.private_notes,
-            "is_active": tool.is_active,
-        }
-
-
-def tool_count(mock_app):
-    with mock_app.app_context():
-        return Tool.query.count()
-
-
-def tool_form(**fields):
-    return {
-        "name": "Perceuse",
-        "description": "Perceuse sans fil 18 V",
-        "condition": "functional",
-        "private_notes": "",
-        **fields,
-    }
 
 
 def test_visitor_is_sent_to_login_with_a_french_message(client):

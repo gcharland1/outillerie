@@ -6,7 +6,7 @@
         <header>
             <h3>{{ title }}</h3>
         </header>
-        <form action="{{ action }}" method="post">
+        <form action="{{ action }}" method="post" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label for="name">Nom:</label>
             <input type="text" id="name" name="name" value="{{ values.name }}" maxlength="250" required />
@@ -23,6 +23,27 @@
 
             <label for="private_notes">Notes privées (visibles par vous seul):</label>
             <textarea id="private_notes" name="private_notes">{{ values.private_notes or "" }}</textarea>
+
+            {% if has_photo %}
+            <fieldset class="photo-choice">
+                <legend>Image</legend>
+                <input type="hidden" name="had_photo" value="1">
+                <img class="tool-photo" src="{{ url_for('tools.photo', tool_id=tool.id) }}" alt="{{ tool.name }}">
+                <label class="checkbox photo-replace-option">
+                    <input type="checkbox" id="photo-replace" name="replace_photo" value="1"{% if replace_checked %} checked{% endif %} />
+                    Modifier l'image (JPEG, PNG ou WebP, 10 Mo au plus)
+                </label>
+                <input type="file" id="photo" name="photo" class="photo-file" accept="image/jpeg,image/png,image/webp" aria-label="Nouvelle image" />
+                <label class="checkbox photo-remove-option">
+                    <input type="checkbox" id="photo-remove" name="remove_photo" value="1"{% if remove_checked %} checked{% endif %} />
+                    Retirer l'image <span class="photo-warning">(définitif)</span>
+                </label>
+                <p class="photo-conflict">Choisissez Modifier l'image ou Retirer l'image, pas les deux.</p>
+            </fieldset>
+            {% else %}
+            <label for="photo">Ajouter une image (JPEG, PNG ou WebP, 10 Mo au plus):</label>
+            <input type="file" id="photo" name="photo" accept="image/jpeg,image/png,image/webp" />
+            {% endif %}
 
             <div class="actions">
                 <a class="button" href="{{ url_for('tools.mine') }}">Annuler</a>
