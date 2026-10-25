@@ -84,3 +84,27 @@ def test_logged_in_pages_are_not_cached(logged_in_client):
 
 def test_visitor_pages_are_cacheable(client):
     assert "no-store" not in client.get("/").headers.get("Cache-Control", "")
+
+
+def test_account_menu_offers_my_contacts(logged_in_client):
+    menu = account_menu(page_text(logged_in_client.get("/")))
+
+    assert '<a href="/contacts">Mes contacts</a>' in menu
+
+
+def test_visitor_has_neither_my_contacts_nor_search(client):
+    text = page_text(client.get("/"))
+
+    assert "Mes contacts" not in text
+    assert 'type="search"' not in text
+
+
+def test_search_bar_offers_users_and_greys_out_tools(logged_in_client):
+    text = page_text(logged_in_client.get("/"))
+
+    search_bar = re.search(r'<div class="nav-center">(.*?)</div>', text, re.DOTALL)[1]
+    assert 'action="/search" method="get"' in search_bar
+    assert '<option value="user" selected>Utilisateur</option>' in search_bar
+    assert '<option value="tool" disabled>Outil</option>' in search_bar
+    assert 'type="search" name="q" value=""' in search_bar
+    assert 'minlength="3"' in search_bar

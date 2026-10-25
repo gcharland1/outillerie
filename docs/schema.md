@@ -8,6 +8,19 @@ depuis `application/`, `uv run paracelsus inject ../docs/schema.md` le régénè
 <!-- BEGIN_SQLALCHEMY_DOCS -->
 ```mermaid
 erDiagram
+  contact_relation {
+    INTEGER user_a_id PK,FK
+    INTEGER user_b_id PK,FK "indexed"
+    DATETIME created_at
+  }
+
+  contact_request {
+    INTEGER id PK
+    INTEGER requester_id FK "indexed"
+    INTEGER recipient_id FK "indexed"
+    DATETIME created_at
+  }
+
   loan {
     INTEGER id PK
     INTEGER tool_id FK "indexed"
@@ -47,6 +60,10 @@ erDiagram
     VARCHAR(20) phone "nullable"
   }
 
+  user ||--o| contact_relation : user_a_id
+  user ||--o| contact_relation : user_b_id
+  user ||--o{ contact_request : requester_id
+  user ||--o{ contact_request : recipient_id
   tool ||--o{ loan : tool_id
   user ||--o{ loan : borrower_id
   user ||--o{ tool : owner_id
