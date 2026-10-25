@@ -39,6 +39,8 @@ def mock_app():
     with app.app_context():
         db.session.remove()
         db.drop_all()
+        # Each test builds its own app and pool; release its connections before the next one.
+        db.engine.dispose()
 
 
 @pytest.fixture
@@ -79,6 +81,23 @@ def bob(mock_app):
         )
         db.session.commit()
     return "bob"
+
+
+@pytest.fixture
+def carole(mock_app):
+    """Username of a third registered user"""
+    with mock_app.app_context():
+        db.session.add(
+            User(
+                username="carole",
+                password=generate_password_hash(USER_PASSWORD, method="pbkdf2:sha256"),
+                first_name="Carole",
+                last_name="Roy",
+                email="carole@example.com",
+            )
+        )
+        db.session.commit()
+    return "carole"
 
 
 @pytest.fixture

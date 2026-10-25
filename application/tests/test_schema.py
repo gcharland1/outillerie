@@ -20,6 +20,22 @@ EXPECTED_CONSTRAINT_NAMES = {
         "ck_loan_end_after_start",
         "excl_loan_tool_dates",
     },
+    "contact_request": {
+        "pk_contact_request",
+        "fk_contact_request_requester_id_user",
+        "fk_contact_request_recipient_id_user",
+        "ix_contact_request_requester_id",
+        "ix_contact_request_recipient_id",
+        "ck_contact_request_not_self",
+        "uq_contact_request_pair",
+    },
+    "contact_relation": {
+        "pk_contact_relation",
+        "fk_contact_relation_user_a_id_user",
+        "fk_contact_relation_user_b_id_user",
+        "ix_contact_relation_user_b_id",
+        "ck_contact_relation_ordered_pair",
+    },
 }
 
 

@@ -1,3 +1,6 @@
+{% macro pending_badge(count) -%}
+{% if count %} <span class="badge">{{ count }} <span class="visually-hidden">demande{{ "s" if count > 1 }} de contact en attente</span></span>{% endif %}
+{%- endmacro -%}
 <!DOCTYPE html>
 <html lang="fr">
     <head>
@@ -21,13 +24,27 @@
                     <a class="brand" href="/"><strong>🛠️ L'Outillerie</strong></a>
                 </div>
 
+                {% if current_user.is_authenticated %}
+                <div class="nav-center">
+                    <form class="search-bar" action="{{ url_for('search.results') }}" method="get" role="search">
+                        <select name="type" aria-label="Type de recherche">
+                            <option value="user" selected>Utilisateur</option>
+                            <option value="tool" disabled>Outil</option>
+                        </select>
+                        <input type="search" name="q" value="{{ search_text|default('') }}" minlength="3" required aria-label="Texte à chercher" placeholder="Rechercher…">
+                        <button type="submit" class="button">Rechercher</button>
+                    </form>
+                </div>
+                {% endif %}
+
                 <div class="nav-right">
                     {% if current_user.is_authenticated %}
                     <details class="account-menu">
-                        <summary>{{ current_user.username }}</summary>
+                        <summary>{{ current_user.username }}{{ pending_badge(pending_contact_requests) }}</summary>
                         <div class="account-menu-items">
                             <span class="menu-item-upcoming" aria-disabled="true">Mon profil</span>
                             <a href="{{ url_for('tools.mine') }}">Gérer mes outils</a>
+                            <a href="{{ url_for('contacts.mine') }}">Mes contacts{{ pending_badge(pending_contact_requests) }}</a>
                             <span class="menu-item-upcoming" aria-disabled="true">Préférences</span>
                         </div>
                     </details>

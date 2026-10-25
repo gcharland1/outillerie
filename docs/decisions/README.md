@@ -33,3 +33,4 @@ structure de l'app, outil de dev, convention transverse. Un détail d'implément
 | 0010 | [Protection CSRF par Flask-WTF](0010-protection-csrf-par-flask-wtf.md) | superseded by 0012 |
 | 0011 | [Une Blueprint par fonctionnalité](0011-une-blueprint-par-fonctionnalite.md) | accepted |
 | 0012 | [Protection CSRF par Flask-WTF, jeton lié à la session](0012-jeton-csrf-lie-a-la-session.md) | accepted |
+| 0013 | [Relation de contact symétrique en une ligne](0013-relation-de-contact-symetrique-en-une-ligne.md) | accepted |
