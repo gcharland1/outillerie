@@ -43,6 +43,11 @@
 - [ ] 9.1 Parcourir dans l'app (`uv run main.py`, CSRF actif) avec deux comptes : recherche → envoyer une demande → pastille chez l'autre compte → accepter → contact des deux côtés → retirer avec confirmation → nouvelle demande → refuser → « Envoyer une demande » de nouveau ; vérifier à l'œil la barre centrée, la pastille et les boutons grisés
 - [x] 9.2 Exécuter `/verifier` et obtenir « terminé »
 
+## 10. Retours de QA (`retours-qa.md`)
+
+- [x] 10.1 Barre de recherche : `.nav-left` et `.nav-right` à leur largeur naturelle, `.nav-center` prend le reste ; menu, champ et bouton fusionnés en un seul rectangle `[ Utilisateur | Rechercher… | Rechercher ]` ; menu déroulant assez large pour son texte et sa flèche ; vérifier par une capture d'écran d'une page connectée et par des tests pytest de la structure de la barre
+- [x] 10.2 Retirer « voisin » des textes affichés du site (placeholder « Rechercher… ») et ajouter la règle à `.claude/rules/templates.md` ; vérifier par un test pytest qu'aucune page connectée ni visiteur n'affiche « voisin », puis exécuter `/verifier` et obtenir « terminé »
+
 ## Workflow follow-up
 
 - Relecture par l'agent `relecteur` avant la PR, qui ferme #22.

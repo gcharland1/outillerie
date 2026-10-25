@@ -125,30 +125,74 @@ td .actions {
     margin: var(--gap) 0;
 }
 
+/* The search bar takes whatever width the logo and the account menu leave. */
+.nav-left,
+.nav-right {
+    flex: 0 0 auto;
+}
+
 .nav-center {
     flex: 1;
-    justify-content: center;
+    align-items: center;
+    padding: 0 calc(var(--gap) * 2);
 }
 
+/* Type, text and button read as one rectangle: [ Utilisateur | Rechercher… | Rechercher ]. */
 .search-bar {
     display: flex;
-    align-items: center;
-    gap: calc(var(--gap) / 2);
+    align-items: stretch;
     width: 100%;
-    max-width: 48rem;
     margin: 0;
+    border: 1px solid var(--color-grey);
+    border-radius: 4px;
+    overflow: hidden;
 }
 
+.search-bar:focus-within {
+    border-color: var(--color-primary);
+}
+
+.search-bar select,
+.search-bar input[type="search"],
+.search-bar .button {
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+/* Wide enough for the longest option and the arrow drawn in its right padding. */
 .search-bar select {
+    flex: 0 0 auto;
     width: auto;
+    padding-right: 3rem;
+    background-origin: padding-box;
+    background-position: right 1.2rem center;
+    border-right: 1px solid var(--color-lightGrey);
 }
 
 .search-bar input[type="search"] {
     flex: 1;
+    min-width: 12rem;
 }
 
 .search-bar .button {
-    margin: 0;
+    flex: 0 0 auto;
+    border-left: 1px solid var(--color-lightGrey);
+}
+
+/* Too narrow to share a line: the search bar moves under the logo and the account menu. */
+@media (max-width: 1000px) {
+    .nav {
+        flex-wrap: wrap;
+        justify-content: space-between;
+    }
+
+    .nav-center {
+        order: 3;
+        flex-basis: 100%;
+        padding: 0 0 var(--gap);
+    }
 }
 
 .badge {

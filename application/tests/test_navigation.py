@@ -108,3 +108,22 @@ def test_search_bar_offers_users_and_greys_out_tools(logged_in_client):
     assert '<option value="tool" disabled>Outil</option>' in search_bar
     assert 'type="search" name="q" value=""' in search_bar
     assert 'minlength="3"' in search_bar
+
+
+def test_search_bar_is_type_then_text_then_button_in_one_form(logged_in_client):
+    text = page_text(logged_in_client.get("/"))
+
+    search_bar = re.search(r'<form class="search-bar".*?</form>', text, re.DOTALL)[0]
+    assert re.search(r"<select .*<input .*<button .*>Rechercher</button>", search_bar, re.DOTALL)
+    assert 'placeholder="Rechercher…"' in search_bar
+
+
+def test_no_page_says_voisin(client, logged_in_client):
+    visitor_pages = ["/", "/login", "/register"]
+    user_pages = ["/", "/tools/mine", "/tools/new", "/contacts", "/search?type=user&q=bob"]
+
+    for response in [client.get(path) for path in visitor_pages] + [
+        logged_in_client.get(path) for path in user_pages
+    ]:
+        assert response.status_code == 200
+        assert "voisin" not in page_text(response).lower()
