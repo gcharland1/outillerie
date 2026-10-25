@@ -1,13 +1,18 @@
 import os
+import re
+from io import BytesIO
 
 import pytest
 from itsdangerous import TimestampSigner
+from PIL import ExifTags, Image
 from sqlalchemy import text
 from werkzeug.security import generate_password_hash
 
 from app import create_app
 from app.extensions import db
+from models import Tool
 from models.user import User
+from tests.factories import make_tool
 
 CI_DATABASE_URL = "postgresql+psycopg://outillerie:outillerie@localhost:5432/outillerie"
 USER_PASSWORD = "secret123"
@@ -107,6 +112,76 @@ def logged_in_client(client, user):
     return client
 
 
+@pytest.fixture
+def csrf_client(mock_app, client):
+    """A client of an app that checks CSRF tokens, as in production"""
+    mock_app.config["WTF_CSRF_ENABLED"] = True
+    return client
+
+
+def token_in(response):
+    return re.search(r'name="csrf_token" value="([^"]+)"', response.get_data(as_text=True))[1]
+
+
+def log_in_with_page_token(client, username, password):
+    token = token_in(client.get("/login"))
+    return client.post(
+        "/login", data={"username": username, "password": password, "csrf_token": token}
+    )
+
+
+def user_id_in(mock_app, username):
+    """A registered user's id, from outside any app context (unlike factories.user_id)"""
+    with mock_app.app_context():
+        return User.query.filter_by(username=username).one().id
+
+
+@pytest.fixture
+def alice_id(mock_app, user):
+    return user_id_in(mock_app, user)
+
+
+@pytest.fixture
+def bob_id(mock_app, bob):
+    return user_id_in(mock_app, bob)
+
+
+def add_tool(mock_app, owner_id, name="Perceuse", **fields):
+    with mock_app.app_context():
+        return make_tool(owner_id, name=name, **fields).id
+
+
+def stored(mock_app, tool_id):
+    """The tool's fields as the database holds them, or None if it is gone"""
+    with mock_app.app_context():
+        tool = db.session.get(Tool, tool_id)
+        if tool is None:
+            return None
+        return {
+            "owner_id": tool.owner_id,
+            "name": tool.name,
+            "description": tool.description,
+            "condition": tool.condition,
+            "private_notes": tool.private_notes,
+            "is_active": tool.is_active,
+        }
+
+
+def tool_count(mock_app):
+    with mock_app.app_context():
+        return Tool.query.count()
+
+
+def tool_form(**fields):
+    return {
+        "name": "Perceuse",
+        "description": "Perceuse sans fil 18 V",
+        "condition": "functional",
+        "private_notes": "",
+        **fields,
+    }
+
+
 class FakeClock:
     def __init__(self):
         self.now = 1_000_000_000
@@ -121,3 +196,68 @@ def clock(monkeypatch):
     fake = FakeClock()
     monkeypatch.setattr(TimestampSigner, "get_timestamp", lambda self: fake.now)
     return fake
+
+
+def encoded(image, image_format, **options):
+    """The bytes of an image saved in the given format"""
+    buffer = BytesIO()
+    image.save(buffer, image_format, **options)
+    return buffer.getvalue()
+
+
+def a_photo(size=(400, 300)):
+    return Image.new("RGB", size, (200, 120, 40))
+
+
+@pytest.fixture
+def jpeg_photo():
+    return encoded(a_photo(), "JPEG")
+
+
+@pytest.fixture
+def transparent_png():
+    image = Image.new("RGBA", (300, 200), (0, 0, 0, 0))
+    image.paste((0, 0, 255, 255), (100, 50, 200, 150))
+    return encoded(image, "PNG")
+
+
+@pytest.fixture
+def webp_photo():
+    return encoded(a_photo(), "WEBP")
+
+
+@pytest.fixture
+def gif_image():
+    return encoded(a_photo(), "GIF")
+
+
+@pytest.fixture
+def huge_png():
+    """50 million pixels: a bilevel image keeps it light to build and to send"""
+    return encoded(Image.new("1", (10_000, 5_000)), "PNG")
+
+
+@pytest.fixture
+def truncated_jpeg(jpeg_photo):
+    return jpeg_photo[: len(jpeg_photo) // 2]
+
+
+@pytest.fixture
+def large_geotagged_photo():
+    """A 4000 × 3000 phone photo whose metadata hold a GPS position"""
+    exif = Image.Exif()
+    exif[ExifTags.Base.Make] = "Phone"
+    gps = exif.get_ifd(ExifTags.IFD.GPSInfo)
+    gps[ExifTags.GPS.GPSLatitudeRef] = "N"
+    gps[ExifTags.GPS.GPSLatitude] = (46.0, 48.0, 0.0)
+    gps[ExifTags.GPS.GPSLongitudeRef] = "W"
+    gps[ExifTags.GPS.GPSLongitude] = (71.0, 13.0, 0.0)
+    return encoded(a_photo((4000, 3000)), "JPEG", exif=exif)
+
+
+@pytest.fixture
+def sideways_photo():
+    """A 3000 × 4000 portrait stored lying down, with the orientation tag that turns it upright"""
+    exif = Image.Exif()
+    exif[ExifTags.Base.Orientation] = 6
+    return encoded(a_photo((4000, 3000)), "JPEG", exif=exif)

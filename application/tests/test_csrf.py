@@ -1,10 +1,9 @@
-import re
 from html import unescape
 
 import pytest
 
 from models import Tool, User
-from tests.conftest import MINUTE, USER_PASSWORD
+from tests.conftest import MINUTE, USER_PASSWORD, log_in_with_page_token, token_in
 
 CSRF_FIELD = 'name="csrf_token"'
 REFUSAL_MESSAGE = "Le formulaire a expiré ou est invalide. Rechargez la page et réessayez."
@@ -14,26 +13,8 @@ def page_text(response):
     return unescape(response.get_data(as_text=True))
 
 
-def token_in(response):
-    return re.search(r'name="csrf_token" value="([^"]+)"', response.get_data(as_text=True))[1]
-
-
 def is_logged_in(client):
     return "Rebonjour" in page_text(client.get("/"))
-
-
-@pytest.fixture
-def csrf_client(mock_app, client):
-    """A client of an app that checks CSRF tokens, as in production"""
-    mock_app.config["WTF_CSRF_ENABLED"] = True
-    return client
-
-
-def log_in_with_page_token(client, username, password):
-    token = token_in(client.get("/login"))
-    return client.post(
-        "/login", data={"username": username, "password": password, "csrf_token": token}
-    )
 
 
 @pytest.mark.parametrize("path", ["/login", "/register"])

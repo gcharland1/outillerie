@@ -2,9 +2,10 @@ import os
 from datetime import timedelta
 
 from dotenv import load_dotenv
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from flask_login import current_user
 from flask_wtf.csrf import CSRFError
+from werkzeug.exceptions import RequestEntityTooLarge
 
 from app.extensions import csrf, db, login_manager, migrate
 
@@ -35,13 +36,18 @@ def create_app(test_config=None):
 
     @app.after_request
     def prevent_caching_for_logged_in_user(response):
-        if current_user.is_authenticated:
+        # The photo sets its own private cache (ADR 0014).
+        if current_user.is_authenticated and request.endpoint != "tools.photo":
             response.headers["Cache-Control"] = "no-store"
         return response
 
     @app.errorhandler(CSRFError)
     def refuse_form_without_valid_token(error):
         return render_template("csrf_error.html"), 400
+
+    @app.errorhandler(RequestEntityTooLarge)
+    def refuse_too_large_request(error):
+        return render_template("too_large.html"), 413
 
     @login_manager.user_loader
     def load_user(user_id):
@@ -58,6 +64,8 @@ def _initialize_app(test_config):
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
     # The token lives as long as the session that holds it (ADR 0012).
     app.config["WTF_CSRF_TIME_LIMIT"] = None
+    # Safety cap on any request; the photo's own 10 MB limit is checked by the view (ADR 0014).
+    app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
 
     if test_config is not None:
         app.config.from_mapping(test_config)

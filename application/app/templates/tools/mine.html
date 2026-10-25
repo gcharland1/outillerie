@@ -9,11 +9,16 @@
 {% if tools %}
     <table>
         <thead>
-            <tr><th>Nom</th><th>État</th><th></th></tr>
+            <tr><th>Photo</th><th>Nom</th><th>État</th><th></th></tr>
         </thead>
         <tbody>
         {% for tool in tools %}
             <tr>
+                <td>
+                {% if tool.id in photo_ids %}
+                    <img class="tool-thumb" src="{{ url_for('tools.photo', tool_id=tool.id) }}" alt="{{ tool.name }}">
+                {% endif %}
+                </td>
                 <td>{{ tool.name }}</td>
                 <td>{{ condition_labels[tool.condition] }}</td>
                 <td>

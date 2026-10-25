@@ -217,3 +217,52 @@ td .actions {
     clip-path: inset(50%);
     white-space: nowrap;
 }
+
+.tool-photo {
+    display: block;
+    max-width: 100%;
+    max-height: 24rem;
+    margin-bottom: var(--gap);
+    border-radius: 4px;
+}
+
+.tool-thumb {
+    display: block;
+    width: 4rem;
+    height: 4rem;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.photo-choice {
+    margin: var(--gap) 0;
+}
+
+/* Greyed until "Modifier l'image" is ticked; the server ignores the file otherwise. */
+.photo-choice:has(#photo-replace:not(:checked)) .photo-file,
+/* Each box locks the other while ticked, without JavaScript; the server refuses both anyway. */
+.photo-choice:has(#photo-replace:checked) .photo-remove-option:has(input:not(:checked)),
+.photo-choice:has(#photo-remove:checked) .photo-replace-option:has(input:not(:checked)) {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* The keyboard gets past the pointer lock: warn before the server refuses both boxes. */
+.photo-conflict {
+    display: none;
+    color: var(--color-error);
+}
+
+.photo-choice:has(#photo-replace:checked):has(#photo-remove:checked) .photo-conflict {
+    display: block;
+}
+
+/* Both boxes ticked would be refused: keep the submit button out of reach until one is unticked. */
+form:has(#photo-replace:checked):has(#photo-remove:checked) [type="submit"] {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.photo-warning {
+    color: var(--color-error);
+}
