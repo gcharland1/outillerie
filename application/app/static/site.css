@@ -125,6 +125,11 @@ td .actions {
     margin: var(--gap) 0;
 }
 
+/* Without the search bar, nothing fills the middle: keep the account side on the right. */
+.nav {
+    justify-content: space-between;
+}
+
 /* The search bar takes whatever width the logo and the account menu leave. */
 .nav-left,
 .nav-right {
@@ -185,7 +190,6 @@ td .actions {
 @media (max-width: 1000px) {
     .nav {
         flex-wrap: wrap;
-        justify-content: space-between;
     }
 
     .nav-center {
