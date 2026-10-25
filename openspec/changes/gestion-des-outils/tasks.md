@@ -45,6 +45,13 @@
 - [x] 8.1 Parcourir dans l'app (`uv run main.py`, CSRF actif) : connexion → « Gérer mes outils » → enregistrer → modifier → retirer en effaçant les notes → « Précédent » ramène à « Mes outils » → « Voir mes outils retirés » → remettre en circulation → déconnexion ; vérifier qu'aucun envoi n'est refusé pour le jeton
 - [x] 8.2 Exécuter `/verifier` et obtenir « terminé »
 
+## 9. Retours de QA (`retours-qa.md`)
+
+- [x] 9.1 Créer `app/static/site.css` (contour des boutons, `.site-header`, `.account-menu`, `.actions`, `.flash`, `.landing`), le charger après Chota épinglé à `0.9.2`, et retirer les attributs `style=` des gabarits ; vérifier par un test pytest que `/static/site.css` répond 200 et qu'aucun gabarit rendu ne contient `style=`
+- [x] 9.2 Menu du compte : `<details class="account-menu">` sur le nom d'utilisateur avec « Gérer mes outils » en simple lien texte, entre « Mon profil » et « Préférences » grisés et sans lien, « Me déconnecter » visible à côté ; vérifier par des tests pytest le lien dans le menu, le bouton de déconnexion hors du menu, et l'absence du menu pour un visiteur
+- [x] 9.3 Boutons et espacement : « Modifier » et « Retirer » (rouge) en boutons, « Remettre en circulation » sur fond plein, groupes de boutons dans `.actions`, plus de `button outline` ; vérifier par des tests pytest les classes de « Retirer » et « Confirmer le retrait » et l'absence de `outline` dans les pages d'outils
+- [ ] 9.4 Ajouter les règles d'interface à `.claude/rules/templates.md` ; vérifier à l'œil les pages connectées et visiteur dans un navigateur, puis exécuter `/verifier` et obtenir « terminé »
+
 ## Workflow follow-up
 
 - Relecture par l'agent `relecteur` avant la PR, qui ferme #17 (pas #20) ; la PR signale que les libellés « Retirer » et « Mes outils retirés » remplacent ceux de l'issue.

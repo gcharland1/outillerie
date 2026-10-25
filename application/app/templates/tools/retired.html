@@ -2,7 +2,9 @@
 
 {% block content %}
     <h2>Mes outils retirés</h2>
-    <p><a href="{{ url_for('tools.mine') }}">Retour à mes outils</a></p>
+    <div class="actions page-actions">
+        <a class="button" href="{{ url_for('tools.mine') }}">Retour à mes outils</a>
+    </div>
 {% if tools %}
     <table>
         <thead>
@@ -13,10 +15,10 @@
             <tr>
                 <td>{{ tool.name }}</td>
                 <td>{{ condition_labels[tool.condition] }}</td>
-                <td class="text-right">
-                    <form action="{{ url_for('tools.restore', tool_id=tool.id) }}" method="post">
+                <td>
+                    <form class="actions" action="{{ url_for('tools.restore', tool_id=tool.id) }}" method="post">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="button outline">Remettre en circulation</button>
+                        <button type="submit" class="button primary">Remettre en circulation</button>
                     </form>
                 </td>
             </tr>

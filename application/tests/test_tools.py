@@ -438,3 +438,29 @@ def test_every_post_form_of_the_tool_pages_carries_a_token(mock_app, logged_in_c
         assert forms, page
         for form in forms:
             assert 'name="csrf_token"' in form, page
+
+
+def test_tool_actions_are_buttons_and_retiring_is_red(mock_app, logged_in_client, alice_id):
+    tool_id = add_tool(mock_app, alice_id)
+
+    mine = logged_in_client.get("/tools/mine").get_data(as_text=True)
+    confirm = logged_in_client.get(f"/tools/{tool_id}/retire").get_data(as_text=True)
+
+    assert f'<a class="button" href="/tools/{tool_id}/edit">Modifier</a>' in mine
+    assert f'<a class="button error" href="/tools/{tool_id}/retire">Retirer</a>' in mine
+    assert '<button type="submit" class="button error">Confirmer le retrait</button>' in confirm
+
+
+def test_no_tool_page_uses_transparent_buttons(mock_app, logged_in_client, alice_id):
+    tool_id = add_tool(mock_app, alice_id)
+    add_tool(mock_app, alice_id, "Ponceuse", is_active=False)
+    pages = [
+        "/tools/mine",
+        "/tools/mine/retired",
+        "/tools/new",
+        f"/tools/{tool_id}/edit",
+        f"/tools/{tool_id}/retire",
+    ]
+
+    for page in pages:
+        assert "outline" not in logged_in_client.get(page).get_data(as_text=True), page

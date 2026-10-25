@@ -24,11 +24,9 @@
             <label for="private_notes">Notes privées (visibles par vous seul):</label>
             <textarea id="private_notes" name="private_notes">{{ values.private_notes or "" }}</textarea>
 
-            <div class="row">
-                <div class="col text-right">
-                    <a class="button outline" href="{{ url_for('tools.mine') }}">Annuler</a>
-                    <button type="submit">Enregistrer</button>
-                </div>
+            <div class="actions">
+                <a class="button" href="{{ url_for('tools.mine') }}">Annuler</a>
+                <button type="submit" class="button primary">Enregistrer</button>
             </div>
         </form>
     </div>

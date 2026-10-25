@@ -165,10 +165,30 @@ Alternative écartée : désactiver le CSRF pour `/login` et `/register`. Un CSR
 ouvrirait la session de l'attaquant dans le navigateur de la victime, qui enregistrerait alors ses
 outils dans le mauvais compte.
 
-### Navigation
+### Navigation et interface
 
-`base.html` ajoute, pour un utilisateur connecté, un lien « Gérer mes outils » vers
-`url_for('tools.mine')` à gauche du nom d'utilisateur.
+Pour un utilisateur connecté, le nom d'utilisateur de `base.html` est le `<summary>` d'un
+`<details class="account-menu">` qui contient « Gérer mes outils » (`url_for('tools.mine')`), en
+simple lien texte : un bouton serait trop lourd dans une liste de menu. « Mon profil » et
+« Préférences » l'entourent, grisés et sans lien (`<span aria-disabled="true">`), pour annoncer
+les pages à venir sans mener à une erreur 404 ;
+« Me déconnecter » reste à côté, hors du menu. `<details>` s'ouvre et se ferme au clic sans
+JavaScript (ADR 0001) ; il ne se ferme ni sur un clic ailleurs ni sur Échap, ce qui demanderait un
+script et un ADR.
+
+Les règles d'interface vivent dans `.claude/rules/templates.md` (section « Interface ») et leurs
+styles dans `app/static/site.css`, chargé après Chota, épinglé à la version `0.9.2` que servait
+`@latest` : `site.css` s'appuie sur ses classes. Les attributs `style=` des gabarits y passent.
+
+- Boutons : contour ajouté aux boutons de Chota (transparent par défaut) ; plus de `button outline`,
+  qui rendait « Remettre en circulation » blanc sur blanc (texte blanc des `submit` sur fond
+  transparent). Actions de page et de ligne en boutons ; « Retirer » et « Confirmer le retrait » en
+  `button error`.
+- Espacement : `.actions` (flex, `gap: var(--gap)`, marge au-dessus) pour chaque groupe de boutons ;
+  la barre `.site-header` est bordée et laisse un écart avant le contenu.
+
+Alternative écartée : un menu avec JavaScript, qui se fermerait sur un clic ailleurs. Il
+demanderait un ADR qui complète 0001 pour un seul menu.
 
 `app/extensions.py` pose `login_manager.login_message = "Veuillez vous connecter pour accéder à
 cette page."` : sans lui, `@login_required` affiche le message anglais de Flask-Login

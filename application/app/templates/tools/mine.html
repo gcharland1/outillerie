@@ -2,10 +2,10 @@
 
 {% block content %}
     <h2>Mes outils</h2>
-    <p>
+    <div class="actions page-actions">
         <a class="button primary" href="{{ url_for('tools.new') }}">Enregistrer un outil</a>
-        <a class="button outline" href="{{ url_for('tools.retired') }}">Voir mes outils retirés</a>
-    </p>
+        <a class="button" href="{{ url_for('tools.retired') }}">Voir mes outils retirés</a>
+    </div>
 {% if tools %}
     <table>
         <thead>
@@ -16,9 +16,11 @@
             <tr>
                 <td>{{ tool.name }}</td>
                 <td>{{ condition_labels[tool.condition] }}</td>
-                <td class="text-right">
-                    <a href="{{ url_for('tools.edit', tool_id=tool.id) }}">Modifier</a>
-                    <a href="{{ url_for('tools.confirm_retire', tool_id=tool.id) }}">Retirer</a>
+                <td>
+                    <div class="actions">
+                        <a class="button" href="{{ url_for('tools.edit', tool_id=tool.id) }}">Modifier</a>
+                        <a class="button error" href="{{ url_for('tools.confirm_retire', tool_id=tool.id) }}">Retirer</a>
+                    </div>
                 </td>
             </tr>
         {% endfor %}
