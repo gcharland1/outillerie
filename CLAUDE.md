@@ -28,6 +28,8 @@ Les variables à fournir sont dans `.env.example` ; ne jamais lire ni afficher `
 5. Vérifier : `/verifier` doit rendre « terminé » ; relecture par l'agent `relecteur` avant une PR.
 6. Archiver : `/opsx:archive` une fois le changement mergé ou validé.
 
+Raccourci des étapes 1 à 3 pour une issue GitHub : `/traiter-issue <n>`.
+
 Les ADR `accepted` dans `docs/decisions/` sont des contraintes : ne pas les contourner,
 en écrire un nouveau qui les remplace. Index : @docs/decisions/README.md
 
