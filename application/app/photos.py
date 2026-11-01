@@ -9,7 +9,8 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 from sqlalchemy import select
 
 from app.extensions import db
-from models.tool import ToolPhoto
+from models.contact import ContactRelation
+from models.tool import ToolCondition, ToolPhoto
 
 MAX_BYTES = 10 * 1024 * 1024
 MAX_PIXELS = 40_000_000
@@ -96,8 +97,14 @@ def tool_ids_with_photo(tool_ids):
 
 
 def can_view_photo(user, tool):
-    """Only the owner for now; a contact of the owner will be let in with the contacts' tool list"""
-    return user.is_authenticated and tool.owner_id == user.id
+    """The owner, or a contact of the owner while the tool is shown to contacts"""
+    if not user.is_authenticated:
+        return False
+    if tool.owner_id == user.id:
+        return True
+    if not tool.is_active or tool.condition == ToolCondition.OUT_OF_ORDER:
+        return False
+    return db.session.get(ContactRelation, ContactRelation.pair(user.id, tool.owner_id)) is not None
 
 
 def _on_white(image):

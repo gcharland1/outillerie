@@ -270,3 +270,67 @@ form:has(#photo-replace:checked):has(#photo-remove:checked) [type="submit"] {
 .photo-warning {
     color: var(--color-error);
 }
+
+.tool-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--gap);
+    margin-bottom: var(--gap);
+}
+
+.tool-filters input[type="search"] {
+    flex: 1;
+    min-width: 12rem;
+}
+
+.tool-filters .checkbox {
+    margin: 0;
+}
+
+/* One card per row on a phone, three from a medium screen up. */
+.tool-cards {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--gap);
+}
+
+@media (min-width: 600px) {
+    .tool-cards {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.tool-card {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0;
+}
+
+.tool-card .actions {
+    margin-top: auto;
+}
+
+.tool-card-photo {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.tool-card-no-photo {
+    background: var(--color-lightGrey);
+}
+
+.status-available {
+    color: var(--color-success);
+}
+
+.status-unavailable {
+    color: var(--color-grey);
+}
+
+.upcoming {
+    color: var(--color-grey);
+}

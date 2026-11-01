@@ -4,6 +4,7 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 
+from app import catalog
 from app.extensions import db
 from models.contact import ContactRelation, ContactRequest
 from models.user import User
@@ -36,6 +37,17 @@ def mine():
         .order_by(ContactRequest.created_at, ContactRequest.id)
     ).all()
     return render_template("contacts/mine.html", received=received, contacts=_my_contacts())
+
+
+@bp.route("/<int:user_id>")
+@login_required
+def show(user_id):
+    """A contact's page; the same 404 for anyone who is not a contact"""
+    contact = db.session.get(User, user_id)
+    if contact is None or not catalog.is_contact(current_user.id, contact.id):
+        abort(404)
+    page = catalog.tool_list(current_user.id, request.args, owner=contact)
+    return render_template("contacts/show.html", contact=contact, **page)
 
 
 @bp.route("/requests", methods=["POST"])

@@ -108,10 +108,32 @@ def test_no_result(as_alice):
     assert "Aucun utilisateur ne correspond à « zzz »" in search(as_alice, "zzz")
 
 
-def test_tool_search_is_not_available_yet(as_alice):
-    text = search(as_alice, "bob", search_type="tool")
+def test_tool_search_leads_to_find_a_tool(as_alice):
+    response = as_alice.get("/search", query_string={"type": "tool", "q": "  perceuse  "})
 
-    assert "Ce type de recherche n'est pas encore disponible" in text
+    assert response.status_code == 302
+    assert response.location == "/tools/find?q=perceuse"
+
+
+def test_tool_search_lands_on_the_filtered_page(as_alice):
+    response = as_alice.get(
+        "/search", query_string={"type": "tool", "q": "perceuse"}, follow_redirects=True
+    )
+
+    text = page_text(response)
+    assert "<h2>Trouver un outil</h2>" in text
+    assert 'name="q" value="perceuse"' in text
+    assert 'name="available" value="1">' in text
+
+
+def test_tool_search_needs_three_characters(as_alice):
+    assert TOO_SHORT in search(as_alice, "pe", search_type="tool")
+
+
+def test_unknown_search_type_is_not_available(as_alice):
+    text = search(as_alice, "bob", search_type="lieu")
+
+    assert "Ce type de recherche n'est pas disponible" in text
     assert usernames(text) == []
 
 

@@ -4,15 +4,11 @@ from flask import Blueprint, Response, abort, flash, redirect, render_template, 
 from flask_login import current_user, login_required
 from sqlalchemy import func, select
 
-from app import photos
+from app import catalog, photos
+from app.catalog import CONDITION_LABELS
 from app.extensions import db
 from models.tool import Tool, ToolCondition
 
-CONDITION_LABELS = {
-    ToolCondition.FUNCTIONAL: "Fonctionnel",
-    ToolCondition.NEEDS_REPAIR: "À réparer",
-    ToolCondition.OUT_OF_ORDER: "Hors d'usage",
-}
 NAME_MAX_LENGTH = Tool.name.type.length
 # A browser never refills a file field, so a redisplayed form must ask for the photo again.
 CHOOSE_PHOTO_AGAIN = "Choisissez de nouveau la photo"
@@ -37,6 +33,12 @@ def mine():
 @login_required
 def retired():
     return _render_list("tools/retired.html", _my_tools(is_active=False))
+
+
+@bp.route("/find")
+@login_required
+def find():
+    return render_template("tools/find.html", **catalog.tool_list(current_user.id, request.args))
 
 
 @bp.route("/new", methods=["GET", "POST"])
