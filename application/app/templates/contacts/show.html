@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>{{ contact.first_name }} {{ contact.last_name }} (@{{ contact.username }})</h2>
+    <h3>Outils de {{ contact.first_name }} {{ contact.last_name }}</h3>
+{% include "tools/_cards.html" %}
+{% endblock %}

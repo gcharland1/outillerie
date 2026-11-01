@@ -39,10 +39,14 @@ EXPECTED_CONSTRAINT_NAMES = {
 }
 
 
+EXTENSIONS = ("btree_gist", "pg_trgm", "unaccent")
+
+
 def drop_schema():
     db.drop_all()
     db.session.execute(text("DROP TABLE IF EXISTS alembic_version"))
-    db.session.execute(text("DROP EXTENSION IF EXISTS btree_gist"))
+    for extension in EXTENSIONS:
+        db.session.execute(text(f"DROP EXTENSION IF EXISTS {extension}"))
     db.session.commit()
 
 
@@ -79,8 +83,7 @@ def test_revisions_create_exactly_the_expected_constraints(migrated_app):
         )
 
 
-def test_revisions_create_the_btree_gist_extension(migrated_app):
+def test_revisions_create_the_extensions(migrated_app):
     with migrated_app.app_context():
-        assert "btree_gist" in {
-            row[0] for row in db.session.execute(text("SELECT extname FROM pg_extension"))
-        }
+        installed = {row[0] for row in db.session.execute(text("SELECT extname FROM pg_extension"))}
+        assert set(EXTENSIONS) <= installed

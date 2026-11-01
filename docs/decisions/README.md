@@ -36,3 +36,4 @@ structure de l'app, outil de dev, convention transverse. Un détail d'implément
 | 0013 | [Relation de contact symétrique en une ligne](0013-relation-de-contact-symetrique-en-une-ligne.md) | accepted |
 | 0014 | [Normalisation des photos téléversées avec Pillow](0014-normalisation-des-photos-televersees-avec-pillow.md) | accepted |
 | 0015 | [Exposer la production par Cloudflare Tunnel, app en boucle locale](0015-exposer-la-production-par-cloudflare-tunnel.md) | accepted |
+| 0016 | [Recherche floue des outils avec pg_trgm et unaccent](0016-recherche-floue-des-outils-avec-pg-trgm-et-unaccent.md) | accepted |

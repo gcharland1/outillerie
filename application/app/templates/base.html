@@ -29,7 +29,7 @@
                     <form class="search-bar" action="{{ url_for('search.results') }}" method="get" role="search">
                         <select name="type" aria-label="Type de recherche">
                             <option value="user" selected>Utilisateur</option>
-                            <option value="tool" disabled>Outil</option>
+                            <option value="tool">Outil</option>
                         </select>
                         <input type="search" name="q" value="{{ search_text|default('') }}" minlength="3" required aria-label="Texte à chercher" placeholder="Rechercher…">
                         <button type="submit" class="button">Rechercher</button>
@@ -45,6 +45,7 @@
                             <span class="menu-item-upcoming" aria-disabled="true">Mon profil</span>
                             <a href="{{ url_for('tools.mine') }}">Gérer mes outils</a>
                             <a href="{{ url_for('contacts.mine') }}">Mes contacts{{ pending_badge(pending_contact_requests) }}</a>
+                            <a href="{{ url_for('tools.find') }}">Trouver un outil</a>
                             <span class="menu-item-upcoming" aria-disabled="true">Préférences</span>
                         </div>
                     </details>

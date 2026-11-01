@@ -1,0 +1,35 @@
+<form class="tool-filters" action="{{ url_for(request.endpoint, **request.view_args) }}" method="get" role="search">
+    <input type="search" name="q" value="{{ filters.text }}" aria-label="Texte à chercher dans les outils" placeholder="Nom ou description…">
+    <label class="checkbox">
+        <input type="checkbox" name="available" value="1"{% if filters.available_only %} checked{% endif %}>
+        Disponible uniquement
+    </label>
+    <button type="submit" class="button">Filtrer</button>
+</form>
+{% if cards %}
+<div class="tool-cards">
+    {% for card in cards %}
+    <article class="card tool-card">
+        {% if card.has_photo %}
+        <img class="tool-card-photo" src="{{ url_for('tools.photo', tool_id=card.tool.id) }}" alt="{{ card.tool.name }}">
+        {% else %}
+        <div class="tool-card-photo tool-card-no-photo" aria-hidden="true"></div>
+        {% endif %}
+        <h4>{{ card.tool.name }}</h4>
+        <p><a href="{{ url_for('contacts.show', user_id=card.tool.owner.id) }}">{{ card.tool.owner.first_name }} {{ card.tool.owner.last_name }}</a></p>
+        <p>{{ card.description }}</p>
+        <p>{{ card.condition }}</p>
+        <p class="{{ 'status-available' if card.available else 'status-unavailable' }}">{{ card.status }}</p>
+        <div class="actions">
+            <span class="upcoming">Bientôt disponible</span>
+            <button type="button" class="button" disabled>Emprunter</button>
+        </div>
+    </article>
+    {% endfor %}
+</div>
+{% else %}
+<p>{{ empty_message }}</p>
+    {% if suggest_search %}
+<p>Cherchez un utilisateur avec la barre de recherche, ou <a href="{{ url_for('search.results', type='user') }}">ouvrez la recherche d'utilisateurs</a>.</p>
+    {% endif %}
+{% endif %}

@@ -99,13 +99,13 @@ def test_visitor_has_neither_my_contacts_nor_search(client):
     assert 'type="search"' not in text
 
 
-def test_search_bar_offers_users_and_greys_out_tools(logged_in_client):
+def test_search_bar_offers_users_and_tools(logged_in_client):
     text = page_text(logged_in_client.get("/"))
 
     search_bar = re.search(r'<div class="nav-center">(.*?)</div>', text, re.DOTALL)[1]
     assert 'action="/search" method="get"' in search_bar
     assert '<option value="user" selected>Utilisateur</option>' in search_bar
-    assert '<option value="tool" disabled>Outil</option>' in search_bar
+    assert '<option value="tool">Outil</option>' in search_bar
     assert 'type="search" name="q" value=""' in search_bar
     assert 'minlength="3"' in search_bar
 

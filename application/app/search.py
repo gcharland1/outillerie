@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request
+from flask import Blueprint, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from sqlalchemy import func, or_, select
 
@@ -18,10 +18,12 @@ def results():
     search_text = request.args.get("q", "").strip()
     page = {"search_text": search_text, "results": [], "message": None}
 
-    if search_type != "user":
-        page["message"] = "Ce type de recherche n'est pas encore disponible"
+    if search_type not in ("user", "tool"):
+        page["message"] = "Ce type de recherche n'est pas disponible"
     elif len(search_text) < SEARCH_MIN_LENGTH:
         page["message"] = f"Saisissez au moins {SEARCH_MIN_LENGTH} caractères"
+    elif search_type == "tool":
+        return redirect(url_for("tools.find", q=search_text))
     else:
         users = _matching_users(search_text)
         states = relation_states([user.id for user in users])
