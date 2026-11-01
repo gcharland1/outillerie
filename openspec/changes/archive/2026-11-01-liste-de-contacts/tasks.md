@@ -40,7 +40,7 @@
 
 ## 9. Vérification
 
-- [ ] 9.1 Parcourir dans l'app (`uv run main.py`, CSRF actif) avec deux comptes : recherche → envoyer une demande → pastille chez l'autre compte → accepter → contact des deux côtés → retirer avec confirmation → nouvelle demande → refuser → « Envoyer une demande » de nouveau ; vérifier à l'œil la barre centrée, la pastille et les boutons grisés
+- [x] 9.1 Parcourir dans l'app (`uv run main.py`, CSRF actif) avec deux comptes : recherche → envoyer une demande → pastille chez l'autre compte → accepter → contact des deux côtés → retirer avec confirmation → nouvelle demande → refuser → « Envoyer une demande » de nouveau ; vérifier à l'œil la barre centrée, la pastille et les boutons grisés
 - [x] 9.2 Exécuter `/verifier` et obtenir « terminé »
 
 ## 10. Retours de QA (`retours-qa.md`)
