@@ -4,13 +4,13 @@ from html import unescape
 
 import pytest
 
-from app import photos
+from app import catalog, photos
 from app.extensions import db
-from models import Loan, LoanStatus, Tool, ToolCondition
+from models import Loan, LoanStatus, Tool, ToolCondition, User
 from tests.conftest import USER_PASSWORD
 from tests.factories import make_contact_relation, make_contact_request, make_tool, user_id
 
-TODAY = date.today()
+TODAY = catalog.site_today()
 
 
 def page_text(response):
@@ -207,6 +207,9 @@ def test_navigation_offers_find_a_tool(mock_app, ids, as_alice):
 def test_contact_page(mock_app, contacts, as_alice):
     add_tool(mock_app, contacts["bob"], name="Perceuse")
     with mock_app.app_context():
+        bob = db.session.get(User, contacts["bob"])
+        bob.address = "12 rue des Érables"
+        bob.phone = "418-555-0199"
         make_contact_relation(contacts["alice"], contacts["carole"])
     add_tool(mock_app, contacts["carole"], name="Ponceuse")
 
@@ -215,7 +218,8 @@ def test_contact_page(mock_app, contacts, as_alice):
     assert "<h2>Bob Gagnon (@bob)</h2>" in text
     assert "<h3>Outils de Bob Gagnon</h3>" in text
     assert card_names(text) == ["Perceuse"]
-    assert "bob@example.com" not in text
+    for private in ("bob@example.com", "12 rue des Érables", "418-555-0199"):
+        assert private not in text
 
 
 def test_contact_without_tools(mock_app, contacts, as_alice):

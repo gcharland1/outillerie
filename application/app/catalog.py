@@ -1,7 +1,8 @@
 """The tools a user sees among their contacts' tools, and how each one stands for a loan."""
 
-from datetime import date
+from datetime import datetime
 from typing import NamedTuple
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import String, and_, case, exists, func, or_, select
 from sqlalchemy.orm import joinedload
@@ -22,6 +23,8 @@ DESCRIPTION_MAX_LENGTH = 125
 FUZZY_THRESHOLD = 0.5
 # Below this length, trigrams match too loosely: only substrings count.
 FUZZY_MIN_LENGTH = 3
+# The server runs in UTC; a loan's last day ends at midnight where its users live.
+SITE_TIMEZONE = ZoneInfo("America/Toronto")
 MONTHS = (
     "janvier",
     "février",
@@ -143,6 +146,10 @@ def loan_statuses(tool_ids):
     return statuses
 
 
+def site_today():
+    return datetime.now(SITE_TIMEZONE).date()
+
+
 def short_description(description):
     if len(description) <= DESCRIPTION_MAX_LENGTH:
         return description
@@ -183,7 +190,7 @@ def _blocking_loan():
         Loan.status == LoanStatus.LENT,
         and_(
             Loan.status.in_((LoanStatus.REQUESTED, LoanStatus.ACCEPTED)),
-            Loan.end_date >= date.today(),
+            Loan.end_date >= site_today(),
         ),
     )
 

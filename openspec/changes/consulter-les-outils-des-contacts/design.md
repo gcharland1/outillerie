@@ -51,7 +51,8 @@ deux sources de vérité.
 
 Priorité : `lent` (quelles que soient les dates) → « Prêté jusqu'au <end_date> » ; sinon un
 `requested` ou `accepted` non terminé (`end_date >= today`) → « En attente de prêt » ; sinon
-« Disponible ». « Disponible uniquement » applique la même règle en SQL (`NOT EXISTS` sur les
+« Disponible ». « Aujourd'hui » est la date dans le fuseau du site (`SITE_TIMEZONE`,
+`America/Toronto`) : le conteneur tourne en UTC. « Disponible uniquement » applique la même règle en SQL (`NOT EXISTS` sur les
 prêts bloquants), pour ne pas filtrer après coup en Python. La date est formatée en Python par
 `catalog.french_date` (mois en toutes lettres), dans le libellé : pas de Babel.
 

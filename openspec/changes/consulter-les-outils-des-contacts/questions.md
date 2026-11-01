@@ -69,6 +69,9 @@ ce que voit l'emprunteur après l'envoi, sort des demandes au retrait d'un conta
   Remplacé au retour de QA (`retours-qa.md`) : entrée du menu du compte, bouton retiré ; la règle
   du menu du compte (`.claude/rules/templates.md`) est reformulée.
 - #42 (QA) : la carte affiche le prénom et le nom du propriétaire, en lien vers sa page.
+- #43 (relecture) : « aujourd'hui » se calcule dans le fuseau `America/Toronto`, pas en UTC
+  (fuseau du conteneur) ; aucun fuseau n'était configuré. Convention, Inferred des coordonnées de
+  Québec dans les fixtures de test ; à changer si le site sert une autre région.
 - #16 : en-tête minimal « Prénom Nom (@nom d'utilisateur) », puis la section des outils ; aucune coordonnée.
 - #37 (second passage) : sous-chaîne exacte dans le nom d'abord. Tri : exact dans le nom, score nom,
   score description, `lower(name)`, `id` (remplace le tri de #35).

@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from sqlalchemy import event
@@ -8,7 +8,7 @@ from app.extensions import db
 from models import Loan, LoanStatus, ToolCondition
 from tests.factories import make_contact_relation, make_contact_request, make_tool, user_id
 
-TODAY = date.today()
+TODAY = catalog.site_today()
 
 
 @pytest.fixture
@@ -134,6 +134,23 @@ def test_loan_status(mock_app, contacts, status, first_day, last_day, label):
         [card] = catalog.tool_cards([tool])
         assert card.status.startswith(label)
         assert card.available == (label == "Disponible")
+
+
+def test_a_loan_ends_at_midnight_where_its_users_live(mock_app, contacts, monkeypatch):
+    class EveningInQuebec(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            # 21 h on November 3 in Québec is already November 4 in UTC.
+            return datetime(2026, 11, 4, 2, 0, tzinfo=UTC).astimezone(tz)
+
+    monkeypatch.setattr(catalog, "datetime", EveningInQuebec)
+    with mock_app.app_context():
+        tool = make_tool(contacts["bob"])
+        add_loan(
+            tool, contacts["alice"], LoanStatus.REQUESTED, date(2026, 11, 2), date(2026, 11, 3)
+        )
+        assert catalog.site_today() == date(2026, 11, 3)
+        assert catalog.loan_statuses([tool.id]) == {tool.id: "En attente de prêt"}
 
 
 def test_lent_wins_over_a_pending_request(mock_app, contacts):
