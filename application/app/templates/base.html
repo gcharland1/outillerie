@@ -39,13 +39,13 @@
 
                 <div class="nav-right">
                     {% if current_user.is_authenticated %}
-                    <a class="button" href="{{ url_for('tools.find') }}">Trouver un outil</a>
                     <details class="account-menu">
                         <summary>{{ current_user.username }}{{ pending_badge(pending_contact_requests) }}</summary>
                         <div class="account-menu-items">
                             <span class="menu-item-upcoming" aria-disabled="true">Mon profil</span>
                             <a href="{{ url_for('tools.mine') }}">Gérer mes outils</a>
                             <a href="{{ url_for('contacts.mine') }}">Mes contacts{{ pending_badge(pending_contact_requests) }}</a>
+                            <a href="{{ url_for('tools.find') }}">Trouver un outil</a>
                             <span class="menu-item-upcoming" aria-disabled="true">Préférences</span>
                         </div>
                     </details>

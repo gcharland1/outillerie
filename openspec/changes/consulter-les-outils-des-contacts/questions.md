@@ -66,6 +66,9 @@ ce que voit l'emprunteur après l'envoi, sort des demandes au retrait d'un conta
 - #27 : les outils `out_of_order` n'apparaissent pas chez les contacts (ni leur photo) ; `needs_repair` est
   listé avec son état et reste disponible.
 - #10 : bouton « Trouver un outil » dans la barre de navigation, pour un utilisateur connecté.
+  Remplacé au retour de QA (`retours-qa.md`) : entrée du menu du compte, bouton retiré ; la règle
+  du menu du compte (`.claude/rules/templates.md`) est reformulée.
+- #42 (QA) : la carte affiche le prénom et le nom du propriétaire, en lien vers sa page.
 - #16 : en-tête minimal « Prénom Nom (@nom d'utilisateur) », puis la section des outils ; aucune coordonnée.
 - #37 (second passage) : sous-chaîne exacte dans le nom d'abord. Tri : exact dans le nom, score nom,
   score description, `lower(name)`, `id` (remplace le tri de #35).

@@ -9,9 +9,9 @@ montre ceux de ses contacts, la photo d'un outil n'est servie qu'à son proprié
 
 ## What Changes
 
-- Page « Trouver un outil » (`/tools/find`), atteinte par un bouton de la barre de navigation :
+- Page « Trouver un outil » (`/tools/find`), atteinte par une entrée du menu du compte :
   tous les outils en circulation des contacts de l'utilisateur, en cartes (une colonne sur mobile,
-  trois à partir d'un écran moyen) avec photo, nom, description coupée à 125 caractères, état et
+  trois à partir d'un écran moyen) avec photo, nom, propriétaire, description coupée à 125 caractères, état et
   statut de prêt.
 - Page d'un contact (`/contacts/<id>`) : « Prénom Nom (@nom d'utilisateur) », puis la section
   « Outils de <Prénom Nom> » avec les mêmes cartes ; le nom d'un contact devient un lien dans

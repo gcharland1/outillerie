@@ -42,13 +42,13 @@ MUST NOT y figurer.
 - **THEN** la page « Trouver un outil » d'Alice montre la perceuse avec l'état « À réparer »
 
 ### Requirement: Page « Trouver un outil »
-Pour un utilisateur connecté, la barre de navigation SHALL offrir un bouton « Trouver un outil »
-vers la page du même nom, qui liste tous les outils visibles de ses contacts. La page MUST exiger
+Pour un utilisateur connecté, le menu du compte SHALL offrir l'entrée « Trouver un outil » vers
+la page du même nom, qui liste tous les outils visibles de ses contacts. La page MUST exiger
 une session ouverte : un visiteur est redirigé vers `/login`.
 
-#### Scenario: Bouton dans la navigation
+#### Scenario: Entrée du menu du compte
 - **WHEN** un utilisateur connecté ouvre une page du site
-- **THEN** la navigation contient un bouton « Trouver un outil » qui mène à la page « Trouver un outil »
+- **THEN** son nom d'utilisateur ouvre un menu qui contient « Trouver un outil », qui mène à la page « Trouver un outil »
 
 #### Scenario: Visiteur
 - **WHEN** un visiteur demande la page « Trouver un outil »
@@ -66,14 +66,15 @@ les outils visibles de ce contact, avec les mêmes cartes et les mêmes filtres 
 - **THEN** la section « Outils de Bob Gagnon » montre l'outil de Bob et pas celui de Carole
 
 ### Requirement: Carte d'un outil
-Chaque outil SHALL être présenté par une carte qui affiche son nom, sa photo, sa description,
-son état et son statut de prêt, ainsi qu'un bouton « Emprunter » grisé portant « Bientôt
+Chaque outil SHALL être présenté par une carte qui affiche son nom, sa photo, le prénom et le nom
+de son propriétaire, menant à sa page, sa description, son état et son statut de prêt, ainsi qu'un bouton « Emprunter » grisé portant « Bientôt
 disponible ». Les cartes sont disposées sur trois colonnes à partir d'un écran moyen, sur une
 seule sur un petit écran. Les notes privées du propriétaire MUST NOT être affichées.
 
 #### Scenario: Contenu de la carte
 - **WHEN** Bob, contact d'Alice, a une perceuse fonctionnelle avec photo et description
-- **THEN** la carte de la perceuse affiche son nom, sa photo, sa description, « Fonctionnel » et son statut
+- **THEN** la carte de la perceuse affiche son nom, sa photo, « Bob Gagnon », sa description, « Fonctionnel » et son statut
+- **AND** « Bob Gagnon » mène à la page de Bob
 - **AND** elle affiche un bouton « Emprunter » désactivé et « Bientôt disponible »
 
 #### Scenario: Notes privées cachées

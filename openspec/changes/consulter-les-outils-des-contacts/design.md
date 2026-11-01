@@ -91,8 +91,10 @@ prêts bloquants), pour ne pas filtrer après coup en Python. La date est format
 - Bouton « Emprunter » : `<button class="button" disabled>` + « Bientôt disponible ».
 - Paramètres : `available` coché seulement pour la valeur `1`, toute autre valeur vaut décoché ;
   `q` est coupé de ses espaces autour. Un outil sans description n'affiche pas de description.
-- `base.html` : option « Outil » sans `disabled` ; bouton « Trouver un outil » (`a.button`) dans
-  la navigation, pas dans le menu du compte (`.claude/rules/templates.md`).
+- `base.html` : option « Outil » sans `disabled` ; entrée « Trouver un outil » (lien texte) dans
+  le menu du compte, après « Mes contacts » (retour de QA, `retours-qa.md`).
+- Carte : prénom et nom du propriétaire en lien vers `contacts.show` ; `visible_tools` charge le
+  propriétaire avec l'outil (`joinedload`), le nombre de requêtes reste fixe.
 - `contacts/mine.html` : nom du contact en lien vers `contacts.show`.
 
 ### Accès à la photo

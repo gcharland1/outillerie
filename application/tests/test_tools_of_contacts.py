@@ -85,6 +85,7 @@ def test_find_a_tool_shows_a_card_per_visible_tool(mock_app, contacts, as_alice,
     assert "<h2>Trouver un outil</h2>" in text
     assert card_names(text) == ["Perceuse"]
     assert f'src="/tools/{tool_id}/photo" alt="Perceuse"' in text
+    assert f'<a href="/contacts/{contacts["bob"]}">Bob Gagnon</a>' in text
     assert "Perceuse sans fil 18 V" in text
     assert "<p>Fonctionnel</p>" in text
     assert '<p class="status-available">Disponible</p>' in text
@@ -196,9 +197,10 @@ def test_visitor_is_sent_to_login(client):
 
 
 def test_navigation_offers_find_a_tool(mock_app, ids, as_alice):
-    assert '<a class="button" href="/tools/find">Trouver un outil</a>' in page_text(
-        as_alice.get("/")
-    )
+    account_menu = re.search(
+        r'<div class="account-menu-items">(.*?)</div>', page_text(as_alice.get("/")), re.DOTALL
+    )[1]
+    assert '<a href="/tools/find">Trouver un outil</a>' in account_menu
     assert "Trouver un outil" not in page_text(mock_app.test_client().get("/"))
 
 

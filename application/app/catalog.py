@@ -4,6 +4,7 @@ from datetime import date
 from typing import NamedTuple
 
 from sqlalchemy import String, and_, case, exists, func, or_, select
+from sqlalchemy.orm import joinedload
 
 from app import photos
 from app.extensions import db
@@ -84,10 +85,14 @@ def has_contacts(user_id):
 
 def visible_tools(user_id, owner_id=None, text="", available_only=False):
     """The contacts' tools the user may see, filtered and ordered as the spec says"""
-    query = select(Tool).where(
-        Tool.is_active,
-        Tool.condition != ToolCondition.OUT_OF_ORDER,
-        Tool.owner_id.in_(_contact_ids(user_id)),
+    query = (
+        select(Tool)
+        .options(joinedload(Tool.owner))
+        .where(
+            Tool.is_active,
+            Tool.condition != ToolCondition.OUT_OF_ORDER,
+            Tool.owner_id.in_(_contact_ids(user_id)),
+        )
     )
     if owner_id is not None:
         query = query.where(Tool.owner_id == owner_id)

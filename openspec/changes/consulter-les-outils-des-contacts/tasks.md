@@ -16,7 +16,7 @@
 ## 3. Page « Trouver un outil »
 
 - [x] 3.1 `GET /tools/find` (`tools.find`, `@login_required`), gabarits `tools/find.html` et `tools/_cards.html` (formulaire GET `q` + `available` + « Filtrer », grille, cartes, messages de liste vide), styles `.tool-cards` dans `site.css` ; vérifier par des tests pytest le contenu d'une carte (nom, photo, description, état, statut, « Emprunter » désactivé, « Bientôt disponible »), l'espace réservé sans photo, les notes privées absentes, la description à 125 et à 200 caractères, les quatre messages de liste vide, la case et le texte conservés, et la redirection d'un visiteur
-- [x] 3.2 Bouton « Trouver un outil » dans la navigation de `base.html` pour un utilisateur connecté ; vérifier par des tests pytest sa présence et son absence pour un visiteur (`tests/test_navigation.py`)
+- [x] 3.2 Entrée « Trouver un outil » dans le menu du compte de `base.html` pour un utilisateur connecté ; vérifier par des tests pytest sa présence et son absence pour un visiteur (`tests/test_navigation.py`)
 
 ## 4. Page d'un contact
 
@@ -33,7 +33,7 @@
 
 ## 7. Vérification
 
-- [ ] 7.1 Vérifier à la main dans `docker compose up --build`, avec deux comptes en contact et un troisième sans lien : « Trouver un outil », page du contact, filtres et faute de frappe, recherche « Outil » depuis la barre, photo visible, grille sur écran étroit et large
+- [x] 7.1 Vérifier à la main dans `docker compose up --build`, avec deux comptes en contact et un troisième sans lien : « Trouver un outil », page du contact, filtres et faute de frappe, recherche « Outil » depuis la barre, photo visible, grille sur écran étroit et large
 - [x] 7.2 Lancer `/verifier` ; il doit rendre « terminé »
 
 ## Workflow follow-up

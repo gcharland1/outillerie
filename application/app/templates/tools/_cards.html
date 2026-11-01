@@ -16,6 +16,7 @@
         <div class="tool-card-photo tool-card-no-photo" aria-hidden="true"></div>
         {% endif %}
         <h4>{{ card.tool.name }}</h4>
+        <p><a href="{{ url_for('contacts.show', user_id=card.tool.owner.id) }}">{{ card.tool.owner.first_name }} {{ card.tool.owner.last_name }}</a></p>
         <p>{{ card.description }}</p>
         <p>{{ card.condition }}</p>
         <p class="{{ 'status-available' if card.available else 'status-unavailable' }}">{{ card.status }}</p>

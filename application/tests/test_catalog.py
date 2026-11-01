@@ -235,12 +235,14 @@ def count_queries(work):
 def test_the_number_of_queries_does_not_grow_with_the_tools(mock_app, contacts):
     def cards():
         db.session.expire_all()
-        catalog.tool_cards(catalog.visible_tools(contacts["alice"]))
+        for card in catalog.tool_cards(catalog.visible_tools(contacts["alice"])):
+            assert card.tool.owner.first_name
 
     with mock_app.app_context():
         tool = make_tool(contacts["bob"])
         add_loan(tool, contacts["alice"], LoanStatus.REQUESTED, TODAY, TODAY + timedelta(days=2))
         one_tool = count_queries(cards)
+        make_contact_relation(contacts["alice"], contacts["carole"])
         for number in range(9):
-            make_tool(contacts["bob"], name=f"Outil {number}")
+            make_tool(contacts["bob" if number % 2 else "carole"], name=f"Outil {number}")
         assert count_queries(cards) == one_tool
