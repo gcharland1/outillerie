@@ -6,8 +6,8 @@ import pytest
 
 from app import catalog, photos
 from app.extensions import db
-from models import Loan, LoanStatus, Tool, ToolCondition, User
-from tests.conftest import USER_PASSWORD
+from models import LoanStatus, Tool, ToolCondition, User
+from tests.conftest import USER_PASSWORD, add_loan
 from tests.factories import make_contact_relation, make_contact_request, make_tool, user_id
 
 TODAY = catalog.site_today()
@@ -56,20 +56,6 @@ def add_photo(mock_app, tool_id, jpeg):
         db.session.commit()
 
 
-def add_loan(mock_app, tool_id, borrower_id, status, first_day, last_day):
-    with mock_app.app_context():
-        db.session.add(
-            Loan(
-                tool_id=tool_id,
-                borrower_id=borrower_id,
-                status=status,
-                start_date=first_day,
-                end_date=last_day,
-            )
-        )
-        db.session.commit()
-
-
 def find(client, **params):
     return page_text(client.get("/tools/find", query_string=params))
 
@@ -89,8 +75,10 @@ def test_find_a_tool_shows_a_card_per_visible_tool(mock_app, contacts, as_alice,
     assert "Perceuse sans fil 18 V" in text
     assert "<p>Fonctionnel</p>" in text
     assert '<p class="status-available">Disponible</p>' in text
-    assert '<button type="button" class="button" disabled>Emprunter</button>' in text
-    assert "Bientôt disponible" in text
+    assert (
+        f'<a class="button primary" href="/loans/new/{tool_id}?origin=find">Emprunter</a>' in text
+    )
+    assert "Bientôt disponible" not in text
 
 
 def test_card_without_photo_keeps_its_place(mock_app, contacts, as_alice):
@@ -118,7 +106,7 @@ def test_description_is_cut_after_125_characters(mock_app, contacts, as_alice, l
 
 def test_lent_tool_shows_its_return_date(mock_app, contacts, as_alice):
     tool_id = add_tool(mock_app, contacts["bob"])
-    add_loan(mock_app, tool_id, contacts["carole"], LoanStatus.LENT, TODAY, date(2099, 11, 3))
+    add_loan(mock_app, tool_id, contacts["carole"], TODAY, date(2099, 11, 3), LoanStatus.LENT)
 
     assert '<p class="status-unavailable">Prêté jusqu\'au 3 novembre 2099</p>' in find(as_alice)
 
@@ -127,8 +115,8 @@ def test_available_only(mock_app, contacts, as_alice):
     add_tool(mock_app, contacts["bob"], name="Perceuse")
     lent = add_tool(mock_app, contacts["bob"], name="Scie")
     pending = add_tool(mock_app, contacts["bob"], name="Ponceuse")
-    add_loan(mock_app, lent, contacts["carole"], LoanStatus.LENT, TODAY, TODAY + timedelta(3))
-    add_loan(mock_app, pending, contacts["carole"], LoanStatus.REQUESTED, TODAY, TODAY)
+    add_loan(mock_app, lent, contacts["carole"], TODAY, TODAY + timedelta(3), LoanStatus.LENT)
+    add_loan(mock_app, pending, contacts["carole"], TODAY, TODAY, LoanStatus.REQUESTED)
 
     checked = find(as_alice, available="1")
     unchecked = find(as_alice)
@@ -142,7 +130,7 @@ def test_available_only(mock_app, contacts, as_alice):
 
 def test_an_unexpected_available_value_does_not_filter(mock_app, contacts, as_alice):
     lent = add_tool(mock_app, contacts["bob"])
-    add_loan(mock_app, lent, contacts["carole"], LoanStatus.LENT, TODAY, TODAY)
+    add_loan(mock_app, lent, contacts["carole"], TODAY, TODAY, LoanStatus.LENT)
 
     assert card_names(find(as_alice, available="oui")) == ["Perceuse"]
 

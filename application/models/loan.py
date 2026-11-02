@@ -35,6 +35,8 @@ class Loan(db.Model):
         default=LoanStatus.REQUESTED,
         server_default=LoanStatus.REQUESTED.value,
     )
+    # Shown to the owner and the borrower only.
+    message = db.Column(db.String(500), nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, server_default=func.now())
 
     tool = db.relationship("Tool")

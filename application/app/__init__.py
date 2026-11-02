@@ -22,13 +22,14 @@ def create_app(test_config=None):
     login_manager.init_app(app)
     csrf.init_app(app)
 
-    from app import auth, contacts, search, tools
+    from app import auth, contacts, loans, search, tools
     from models.user import User
 
     app.register_blueprint(auth.bp)
     app.register_blueprint(tools.bp)
     app.register_blueprint(contacts.bp)
     app.register_blueprint(search.bp)
+    app.register_blueprint(loans.bp)
 
     @app.route("/")
     def index():

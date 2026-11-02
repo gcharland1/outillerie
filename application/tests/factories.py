@@ -1,7 +1,7 @@
 from datetime import date
 
 from app.extensions import db
-from models import ContactRelation, ContactRequest, Tool, User
+from models import ContactRelation, ContactRequest, Loan, Tool, User
 
 
 def a_day(day):
@@ -38,3 +38,17 @@ def make_contact_relation(first_id, second_id):
 
 def user_id(username):
     return User.query.filter_by(username=username).one().id
+
+
+def make_loan(tool_id, borrower_id, first_day, last_day, status=None, message=None):
+    loan = Loan(
+        tool_id=tool_id,
+        borrower_id=borrower_id,
+        start_date=first_day,
+        end_date=last_day,
+        status=status,
+        message=message,
+    )
+    db.session.add(loan)
+    db.session.commit()
+    return loan

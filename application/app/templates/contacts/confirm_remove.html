@@ -7,6 +7,9 @@
             <h3>Retirer {{ contact.first_name }} {{ contact.last_name }} ({{ contact.username }}) de vos contacts ?</h3>
         </header>
         <p>Vous ne figurerez plus non plus dans ses contacts. Vous pourrez lui envoyer une nouvelle demande plus tard.</p>
+        {% if cancel_notice %}
+        <p>{{ cancel_notice }}.</p>
+        {% endif %}
         <form action="{{ url_for('contacts.remove', user_id=contact.id) }}" method="post">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="actions">
