@@ -77,14 +77,14 @@ def create(tool_id):
         "end": request.form.get("end", "").strip(),
         "message": request.form.get("message", "").replace("\r\n", "\n").strip(),
     }
+    if not catalog.is_available(tool.id):
+        return _back_from_unavailable(tool, origin)
     dates, error = _read_dates(values)
     if error is None and len(values["message"]) > MESSAGE_MAX_LENGTH:
         error = MESSAGE_TOO_LONG
     if error is not None:
         flash(error)
         return _render_confirm(tool, values, origin)
-    if not catalog.is_available(tool.id):
-        return _back_from_unavailable(tool, origin)
 
     start, end = dates
     db.session.add(
@@ -109,18 +109,18 @@ def mine():
         .join(Tool, Loan.tool_id == Tool.id)
         .options(joinedload(Loan.tool), joinedload(Loan.borrower))
         .where(Tool.owner_id == current_user.id)
-        .order_by(Loan.start_date.desc(), Loan.id.desc())
+        .order_by(Loan.created_at.desc(), Loan.id.desc())
     ).all()
     sent = db.session.scalars(
         select(Loan)
         .options(joinedload(Loan.tool).joinedload(Tool.owner))
         .where(Loan.borrower_id == current_user.id)
-        .order_by(Loan.start_date.desc(), Loan.id.desc())
+        .order_by(Loan.created_at.desc(), Loan.id.desc())
     ).all()
     return render_template(
         "loans/mine.html",
-        received=[_row(loan) for loan in received],
-        sent=[_row(loan) for loan in sent],
+        received=_rows(received),
+        sent=_rows(sent),
     )
 
 
@@ -163,8 +163,14 @@ def withdraw(loan_id):
 
 
 def _render_confirm(tool, values, origin):
+    today = catalog.site_today()
     return render_template(
         "loans/confirm.html",
+        bounds={
+            "first": today.isoformat(),
+            "last_start": (today + timedelta(days=MAX_LEAD_DAYS)).isoformat(),
+            "last_end": (today + timedelta(days=MAX_LEAD_DAYS + MAX_LOAN_DAYS - 1)).isoformat(),
+        },
         tool=tool,
         has_photo=bool(photos.tool_ids_with_photo([tool.id])),
         condition=catalog.CONDITION_LABELS[tool.condition],
@@ -240,6 +246,11 @@ def _pending_loan(loan_id, owner):
 
 def _is_pending(loan):
     return loan.status == LoanStatus.REQUESTED and loan.start_date >= catalog.site_today()
+
+
+def _rows(loans):
+    """Requests the user can still act on first, each group in the order given"""
+    return sorted((_row(loan) for loan in loans), key=lambda row: not row.pending)
 
 
 def _row(loan):

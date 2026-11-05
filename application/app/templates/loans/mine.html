@@ -21,11 +21,11 @@
                     {% if show_owner_actions %}
                         <form action="{{ url_for('loans.refuse', loan_id=loan.id) }}" method="post">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="button">Refuser</button>
+                            <button type="submit" class="button error">Refuser</button>
                         </form>
                         <form action="{{ url_for('loans.accept', loan_id=loan.id) }}" method="post">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="button primary">Accepter</button>
+                            <button type="submit" class="button success">Accepter</button>
                         </form>
                     {% else %}
                         <form action="{{ url_for('loans.withdraw', loan_id=loan.id) }}" method="post">

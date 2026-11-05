@@ -14,14 +14,17 @@ refuse ou annule ; dates passées ; outil retiré pendant une demande) doivent �
   obligatoires, « Message pour <Prénom Nom> » facultatif (500 caractères au plus), « Confirmer »
   et « Annuler ».
 - Dates : « Du » entre aujourd'hui et 14 jours plus tard, « Au » au plus tôt « Du », prêt de
-  30 jours au plus ; « aujourd'hui » dans le fuseau du site.
+  30 jours au plus ; « aujourd'hui » dans le fuseau du site. Les sélecteurs de date n'offrent que
+  ces bornes, sans JavaScript.
 - « Confirmer » crée une demande et ramène à la liste d'origine (« Trouver un outil » ou page du
   contact, avec ses filtres) avec le message de succès « Demande envoyée à <Prénom Nom> ».
   « Annuler » y ramène sans rien créer.
 - Sur la carte, l'emprunteur voit « Demande envoyée » grisé sur sa propre demande ; les autres
   voient « En attente de prêt ».
 - Page « Mes prêts » dans le menu du compte : demandes reçues (« Accepter », « Refuser ») et mes
-  demandes (« Retirer ma demande »), avec leur statut.
+  demandes (« Retirer ma demande »), avec leur statut. Dans chaque liste, les demandes sur
+  lesquelles on peut agir d'abord, puis les autres, chaque groupe de la plus récente à la plus
+  ancienne ; « Accepter » en vert, « Refuser » en rouge.
 - Une demande sans réponse expire le lendemain de son premier jour : elle n'est plus acceptable
   et ne bloque plus l'outil.
 - Pastille du nombre de demandes d'emprunt reçues à côté de « Mes prêts » ; la pastille du nom
@@ -29,6 +32,7 @@ refuse ou annule ; dates passées ; outil retiré pendant une demande) doivent �
 - Retirer un outil, le passer « Hors d'usage » ou retirer un contact annule les demandes en
   attente concernées ; les pages de confirmation de retrait l'annoncent.
 - Messages flash par catégorie : succès en vert, erreurs comme aujourd'hui.
+- Barre de recherche : « Outil » choisi par défaut au lieu de « Utilisateur ».
 
 ## Capabilities
 
@@ -43,13 +47,14 @@ refuse ou annule ; dates passées ; outil retiré pendant une demande) doivent �
   d'un contact » (annule les demandes en attente entre les deux).
 - `inventaire`: « Modification d'un outil » et « Retrait avec confirmation » (annulent les
   demandes en attente de l'outil).
+- `recherche`: « Barre de recherche dans la navigation » (« Outil » choisi par défaut).
 
 ## Impact
 
 - Code : nouvelle Blueprint `app/loans.py` (`/loans`) ; `app/catalog.py` (règle de blocage,
   vue de l'emprunteur, lien « Emprunter ») ; `app/tools.py` (retrait, passage hors d'usage) ;
-  `app/contacts.py` (retrait, pastille) ; gabarits `base.html` (menu, pastilles, catégories de
-  flash), `tools/_cards.html`, `tools/confirm_retire.html`, `contacts/confirm_remove.html`, nouveaux
+  `app/contacts.py` (retrait, pastille) ; `app/search.py` (type cherché) ; gabarits `base.html`
+  (menu, pastilles, catégories de flash, type de recherche), `tools/_cards.html`, `tools/confirm_retire.html`, `contacts/confirm_remove.html`, nouveaux
   `loans/confirm.html` et `loans/mine.html` ; `app/static/site.css`.
 - Schéma : colonne `loan.message` nullable (`String(500)`), une révision Alembic ; `docs/schema.md`
   régénéré.

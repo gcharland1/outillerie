@@ -16,9 +16,10 @@ bp = Blueprint("search", __name__, url_prefix="/search")
 def results():
     search_type = request.args.get("type", "user")
     search_text = request.args.get("q", "").strip()
-    page = {"search_text": search_text, "results": [], "message": None}
+    page = {"search_text": search_text, "search_type": search_type, "results": [], "message": None}
 
     if search_type not in ("user", "tool"):
+        page["search_type"] = "tool"
         page["message"] = "Ce type de recherche n'est pas disponible"
     elif len(search_text) < SEARCH_MIN_LENGTH:
         page["message"] = f"Saisissez au moins {SEARCH_MIN_LENGTH} caractères"

@@ -31,14 +31,14 @@ prise. État utile :
 
 ### Règle de blocage
 
-`_blocking_loan()` devient : `lent`, OU `accepted` et `end_date >= today`, OU `requested` et
-`start_date >= today` (demande non expirée). Une demande expirée cesse ainsi de bloquer le
-lendemain de son premier jour. Même expression pour le filtre « Disponible uniquement », la
-pastille et la vérification à l'envoi.
+`_blocking_loan()` devient `blocking_loan()` : `lent`, OU `accepted` et `end_date >= today`, OU
+`requested` et `start_date >= today` (demande non expirée, `pending_request()`). Une demande
+expirée cesse ainsi de bloquer le lendemain de son premier jour. Même expression pour le filtre
+« Disponible uniquement », la pastille et la vérification à l'envoi.
 
-`loan_statuses(tool_ids, viewer_id=None)` lit aussi `borrower_id` (même requête) : une demande
-non expirée de `viewer_id` marque la carte `requested_by_viewer`. `ToolCard` gagne
-`requested_by_viewer` et `borrow_url`.
+`_loan_states(tool_ids, viewer_id)`, derrière `loan_statuses(tool_ids)`, lit aussi `borrower_id`
+(même requête) : une demande non expirée de `viewer_id` marque la carte `requested_by_viewer`.
+`ToolCard` gagne `requested_by_viewer` et `borrow_url`.
 
 ### Origine et lien « Emprunter »
 
@@ -63,10 +63,13 @@ sinon `tools.find`. `q` et `available` sont repassés à `url_for`, jamais conca
 
 - Outil demandable : `catalog.visible_tool(user_id, tool_id)` (mêmes conditions que
   `visible_tools`, par id) ou 404. Au POST : `SELECT … FOR UPDATE` sur la ligne `tool`, puis
-  `catalog.is_available(tool_id)` (`NOT EXISTS` sur `_blocking_loan`) ; sinon flash « Cet outil
+  `catalog.is_available(tool_id)` (`NOT EXISTS` sur `blocking_loan()`) ; sinon flash « Cet outil
   n'est plus disponible » et retour à l'origine. Le verrou sérialise deux envois concurrents.
 - Dates : `date.fromisoformat` ; règles dans l'ordre de la spec ; constantes `MAX_LEAD_DAYS = 14`,
-  `MAX_LOAN_DAYS = 30` (bornes comprises : `(end - start).days + 1 <= 30`).
+  `MAX_LOAN_DAYS = 30` (bornes comprises : `(end - start).days + 1 <= 30`). `loans/confirm.html`
+  reçoit les bornes `min` / `max` calculées par la route depuis `site_today()` et ces constantes :
+  « Du » de `today` à `today + MAX_LEAD_DAYS`, « Au » de `today` à
+  `today + MAX_LEAD_DAYS + MAX_LOAN_DAYS - 1`.
 - Message : `strip()`, CRLF → LF, vide → `None`, `MESSAGE_MAX_LENGTH = Loan.message.type.length`,
   `maxlength` dans le gabarit. Rendu échappé, `white-space: pre-line` dans `site.css`.
 - Transitions : la ligne `loan` est lue `with_for_update()` ; un autre acteur ⇒ 404 ; plus
@@ -74,9 +77,21 @@ sinon `tools.find`. `q` et `available` sont repassés à `url_for`, jamais conca
   prêts ». L'acceptation intercepte l'`IntegrityError` de `excl_loan_tool_dates` ⇒ rollback,
   flash « Ces dates ne sont plus libres ».
 - « Mes prêts » : deux requêtes (`Loan` des outils de l'utilisateur, `Loan` dont il est
-  l'emprunteur), triées par `start_date` décroissante, avec `joinedload` de l'outil, du
-  propriétaire et de l'emprunteur. Libellés : `requested` non expirée « En attente », expirée
-  « Expirée », puis « Acceptée », « Refusée », « Annulée », « Prêté », « Rendu ».
+  l'emprunteur), avec `joinedload` de l'outil, du propriétaire et de l'emprunteur. Tri : d'abord
+  les demandes sur lesquelles on peut agir (aujourd'hui, `requested` non expirée : `_is_pending`,
+  forme Python de `catalog.pending_request()`), puis les autres, chaque groupe par `created_at`
+  décroissante. Le jour où un prêt accepté ou prêté aura une action (changement suivant), il
+  rejoint le premier groupe.
+  Libellés : `requested` non expirée « En attente », expirée « Expirée », puis « Acceptée »,
+  « Refusée », « Annulée », « Prêté », « Rendu ». « Accepter » prend la classe `button success`,
+  « Refuser » `button error`, comme « Retirer ma demande ».
+
+### Recherche
+
+`base.html` choisit dans le menu du type de recherche la variable `search_type`, `tool` par
+défaut. `search.results` la passe au gabarit : le type cherché, ou `tool` pour un type inconnu.
+`search.py` garde `user` pour une URL sans `type` : le lien explicite `type=user` de
+`tools/_cards.html` reste valide.
 
 ### Pastilles
 

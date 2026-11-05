@@ -19,10 +19,10 @@
             <input type="hidden" name="available" value="{{ origin.available }}">
 
             <label for="start">Du :</label>
-            <input type="date" id="start" name="start" value="{{ values.start }}" required>
+            <input type="date" id="start" name="start" value="{{ values.start }}" min="{{ bounds.first }}" max="{{ bounds.last_start }}" required>
 
             <label for="end">Au :</label>
-            <input type="date" id="end" name="end" value="{{ values.end }}" required>
+            <input type="date" id="end" name="end" value="{{ values.end }}" min="{{ bounds.first }}" max="{{ bounds.last_end }}" required>
 
             <label for="message">Message pour {{ tool.owner.first_name }} {{ tool.owner.last_name }} (facultatif) :</label>
             <textarea id="message" name="message" maxlength="{{ message_max_length }}">{{ values.message }}</textarea>

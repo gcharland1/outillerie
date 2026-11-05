@@ -28,8 +28,9 @@
                 <div class="nav-center">
                     <form class="search-bar" action="{{ url_for('search.results') }}" method="get" role="search">
                         <select name="type" aria-label="Type de recherche">
-                            <option value="user" selected>Utilisateur</option>
-                            <option value="tool">Outil</option>
+                            {% set chosen_type = search_type|default("tool") %}
+                            <option value="tool"{% if chosen_type == "tool" %} selected{% endif %}>Outil</option>
+                            <option value="user"{% if chosen_type == "user" %} selected{% endif %}>Utilisateur</option>
                         </select>
                         <input type="search" name="q" value="{{ search_text|default('') }}" minlength="3" required aria-label="Texte à chercher" placeholder="Rechercher…">
                         <button type="submit" class="button">Rechercher</button>

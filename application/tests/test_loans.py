@@ -1,5 +1,5 @@
 import re
-from datetime import timedelta
+from datetime import date, timedelta
 from html import unescape
 
 import pytest
@@ -108,6 +108,15 @@ def test_confirmation_page(mock_app, drill, as_alice):
     assert "Message pour Bob Gagnon (facultatif)" in text
     assert "code du cadenas 1234" not in text
     assert loans(mock_app) == []
+
+
+def test_date_pickers_offer_only_allowed_dates(mock_app, drill, as_alice, monkeypatch):
+    monkeypatch.setattr(catalog, "site_today", lambda: date(2026, 11, 4))
+
+    text = page_text(as_alice.get(f"/loans/new/{drill}"))
+
+    assert 'name="start" value="2026-11-04" min="2026-11-04" max="2026-11-18"' in text
+    assert 'name="end" value="" min="2026-11-04" max="2026-12-17"' in text
 
 
 @pytest.mark.parametrize("method", ["get", "post"])
@@ -270,6 +279,14 @@ def test_second_tab_does_not_create_a_second_request(mock_app, drill, as_alice):
     assert len(loans(mock_app)) == 1
 
 
+def test_unavailable_tool_goes_back_even_with_invalid_dates(mock_app, drill, as_alice):
+    request_drill(as_alice, drill)
+    response = request_drill(as_alice, drill, start=-1, origin="find")
+
+    assert response.location == "/tools/find"
+    assert len(loans(mock_app)) == 1
+
+
 def test_a_second_borrower_cannot_request_a_requested_tool(
     mock_app, contacts, drill, as_alice, as_carole
 ):
@@ -354,6 +371,40 @@ def test_expired_request_has_no_buttons(mock_app, contacts, drill, as_bob):
     assert "Accepter" not in text
 
 
+def test_requests_to_act_on_come_first_newest_first(mock_app, contacts, drill, as_bob):
+    saw = add_tool(mock_app, contacts["bob"], name="Scie")
+    sander = add_tool(mock_app, contacts["bob"], name="Ponceuse")
+    plane = add_tool(mock_app, contacts["bob"], name="Rabot")
+    add_loan(mock_app, saw, contacts["alice"], days(1), days(2), LoanStatus.REFUSED)
+    add_loan(mock_app, drill, contacts["alice"], days(1), days(2))
+    add_loan(mock_app, sander, contacts["alice"], days(1), days(2), LoanStatus.ACCEPTED)
+    add_loan(mock_app, plane, contacts["carole"], days(1), days(2))
+
+    text = page_text(as_bob.get("/loans"))
+
+    names = re.findall(r"<tr>\s*<td>([^<]+)</td>", text)
+    assert names == ["Rabot", "Perceuse", "Ponceuse", "Scie"]
+
+
+def test_my_requests_to_act_on_come_first_newest_first(mock_app, contacts, drill, as_alice):
+    saw = add_tool(mock_app, contacts["bob"], name="Scie")
+    sander = add_tool(mock_app, contacts["bob"], name="Ponceuse")
+    add_loan(mock_app, saw, contacts["alice"], days(1), days(2), LoanStatus.REFUSED)
+    add_loan(mock_app, drill, contacts["alice"], days(1), days(2))
+    add_loan(mock_app, sander, contacts["alice"], days(1), days(2), LoanStatus.CANCELED)
+
+    sent = page_text(as_alice.get("/loans")).split("<h3>Mes demandes</h3>")[1]
+
+    assert re.findall(r"<tr>\s*<td>([^<]+)</td>", sent) == ["Perceuse", "Ponceuse", "Scie"]
+
+
+def test_answer_buttons_are_green_and_red(mock_app, request_id, as_bob):
+    text = page_text(as_bob.get("/loans"))
+
+    assert '<button type="submit" class="button success">Accepter</button>' in text
+    assert '<button type="submit" class="button error">Refuser</button>' in text
+
+
 def test_my_loans_sends_a_visitor_to_login(client):
     assert client.get("/loans").location.startswith("/login")
 
@@ -405,6 +456,18 @@ def test_expired_request_cannot_be_accepted(mock_app, contacts, drill, as_bob):
 
     assert status_of(mock_app, expired) is LoanStatus.REQUESTED
     assert "Cette demande n'est plus en attente" in page_text(as_bob.get("/loans"))
+
+
+def test_expired_request_cannot_be_refused_or_withdrawn(
+    mock_app, contacts, drill, as_alice, as_bob
+):
+    expired = add_loan(mock_app, drill, contacts["alice"], days(-1), days(3))
+
+    as_bob.post(f"/loans/{expired}/refuse")
+    as_alice.post(f"/loans/{expired}/withdraw")
+
+    assert status_of(mock_app, expired) is LoanStatus.REQUESTED
+    assert "Cette demande n'est plus en attente" in page_text(as_alice.get("/loans"))
 
 
 def test_accepting_taken_dates_is_refused(mock_app, contacts, drill, request_id, as_bob):

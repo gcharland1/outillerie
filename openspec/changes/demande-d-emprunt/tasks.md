@@ -31,8 +31,15 @@
 
 ## 7. Vérification
 
-- [ ] 7.1 Vérifier à la main dans `docker compose up --build`, avec deux comptes en contact et un troisième : demander un outil depuis les deux listes, voir la pastille, accepter, refuser, retirer une demande, retirer un outil et un contact avec une demande en attente
+- [x] 7.1 Vérifier à la main dans `docker compose up --build`, avec deux comptes en contact et un troisième : demander un outil depuis les deux listes, voir la pastille, accepter, refuser, retirer une demande, retirer un outil et un contact avec une demande en attente
 - [x] 7.2 Lancer `/verifier` ; il doit rendre « terminé »
+
+## 8. Retours de QA
+
+- [x] 8.1 « Mes prêts » : tri (demandes sur lesquelles on peut agir d'abord, puis les autres, par `created_at` décroissante) et classes `button success` / `button error` sur « Accepter » / « Refuser » ; vérifier par des tests pytest « Ordre des demandes » et « Couleur des réponses »
+- [x] 8.2 Bornes `min` / `max` des sélecteurs de `loans/confirm.html`, calculées dans la route ; vérifier par des tests pytest « Bornes des sélecteurs » avec une date du site fixée
+- [x] 8.3 Menu du type de recherche : « Outil » par défaut, « Utilisateur » gardé sur la page de résultats d'utilisateurs ; mettre à jour `tests/test_navigation.py` et vérifier par des tests pytest les scénarios « Utilisateur connecté » et « Texte cherché conservé »
+- [x] 8.4 Vérifier à la main ces trois retours dans `docker compose up --build`, puis relancer `/verifier` ; il doit rendre « terminé »
 
 ## Workflow follow-up
 

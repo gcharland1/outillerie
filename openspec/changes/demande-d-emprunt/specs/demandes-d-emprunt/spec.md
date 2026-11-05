@@ -64,6 +64,16 @@ saisis, et ne crée aucune demande. Aujourd'hui est la date dans le fuseau du si
 - **THEN** la page affiche « Indiquez des dates valides »
 - **AND** le message saisi est conservé
 
+### Requirement: Bornes des sélecteurs de date
+Les sélecteurs de date SHALL n'offrir pour « Du » que les dates d'aujourd'hui à 14 jours plus
+tard, et pour « Au » que les dates d'aujourd'hui à 43 jours plus tard ; le serveur applique quand
+même chaque règle de « Dates d'une demande ».
+
+#### Scenario: Bornes des sélecteurs
+- **WHEN** Alice ouvre la page de confirmation le 4 novembre
+- **THEN** le sélecteur « Du » n'offre que les dates du 4 au 18 novembre
+- **AND** le sélecteur « Au » n'offre que les dates du 4 novembre au 17 décembre
+
 ### Requirement: Message au propriétaire
 Le message est facultatif, au plus 500 caractères sans les espaces qui l'entourent ; un message
 fait d'espaces vaut l'absence de message. Il SHALL n'être montré qu'au propriétaire et à
@@ -137,6 +147,20 @@ message et le statut : « En attente », « Expirée », « Acceptée », « Ref
 #### Scenario: Entrée du menu
 - **WHEN** un utilisateur connecté ouvre une page du site
 - **THEN** son menu du compte contient « Mes prêts »
+
+### Requirement: Ordre et couleurs de « Mes prêts »
+Chaque liste de « Mes prêts » SHALL montrer d'abord les demandes sur lesquelles l'utilisateur peut
+agir (accepter, refuser ou retirer), puis les autres, chaque groupe de la plus récente à la plus
+ancienne selon la date d'envoi. « Accepter » SHALL être affiché en vert et « Refuser » en rouge.
+
+#### Scenario: Ordre des demandes
+- **WHEN** Bob a reçu, dans cet ordre, des demandes de la scie, de la perceuse, de la ponceuse et du rabot
+- **AND** il a refusé celle de la scie et accepté celle de la ponceuse
+- **THEN** ses demandes reçues sont listées dans l'ordre : rabot, perceuse, ponceuse, scie
+
+#### Scenario: Couleur des réponses
+- **WHEN** Bob a une demande reçue en attente
+- **THEN** « Accepter » est affiché en vert et « Refuser » en rouge
 
 ### Requirement: Réponse du propriétaire
 Le propriétaire SHALL pouvoir accepter ou refuser une demande en attente de son outil ; seul lui
