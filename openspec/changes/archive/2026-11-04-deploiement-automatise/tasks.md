@@ -13,7 +13,7 @@
 
 ## 3. CI sur main
 
-- [ ] 3.1 Ajouter `push: branches: [main]` aux déclencheurs de `ci.yml` ; vérifier avec `actionlint` ou une lecture de la syntaxe, puis, après le merge, qu'un run `push` existe pour le commit de merge avec les jobs `tests` et `specs`
+- [x] 3.1 Ajouter `push: branches: [main]` aux déclencheurs de `ci.yml` ; vérifier avec `actionlint` ou une lecture de la syntaxe, puis, après le merge, qu'un run `push` existe pour le commit de merge avec les jobs `tests` et `specs`
 
 ## 4. Logique de choix du commit
 
@@ -24,7 +24,7 @@
 
 - [x] 5.1 Implémenter dans `deployer.py` : verrou, lecture et écriture de `etat.json` (refus sans fichier), appels API avec le jeton en en-tête, `git fetch`, contrôle du checkout, espace libre, sauvegarde et rotation, build, `up --wait`, retour arrière, statut, nettoyage des images, compteur d'échecs transitoires ; vérifier par des tests pytest les parties sans effet de bord (rotation des sauvegardes, transitions de `etat.json`, classement transitoire ou définitif d'un échec, absence du jeton dans la sortie)
 - [x] 5.2 Écrire le gabarit `deploiement/outillerie-deploiement.service.in` et `outillerie-deploiement.timer`, sans aucun chemin du serveur ; vérifier avec `systemd-analyze verify` l'unité générée
-- [ ] 5.3 Écrire `deploiement/installer.sh`, idempotent, chemins déduits de son emplacement (dossier, script, jeton, amorçage, unités liées et activées), et `deploiement/README.md` (jeton : droits et expiration ; installation et mise à jour ; réamorçage ; journal ; nouvelle tentative ; déblocage ; restauration ; désactivation ; ne jamais lancer `compose up` à la main en production) ; vérifier en lançant `installer.sh` une fois sur le serveur, puis une seconde fois sans effet
+- [x] 5.3 Écrire `deploiement/installer.sh`, idempotent, chemins déduits de son emplacement (dossier, script, jeton, amorçage, unités liées et activées), et `deploiement/README.md` (jeton : droits et expiration ; installation et mise à jour ; réamorçage ; journal ; nouvelle tentative ; déblocage ; restauration ; désactivation ; ne jamais lancer `compose up` à la main en production) ; vérifier en lançant `installer.sh` une fois sur le serveur, puis une seconde fois sans effet
 
 ## 6. Vérification de bout en bout
 
