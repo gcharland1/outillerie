@@ -12,7 +12,7 @@ from app import create_app
 from app.extensions import db
 from models import Tool
 from models.user import User
-from tests.factories import make_tool
+from tests.factories import make_loan, make_tool
 
 CI_DATABASE_URL = "postgresql+psycopg://outillerie:outillerie@localhost:5432/outillerie"
 USER_PASSWORD = "secret123"
@@ -158,6 +158,11 @@ def bob_id(mock_app, bob):
 def add_tool(mock_app, owner_id, name="Perceuse", **fields):
     with mock_app.app_context():
         return make_tool(owner_id, name=name, **fields).id
+
+
+def add_loan(mock_app, tool_id, borrower_id, first_day, last_day, status=None, message=None):
+    with mock_app.app_context():
+        return make_loan(tool_id, borrower_id, first_day, last_day, status, message).id
 
 
 def stored(mock_app, tool_id):

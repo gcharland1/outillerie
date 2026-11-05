@@ -5,8 +5,14 @@ from sqlalchemy import event
 
 from app import catalog
 from app.extensions import db
-from models import Loan, LoanStatus, ToolCondition
-from tests.factories import make_contact_relation, make_contact_request, make_tool, user_id
+from models import LoanStatus, ToolCondition
+from tests.factories import (
+    make_contact_relation,
+    make_contact_request,
+    make_loan,
+    make_tool,
+    user_id,
+)
 
 TODAY = catalog.site_today()
 
@@ -27,19 +33,6 @@ def contacts(mock_app, ids):
 
 def visible_names(user_id, **filters):
     return [tool.name for tool in catalog.visible_tools(user_id, **filters)]
-
-
-def add_loan(tool, borrower_id, status, first_day, last_day):
-    db.session.add(
-        Loan(
-            tool_id=tool.id,
-            borrower_id=borrower_id,
-            status=status,
-            start_date=first_day,
-            end_date=last_day,
-        )
-    )
-    db.session.commit()
 
 
 def test_a_contacts_tool_is_visible(mock_app, contacts):
@@ -130,7 +123,7 @@ def test_is_contact(mock_app, contacts):
 def test_loan_status(mock_app, contacts, status, first_day, last_day, label):
     with mock_app.app_context():
         tool = make_tool(contacts["bob"])
-        add_loan(tool, contacts["alice"], status, first_day, last_day)
+        make_loan(tool.id, contacts["alice"], first_day, last_day, status)
         [card] = catalog.tool_cards([tool])
         assert card.status.startswith(label)
         assert card.available == (label == "Disponible")
@@ -146,8 +139,8 @@ def test_a_loan_ends_at_midnight_where_its_users_live(mock_app, contacts, monkey
     monkeypatch.setattr(catalog, "datetime", EveningInQuebec)
     with mock_app.app_context():
         tool = make_tool(contacts["bob"])
-        add_loan(
-            tool, contacts["alice"], LoanStatus.REQUESTED, date(2026, 11, 2), date(2026, 11, 3)
+        make_loan(
+            tool.id, contacts["alice"], date(2026, 11, 2), date(2026, 11, 3), LoanStatus.ACCEPTED
         )
         assert catalog.site_today() == date(2026, 11, 3)
         assert catalog.loan_statuses([tool.id]) == {tool.id: "En attente de prêt"}
@@ -156,8 +149,10 @@ def test_a_loan_ends_at_midnight_where_its_users_live(mock_app, contacts, monkey
 def test_lent_wins_over_a_pending_request(mock_app, contacts):
     with mock_app.app_context():
         tool = make_tool(contacts["bob"])
-        add_loan(tool, contacts["alice"], LoanStatus.REQUESTED, TODAY, TODAY + timedelta(days=30))
-        add_loan(tool, contacts["carole"], LoanStatus.LENT, TODAY, date(2099, 11, 3))
+        make_loan(
+            tool.id, contacts["alice"], TODAY, TODAY + timedelta(days=30), LoanStatus.REQUESTED
+        )
+        make_loan(tool.id, contacts["carole"], TODAY, date(2099, 11, 3), LoanStatus.LENT)
         assert catalog.loan_statuses([tool.id]) == {tool.id: "Prêté jusqu'au 3 novembre 2099"}
 
 
@@ -171,8 +166,10 @@ def test_available_only_hides_lent_and_pending_tools(mock_app, contacts):
         make_tool(contacts["bob"], name="Perceuse")
         lent = make_tool(contacts["bob"], name="Scie")
         pending = make_tool(contacts["bob"], name="Ponceuse")
-        add_loan(lent, contacts["alice"], LoanStatus.LENT, TODAY, TODAY + timedelta(days=3))
-        add_loan(pending, contacts["alice"], LoanStatus.REQUESTED, TODAY, TODAY + timedelta(days=3))
+        make_loan(lent.id, contacts["alice"], TODAY, TODAY + timedelta(days=3), LoanStatus.LENT)
+        make_loan(
+            pending.id, contacts["alice"], TODAY, TODAY + timedelta(days=3), LoanStatus.REQUESTED
+        )
         assert visible_names(contacts["alice"], available_only=True) == ["Perceuse"]
         assert visible_names(contacts["alice"]) == ["Perceuse", "Ponceuse", "Scie"]
 
@@ -257,7 +254,9 @@ def test_the_number_of_queries_does_not_grow_with_the_tools(mock_app, contacts):
 
     with mock_app.app_context():
         tool = make_tool(contacts["bob"])
-        add_loan(tool, contacts["alice"], LoanStatus.REQUESTED, TODAY, TODAY + timedelta(days=2))
+        make_loan(
+            tool.id, contacts["alice"], TODAY, TODAY + timedelta(days=2), LoanStatus.REQUESTED
+        )
         one_tool = count_queries(cards)
         make_contact_relation(contacts["alice"], contacts["carole"])
         for number in range(9):

@@ -21,8 +21,13 @@
         <p>{{ card.condition }}</p>
         <p class="{{ 'status-available' if card.available else 'status-unavailable' }}">{{ card.status }}</p>
         <div class="actions">
-            <span class="upcoming">Bientôt disponible</span>
+            {% if card.requested_by_viewer %}
+            <button type="button" class="button" disabled>Demande envoyée</button>
+            {% elif card.available %}
+            <a class="button primary" href="{{ card.borrow_url }}">Emprunter</a>
+            {% else %}
             <button type="button" class="button" disabled>Emprunter</button>
+            {% endif %}
         </div>
     </article>
     {% endfor %}

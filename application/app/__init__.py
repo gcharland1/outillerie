@@ -10,6 +10,9 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 from app.extensions import csrf, db, login_manager, migrate
 
+# The value .env.example ships with.
+EXAMPLE_SECRET_KEY = "dev-seulement"
+
 
 def create_app(test_config=None):
     """Creates an app and sets it's routes, using test_config instead of the environment if given"""
@@ -22,13 +25,14 @@ def create_app(test_config=None):
     login_manager.init_app(app)
     csrf.init_app(app)
 
-    from app import auth, contacts, search, tools
+    from app import auth, contacts, loans, search, tools
     from models.user import User
 
     app.register_blueprint(auth.bp)
     app.register_blueprint(tools.bp)
     app.register_blueprint(contacts.bp)
     app.register_blueprint(search.bp)
+    app.register_blueprint(loans.bp)
 
     @app.route("/")
     def index():
@@ -81,6 +85,16 @@ def _initialize_app(test_config):
         load_dotenv()
 
     app.config["SQLALCHEMY_DATABASE_URI"] = os.environ["DATABASE_URL"]
-    app.config["SECRET_KEY"] = os.environ["FLASK_SECRET_KEY"]
+    app.config["SECRET_KEY"] = _secret_key(environment)
 
     return app
+
+
+def _secret_key(environment):
+    """Returns FLASK_SECRET_KEY, refusing outside development a missing, empty or example key"""
+    if environment == "development":
+        return os.environ["FLASK_SECRET_KEY"]
+    key = os.getenv("FLASK_SECRET_KEY", "")
+    if key in ("", EXAMPLE_SECRET_KEY):
+        raise RuntimeError(f"FLASK_SECRET_KEY must hold a real secret in {environment}")
+    return key

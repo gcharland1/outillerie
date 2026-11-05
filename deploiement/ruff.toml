@@ -1,0 +1,3 @@
+extend = "../application/pyproject.toml"
+# Runs on the server's python3 (3.10 or later), not the app image's.
+target-version = "py310"

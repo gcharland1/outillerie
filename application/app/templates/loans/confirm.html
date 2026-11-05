@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row is-center">
+    <div class="col-12 col-8-md card">
+        <header>
+            <h3>Emprunter « {{ tool.name }} »</h3>
+        </header>
+        {% if has_photo %}
+        <img class="tool-photo" src="{{ url_for('tools.photo', tool_id=tool.id) }}" alt="{{ tool.name }}">
+        {% endif %}
+        <p>Propriétaire : {{ tool.owner.first_name }} {{ tool.owner.last_name }}</p>
+        <p>État : {{ condition }}</p>
+        <p class="loan-text">{{ tool.description }}</p>
+        <form action="{{ url_for('loans.create', tool_id=tool.id) }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="origin" value="{{ origin.origin }}">
+            <input type="hidden" name="q" value="{{ origin.q }}">
+            <input type="hidden" name="available" value="{{ origin.available }}">
+
+            <label for="start">Du :</label>
+            <input type="date" id="start" name="start" value="{{ values.start }}" min="{{ bounds.first }}" max="{{ bounds.last_start }}" required>
+
+            <label for="end">Au :</label>
+            <input type="date" id="end" name="end" value="{{ values.end }}" min="{{ bounds.first }}" max="{{ bounds.last_end }}" required>
+
+            <label for="message">Message pour {{ tool.owner.first_name }} {{ tool.owner.last_name }} (facultatif) :</label>
+            <textarea id="message" name="message" maxlength="{{ message_max_length }}">{{ values.message }}</textarea>
+
+            <div class="actions">
+                <a class="button" href="{{ back_url }}">Annuler</a>
+                <button type="submit" class="button primary">Confirmer</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

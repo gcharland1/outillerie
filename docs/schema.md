@@ -28,6 +28,7 @@ erDiagram
     DATE start_date
     DATE end_date
     ENUM status
+    VARCHAR(500) message "nullable"
     DATETIME created_at
   }
 

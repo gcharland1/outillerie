@@ -4,7 +4,8 @@ from datetime import datetime
 from typing import NamedTuple
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import String, and_, case, exists, func, or_, select
+from flask import url_for
+from sqlalchemy import String, and_, case, exists, func, or_, select, update
 from sqlalchemy.orm import joinedload
 
 from app import photos
@@ -54,6 +55,8 @@ class ToolCard(NamedTuple):
     condition: str
     status: str
     available: bool
+    requested_by_viewer: bool
+    borrow_url: str | None
 
 
 def tool_list(user_id, args, owner=None):
@@ -63,7 +66,13 @@ def tool_list(user_id, args, owner=None):
         "available_only": args.get("available") == "1",
     }
     owner_id = owner.id if owner is not None else None
-    cards = tool_cards(visible_tools(user_id, owner_id=owner_id, **filters))
+    origin = {
+        "origin": "contact" if owner is not None else "find",
+        "q": filters["text"] or None,
+        "available": "1" if filters["available_only"] else None,
+    }
+    tools = visible_tools(user_id, owner_id=owner_id, **filters)
+    cards = tool_cards(tools, viewer_id=user_id, origin=origin)
     empty_message = None
     if not cards:
         empty_message = _empty_message(user_id, owner, filtered=any(filters.values()))
@@ -82,35 +91,81 @@ def is_contact(user_id, other_id):
     return db.session.get(ContactRelation, ContactRelation.pair(user_id, other_id)) is not None
 
 
+def visible_tool(user_id, tool_id):
+    """One of the contacts' tools the user may see, or None"""
+    query = select(Tool).options(joinedload(Tool.owner)).where(Tool.id == tool_id)
+    return db.session.scalars(query.where(_visible(user_id))).one_or_none()
+
+
+def is_available(tool_id):
+    """Whether no loan keeps the tool from being requested now"""
+    return not db.session.scalar(select(exists().where(Loan.tool_id == tool_id, blocking_loan())))
+
+
+def count_pending_requests(*conditions):
+    """How many unexpired requests meet these conditions on Loan"""
+    return db.session.scalar(
+        select(func.count()).select_from(Loan).where(pending_request(), *conditions)
+    )
+
+
+def cancel_pending_requests(*conditions):
+    """Cancels the unexpired requests meeting these conditions on Loan; the caller commits"""
+    db.session.execute(
+        update(Loan)
+        .where(pending_request(), *conditions)
+        .values(status=LoanStatus.CANCELED)
+        .execution_options(synchronize_session=False)
+    )
+
+
+def requests_for_tool(tool_id):
+    return Loan.tool_id == tool_id
+
+
+def requests_between(user_id, other_id):
+    """Requests of either user for a tool of the other"""
+
+    def tools_of(owner_id):
+        return select(Tool.id).where(Tool.owner_id == owner_id)
+
+    return or_(
+        and_(Loan.borrower_id == user_id, Loan.tool_id.in_(tools_of(other_id))),
+        and_(Loan.borrower_id == other_id, Loan.tool_id.in_(tools_of(user_id))),
+    )
+
+
+def cancel_notice(count, between=False):
+    """What a confirmation page says about the requests its action will cancel, if any"""
+    if not count:
+        return None
+    where = " entre vous" if between else ""
+    if count == 1:
+        return f"1 demande d'emprunt en attente{where} sera annulée"
+    return f"{count} demandes d'emprunt en attente{where} seront annulées"
+
+
 def has_contacts(user_id):
     return db.session.scalar(select(exists().where(_relations_of(user_id))))
 
 
 def visible_tools(user_id, owner_id=None, text="", available_only=False):
     """The contacts' tools the user may see, filtered and ordered as the spec says"""
-    query = (
-        select(Tool)
-        .options(joinedload(Tool.owner))
-        .where(
-            Tool.is_active,
-            Tool.condition != ToolCondition.OUT_OF_ORDER,
-            Tool.owner_id.in_(_contact_ids(user_id)),
-        )
-    )
+    query = select(Tool).options(joinedload(Tool.owner)).where(_visible(user_id))
     if owner_id is not None:
         query = query.where(Tool.owner_id == owner_id)
     if available_only:
-        query = query.where(~exists().where(Loan.tool_id == Tool.id, _blocking_loan()))
+        query = query.where(~exists().where(Loan.tool_id == Tool.id, blocking_loan()))
     if text:
         condition, ordering = _text_search(text)
         query = query.where(condition).order_by(*ordering)
     return db.session.scalars(query.order_by(func.lower(Tool.name), Tool.id)).all()
 
 
-def tool_cards(tools):
+def tool_cards(tools, viewer_id=None, origin=None):
     """What each tool's card shows, with statuses and photos read in one query each"""
     tool_ids = [tool.id for tool in tools]
-    statuses = loan_statuses(tool_ids)
+    statuses, requested_by_viewer = _loan_states(tool_ids, viewer_id)
     photo_ids = photos.tool_ids_with_photo(tool_ids)
     return [
         ToolCard(
@@ -120,6 +175,8 @@ def tool_cards(tools):
             condition=CONDITION_LABELS[tool.condition],
             status=statuses[tool.id],
             available=statuses[tool.id] == AVAILABLE,
+            requested_by_viewer=tool.id in requested_by_viewer,
+            borrow_url=url_for("loans.new", tool_id=tool.id, **origin) if origin else None,
         )
         for tool in tools
     ]
@@ -127,23 +184,7 @@ def tool_cards(tools):
 
 def loan_statuses(tool_ids):
     """Each tool's loan status label: lent wins over a pending loan, which wins over available"""
-    statuses = dict.fromkeys(tool_ids, AVAILABLE)
-    if not tool_ids:
-        return statuses
-    lent_until = {}
-    rows = db.session.execute(
-        select(Loan.tool_id, Loan.status, Loan.end_date).where(
-            Loan.tool_id.in_(tool_ids), _blocking_loan()
-        )
-    )
-    for tool_id, status, end_date in rows:
-        if status == LoanStatus.LENT:
-            lent_until[tool_id] = max(end_date, lent_until.get(tool_id, end_date))
-        else:
-            statuses[tool_id] = PENDING
-    for tool_id, end_date in lent_until.items():
-        statuses[tool_id] = f"Prêté jusqu'au {french_date(end_date)}"
-    return statuses
+    return _loan_states(tool_ids, viewer_id=None)[0]
 
 
 def site_today():
@@ -184,15 +225,50 @@ def _contact_ids(user_id):
     return select(other).where(_relations_of(user_id))
 
 
-def _blocking_loan():
-    """A loan that keeps the tool from being borrowed now: lent, or pending and not over"""
+def pending_request():
+    """A request still awaiting an answer: it expires once its first day is over"""
+    return and_(Loan.status == LoanStatus.REQUESTED, Loan.start_date >= site_today())
+
+
+def blocking_loan():
+    """A loan that keeps the tool from being requested now: lent, accepted and not over, pending"""
     return or_(
         Loan.status == LoanStatus.LENT,
-        and_(
-            Loan.status.in_((LoanStatus.REQUESTED, LoanStatus.ACCEPTED)),
-            Loan.end_date >= site_today(),
-        ),
+        and_(Loan.status == LoanStatus.ACCEPTED, Loan.end_date >= site_today()),
+        pending_request(),
     )
+
+
+def _visible(user_id):
+    return and_(
+        Tool.is_active,
+        Tool.condition != ToolCondition.OUT_OF_ORDER,
+        Tool.owner_id.in_(_contact_ids(user_id)),
+    )
+
+
+def _loan_states(tool_ids, viewer_id):
+    """Each tool's status label, and which tools the viewer has a pending request for"""
+    statuses = dict.fromkeys(tool_ids, AVAILABLE)
+    requested_by_viewer = set()
+    if not tool_ids:
+        return statuses, requested_by_viewer
+    lent_until = {}
+    rows = db.session.execute(
+        select(Loan.tool_id, Loan.status, Loan.end_date, Loan.borrower_id).where(
+            Loan.tool_id.in_(tool_ids), blocking_loan()
+        )
+    )
+    for tool_id, status, end_date, borrower_id in rows:
+        if status == LoanStatus.LENT:
+            lent_until[tool_id] = max(end_date, lent_until.get(tool_id, end_date))
+            continue
+        statuses[tool_id] = PENDING
+        if status == LoanStatus.REQUESTED and borrower_id == viewer_id:
+            requested_by_viewer.add(tool_id)
+    for tool_id, end_date in lent_until.items():
+        statuses[tool_id] = f"Prêté jusqu'au {french_date(end_date)}"
+    return statuses, requested_by_viewer
 
 
 def _text_search(text):

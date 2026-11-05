@@ -32,4 +32,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 EXPOSE 5000
 
-CMD ["sh", "-c", "uv run flask db upgrade && uv run main.py"]
+# Une version relancée après un déploiement raté ne connaît pas la révision appliquée par la
+# version suivante : le retour arrière passe SKIP_DB_UPGRADE=1 (ADR 0017).
+CMD ["sh", "-c", "if [ \"$SKIP_DB_UPGRADE\" != 1 ]; then uv run flask db upgrade || exit 1; fi; exec uv run main.py"]

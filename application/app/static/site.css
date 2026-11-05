@@ -87,6 +87,12 @@ button,
     margin-bottom: var(--gap);
 }
 
+/* Errors keep the .flash look; a confirmed action shows in green. */
+.flash-success {
+    color: var(--color-success);
+    border-color: var(--color-success);
+}
+
 .card {
     margin-bottom: var(--gap);
 }
@@ -331,6 +337,7 @@ form:has(#photo-replace:checked):has(#photo-remove:checked) [type="submit"] {
     color: var(--color-grey);
 }
 
-.upcoming {
-    color: var(--color-grey);
+/* Free text typed by a user: shown as is, line breaks kept. */
+.loan-text {
+    white-space: pre-line;
 }
