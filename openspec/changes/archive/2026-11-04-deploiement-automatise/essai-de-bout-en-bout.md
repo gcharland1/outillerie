@@ -55,3 +55,12 @@ base portant une révision qu'elle ignore. Essai, après le correctif `SKIP_DB_U
 | 7 | Commit `relecture` (correctifs) vert | déployé, statut `success` |
 | 8 | Commit `app-cassee` vert : migration valide (`e55a10000001`, crée une table), puis `main.py` qui s'arrête | `up --wait` échoue ; retour à `relecture` avec `SKIP_DB_UPGRADE=1`, `healthy` ; `alembic_version` = `e55a10000001`, table présente ; commit en échec, statut `failure`, code 1, pas de blocage |
 | 8b | Contre-épreuve : même relance sans `SKIP_DB_UPGRADE` | `unhealthy`, journal : `Can't locate revision identified by 'e55a10000001'` |
+
+## Mise en production (rapportée par l'utilisateur, 2026-11-05)
+
+- `installer.sh` lancé sur le serveur après le merge de #32 (commit de merge `9d9ff35`) : installation
+  et amorçage réussis ; le journal du service affiche `Aucun commit à déployer` toutes les 5 minutes.
+- Second passage d'`installer.sh` : sans effet (tâche 5.3).
+- Boucle complète constatée : un commit de `main` à la CI `push` verte a été redéployé seul (tâche 3.1).
+- Affichage du journal : les accents apparaissent échappés (`<C3><A0>`) sous `LANG=C` ; le journal
+  contient bien de l'UTF-8, rien à changer dans le script.

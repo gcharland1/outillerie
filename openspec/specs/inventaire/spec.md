@@ -113,7 +113,8 @@ saisies et le message de l'erreur, sans rien enregistrer ni modifier.
 ### Requirement: Modification d'un outil
 Le système SHALL permettre au propriétaire de modifier le nom, la description, l'état et les
 notes privées d'un outil en circulation, depuis un formulaire prérempli avec les valeurs
-actuelles, puis le ramener à « Mes outils ». Vider les notes privées les supprime.
+actuelles, puis le ramener à « Mes outils ». Vider les notes privées les supprime. Passer l'outil
+à l'état « Hors d'usage » annule ses demandes d'emprunt en attente.
 
 #### Scenario: Formulaire prérempli
 - **WHEN** Alice ouvre « Modifier » pour sa perceuse
@@ -124,15 +125,21 @@ actuelles, puis le ramener à « Mes outils ». Vider les notes privées les sup
 - **THEN** la perceuse est à l'état `out_of_order`
 - **AND** Alice est redirigée vers « Mes outils »
 
+#### Scenario: Demandes annulées par le passage hors d'usage
+- **WHEN** Bob a demandé la perceuse d'Alice, sans réponse
+- **AND** Alice passe sa perceuse à l'état « Hors d'usage »
+- **THEN** la demande de Bob est annulée
+
 #### Scenario: Outil retiré non modifiable
 - **WHEN** Alice demande la modification d'un de ses outils retirés
 - **THEN** le système répond 404
 
 ### Requirement: Retrait avec confirmation
 « Retirer » SHALL mener à une page de confirmation qui nomme l'outil, indique qu'il restera
-enregistré et pourra être remis en circulation, et offre « Confirmer le retrait » et un lien
-d'annulation vers « Mes outils ». Seule la confirmation, par un envoi de formulaire, retire
-l'outil de la circulation ; il reste enregistré.
+enregistré et pourra être remis en circulation, annonce le nombre de demandes d'emprunt en attente
+qui seront annulées s'il y en a, et offre « Confirmer le retrait » et un lien d'annulation vers
+« Mes outils ». Seule la confirmation, par un envoi de formulaire, retire l'outil de la
+circulation et annule ces demandes ; il reste enregistré.
 
 #### Scenario: Page de confirmation
 - **WHEN** Alice clique « Retirer » pour sa perceuse
@@ -144,6 +151,12 @@ l'outil de la circulation ; il reste enregistré.
 - **WHEN** Alice clique « Confirmer le retrait » pour sa perceuse
 - **THEN** la perceuse n'est plus en circulation et reste enregistrée avec ses informations
 - **AND** Alice est redirigée vers « Mes outils », qui ne liste plus la perceuse
+
+#### Scenario: Demandes annulées par le retrait
+- **WHEN** Bob a demandé la perceuse d'Alice, sans réponse
+- **AND** Alice ouvre la confirmation du retrait de la perceuse
+- **THEN** la page annonce « 1 demande d'emprunt en attente sera annulée »
+- **AND** une fois le retrait confirmé, la demande de Bob est annulée
 
 #### Scenario: Pas de retrait par un lien
 - **WHEN** le retrait d'un outil est demandé sans envoi de formulaire (`GET`)
