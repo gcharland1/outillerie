@@ -37,4 +37,4 @@ structure de l'app, outil de dev, convention transverse. Un détail d'implément
 | 0014 | [Normalisation des photos téléversées avec Pillow](0014-normalisation-des-photos-televersees-avec-pillow.md) | accepted |
 | 0015 | [Exposer la production par Cloudflare Tunnel, app en boucle locale](0015-exposer-la-production-par-cloudflare-tunnel.md) | accepted |
 | 0016 | [Recherche floue des outils avec pg_trgm et unaccent](0016-recherche-floue-des-outils-avec-pg-trgm-et-unaccent.md) | accepted |
-| 0017 | [Déployer la production par sondage du serveur](0017-deployer-la-production-par-sondage-du-serveur.md) | proposed |
+| 0017 | [Déployer la production par sondage du serveur](0017-deployer-la-production-par-sondage-du-serveur.md) | accepted |
