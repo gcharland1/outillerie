@@ -3,6 +3,9 @@ name: CI
 on:
   pull_request:
     branches: [main]
+  # The server deploys a main commit only once this run is green (ADR 0017).
+  push:
+    branches: [main]
 
 permissions:
   contents: read
@@ -52,8 +55,8 @@ jobs:
       - name: Lint
         working-directory: application
         run: |
-          uv run --locked ruff check .
-          uv run --locked ruff format --check .
+          uv run --locked ruff check . ../deploiement
+          uv run --locked ruff format --check . ../deploiement
 
       # Runs first, on a database that has never seen btree_gist or any table.
       - name: Check migrations
@@ -67,6 +70,10 @@ jobs:
       - name: Run unit tests
         working-directory: application
         run: uv run --locked pytest
+
+      - name: Run deployment script tests
+        working-directory: application
+        run: uv run --locked pytest ../deploiement/tests
 
       - name: Check schema diagram
         working-directory: application

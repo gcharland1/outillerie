@@ -1,7 +1,7 @@
 import pytest
 from flask import request, url_for
 
-from app import create_app
+from app import EXAMPLE_SECRET_KEY, create_app
 from app.extensions import db
 from tests.conftest import USER_PASSWORD, app_config
 
@@ -65,3 +65,42 @@ def test_direct_request_is_not_secure(scheme_client):
 
     assert not seen["secure"]
     assert seen["url"].startswith("http://")
+
+
+@pytest.fixture
+def environment_without_test_config(monkeypatch):
+    """Sets what create_app reads from the environment when no test_config is given"""
+
+    def set_environment(environment, secret_key):
+        monkeypatch.setenv("FLASK_ENVIRONMENT", environment)
+        monkeypatch.setenv("DATABASE_URL", app_config()["SQLALCHEMY_DATABASE_URI"])
+        if secret_key is None:
+            monkeypatch.delenv("FLASK_SECRET_KEY", raising=False)
+        else:
+            monkeypatch.setenv("FLASK_SECRET_KEY", secret_key)
+
+    return set_environment
+
+
+@pytest.mark.parametrize("secret_key", [EXAMPLE_SECRET_KEY, "", None])
+def test_production_refuses_missing_or_example_secret_key(
+    environment_without_test_config, secret_key
+):
+    environment_without_test_config("production", secret_key)
+
+    with pytest.raises(RuntimeError, match="FLASK_SECRET_KEY") as refusal:
+        create_app()
+
+    assert EXAMPLE_SECRET_KEY not in str(refusal.value)
+
+
+def test_production_accepts_a_real_secret_key(environment_without_test_config):
+    environment_without_test_config("production", "a-real-secret")
+
+    assert create_app().config["SECRET_KEY"] == "a-real-secret"
+
+
+def test_development_accepts_the_example_secret_key(environment_without_test_config):
+    environment_without_test_config("development", EXAMPLE_SECRET_KEY)
+
+    assert create_app().config["SECRET_KEY"] == EXAMPLE_SECRET_KEY

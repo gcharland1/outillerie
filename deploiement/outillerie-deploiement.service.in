@@ -1,0 +1,14 @@
+# Template: installer.sh fills the @…@ values, so no server path lives in the repository.
+[Unit]
+Description=Déploiement de L'Outillerie
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=@COMPTE@
+Environment="OUTILLERIE_CHECKOUT=@CHECKOUT@"
+ExecStart=@PYTHON@ @DEPLOIEMENT@/deployer.py
+TimeoutStartSec=30min
+NoNewPrivileges=yes
+PrivateTmp=yes
