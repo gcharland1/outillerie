@@ -50,14 +50,17 @@ Le script est idempotent ; chaque passage :
 Le chemin du checkout ne doit contenir que lettres, chiffres, `.`, `_`, `-` et `/`.
 
 Si l'amorçage échoue au démarrage (`up --wait`), la pile reste sur la nouvelle version en échec et
-`etat.json` n'est pas écrit. Pour revenir à la version d'avant, depuis le checkout :
+`etat.json` n'est pas écrit. La version d'avant ne connaît pas `SKIP_DB_UPGRADE` : si une migration a
+été appliquée, elle ne redémarre qu'une fois la base restaurée. Depuis le checkout :
 
 ```sh
+docker compose -p outillerie-prod stop app
+docker compose -p outillerie-prod exec -T db \
+  sh -c 'pg_restore --clean --if-exists -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
+  < "../$(basename "$PWD")-deploiement/sauvegardes/<horodatage>-installation.dump"
 git checkout <commit d'avant>
-docker compose -p outillerie-prod up -d --build
+docker compose -p outillerie-prod up -d --wait --build
 ```
-
-Si une migration a été appliquée, restaurer aussi la sauvegarde de l'installation (ci-dessous).
 
 Le commit amorcé doit rester un ancêtre de `main` : amorcer sur une branche puis la fusionner par
 *squash* ou *rebase* bloque les déploiements (le journal le signale). Dans ce cas, se placer sur
@@ -76,7 +79,9 @@ Depuis le checkout ; `etat.json` et `sauvegardes/` sont dans `<checkout>-deploie
 - Forcer une nouvelle tentative d'un commit en échec : retirer son SHA de `failed` et de `attempts`
   dans `etat.json`.
 - Déploiements bloqués (le retour arrière lui-même a échoué) : remettre la pile en état à la main,
-  aligner `deployed` dans `etat.json` sur le commit en marche, puis remettre `"blocked": false`.
+  aligner `deployed` dans `etat.json` sur le commit en marche, puis remettre `"blocked": false`. Si
+  le commit en échec a appliqué une migration, relancer avec `SKIP_DB_UPGRADE=1` ou restaurer la
+  sauvegarde prise avant lui.
 - Restaurer une sauvegarde :
 
   ```sh
@@ -94,5 +99,8 @@ Depuis le checkout ; `etat.json` et `sauvegardes/` sont dans `<checkout>-deploie
 ## À ne jamais faire en production
 
 - `docker compose up` sans `APP_TAG` : la pile repasserait sur `outillerie-app:dev`.
+- Après un retour arrière automatique, `docker compose up` sans `SKIP_DB_UPGRADE=1` : la base peut
+  porter une révision que le code en marche ignore, et l'app ne redémarrerait pas. Cela vaut jusqu'au
+  déploiement réussi suivant ou à une restauration.
 - Modifier un fichier suivi du checkout : le script refuse alors de déployer.
 - `git clean`, `git reset --hard` ou `docker system prune` sur le serveur.

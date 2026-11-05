@@ -275,6 +275,8 @@ def restore_checkout(state):
     try:
         run("git", "checkout", "--quiet", "--detach", state["deployed"])
     except subprocess.CalledProcessError as error:
+        # The checkout no longer matches the running version: stop until someone looks.
+        state["blocked"] = True
         raise StateError(f"Checkout non ramené sur {state['deployed']} : intervention") from error
 
 
@@ -315,9 +317,9 @@ def deploy(state, github):
         state["dirty_reported"] = sha
         return sha, "failure"
     except (TransientError, subprocess.CalledProcessError) as error:
-        restore_checkout(state)
         exhausted = record_transient(state, sha)
         log(f"Échec transitoire ({error}) ; tentative {state['attempts'][sha]}")
+        restore_checkout(state)
         return (sha, "failure") if exhausted else None
     try:
         up(sha)

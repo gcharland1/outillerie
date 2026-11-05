@@ -1,4 +1,5 @@
 import io
+import subprocess
 import urllib.error
 
 import pytest
@@ -142,6 +143,48 @@ def test_rollback_and_deploys_tell_compose_whether_to_migrate(monkeypatch):
 
     assert [env["SKIP_DB_UPGRADE"] for env in environments] == ["0", "1"]
     assert [env["APP_TAG"] for env in environments] == ["new", "old"]
+
+
+def test_rollback_restarts_the_deployed_commit_without_any_migration(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        deployer, "run", lambda *command, env=None, stdout=None: calls.append((command, env))
+    )
+    state = new_state("old")
+
+    deployer.roll_back(state, "new")
+
+    (checkout, _), (up, env) = calls
+    assert checkout == ("git", "checkout", "--quiet", "--detach", "old")
+    assert up[:4] == ("docker", "compose", "-p", deployer.COMPOSE_PROJECT)
+    assert "--no-build" in up and "downgrade" not in up
+    assert (env["APP_TAG"], env["SKIP_DB_UPGRADE"]) == ("old", "1")
+    assert state["failed"] == ["new"] and not state["blocked"]
+
+
+def test_failed_rollback_blocks_deploys(monkeypatch):
+    def failing_run(*command, env=None, stdout=None):
+        raise subprocess.CalledProcessError(1, command)
+
+    monkeypatch.setattr(deployer, "run", failing_run)
+    state = new_state("old")
+
+    deployer.roll_back(state, "new")
+
+    assert state["blocked"]
+
+
+def test_checkout_that_cannot_be_restored_blocks_deploys(monkeypatch):
+    def failing_run(*command, env=None, stdout=None):
+        raise subprocess.CalledProcessError(1, command)
+
+    monkeypatch.setattr(deployer, "run", failing_run)
+    state = new_state("old")
+
+    with pytest.raises(deployer.StateError):
+        deployer.restore_checkout(state)
+
+    assert state["blocked"]
 
 
 def test_failed_commit_is_excluded():
