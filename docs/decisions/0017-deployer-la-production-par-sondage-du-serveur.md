@@ -35,8 +35,9 @@ entrant, ne met aucun secret dans GitHub et garde un seul `compose.yaml`.
 * Choix : le plus récent commit vert de `main` qui descend du commit déployé, toutes les 5 minutes.
 * Protection : `pg_dump` avant chaque déploiement (10 gardés sur le serveur), build avant l'arrêt,
   image étiquetée par SHA (`outillerie-app:${APP_TAG:-dev}`), `up --wait` sur un healthcheck de l'app.
-* Échec : retour automatique à l'image et au checkout précédents, sans downgrade Alembic ; le commit
-  n'est plus retenté. Repose sur l'expand/contract de l'ADR 0007.
+* Échec : retour automatique à l'image et au checkout précédents, sans downgrade Alembic ni
+  `flask db upgrade` (`SKIP_DB_UPGRADE=1`) : l'ancien code ne connaît pas une révision appliquée
+  par le commit en échec. Le commit n'est plus retenté. Repose sur l'expand/contract de l'ADR 0007.
 * Résultat : statut de commit `deploiement` sans détail, posé avec un jeton à grain fin gardé sur le
   serveur ; le détail reste dans journald.
 * Compte : le service tourne sous le compte personnel de l'utilisateur.
@@ -57,7 +58,8 @@ sur la base de production, pour un commit déjà testé.
 * Mauvais, parce que le déroulement d'un déploiement se lit dans journald, pas dans Actions : GitHub
   ne montre que le statut.
 * Mauvais, parce que le compte personnel, membre du groupe `docker`, exécute ce que `compose.yaml`
-  décrit : tout commit mergé sur `main` agit avec des droits équivalents à root.
+  décrit : tout commit mergé sur `main` agit avec des droits équivalents à root. Pour la même
+  raison, les unités systemd générées vivent dans un dossier de ce compte, qui peut les modifier.
 * Mauvais, parce que le script et les unités systemd s'installent et se mettent à jour à la main, et
   que le jeton GitHub expire.
 * Mauvais, parce qu'un retour arrière sans downgrade suppose que chaque migration respecte

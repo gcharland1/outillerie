@@ -10,6 +10,7 @@ services:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       FLASK_SECRET_KEY: ${FLASK_SECRET_KEY}
       FLASK_ENVIRONMENT: ${FLASK_ENVIRONMENT:-development}
+      SKIP_DB_UPGRADE: ${SKIP_DB_UPGRADE:-0}
     ports:
       - "127.0.0.1:8080:5000"
     networks:

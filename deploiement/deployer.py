@@ -90,6 +90,7 @@ def record_success(state, sha):
     state["previous"] = state["deployed"]
     state["deployed"] = sha
     state["attempts"].pop(sha, None)
+    state.pop("dirty_reported", None)
 
 
 def record_failure(state, sha):
@@ -174,13 +175,14 @@ def git_output(*args):
     return run("git", *args, stdout=subprocess.PIPE).stdout.split()
 
 
-def compose(*args, tag, stdout=None):
-    env = {**os.environ, "APP_TAG": tag}
+def compose(*args, tag, stdout=None, skip_db_upgrade=False):
+    env = {**os.environ, "APP_TAG": tag, "SKIP_DB_UPGRADE": "1" if skip_db_upgrade else "0"}
     return run("docker", "compose", "-p", COMPOSE_PROJECT, *args, env=env, stdout=stdout)
 
 
-def up(tag, *options):
-    compose("up", "-d", "--wait", "--wait-timeout", str(WAIT_TIMEOUT_SECONDS), *options, tag=tag)
+def up(tag, *options, skip_db_upgrade=False):
+    wait = ("--wait", "--wait-timeout", str(WAIT_TIMEOUT_SECONDS))
+    compose("up", "-d", *wait, *options, tag=tag, skip_db_upgrade=skip_db_upgrade)
 
 
 def load_state():
@@ -206,7 +208,10 @@ def candidates(deployed):
     )
     if on_main.returncode != 0:
         raise StateError(f"{deployed} absent de main : réamorcer (deploiement/README.md)")
-    return git_output("rev-list", "--ancestry-path", "--topo-order", f"{deployed}..origin/main")
+    try:
+        return git_output("rev-list", "--ancestry-path", "--topo-order", f"{deployed}..origin/main")
+    except subprocess.CalledProcessError as error:
+        raise TransientError("git rev-list en échec") from error
 
 
 def ensure_clean_checkout():
@@ -254,22 +259,34 @@ def back_up(state, sha):
 
 
 def remove_old_images(state):
-    tags = run(
-        "docker", "image", "ls", APP_IMAGE, "--format", "{{.Tag}}", stdout=subprocess.PIPE
-    ).stdout.split()
-    for tag in images_to_delete(tags, state):
-        run("docker", "image", "rm", f"{APP_IMAGE}:{tag}")
-    run("docker", "image", "prune", "-f")
+    """Frees disk space; a failure here never fails the deploy that just succeeded"""
+    try:
+        tags = run(
+            "docker", "image", "ls", APP_IMAGE, "--format", "{{.Tag}}", stdout=subprocess.PIPE
+        ).stdout.split()
+        for tag in images_to_delete(tags, state):
+            run("docker", "image", "rm", f"{APP_IMAGE}:{tag}")
+        run("docker", "image", "prune", "-f")
+    except subprocess.CalledProcessError as error:
+        log(f"Nettoyage des images incomplet : {error}")
+
+
+def restore_checkout(state):
+    try:
+        run("git", "checkout", "--quiet", "--detach", state["deployed"])
+    except subprocess.CalledProcessError as error:
+        raise StateError(f"Checkout non ramené sur {state['deployed']} : intervention") from error
 
 
 def roll_back(state, sha):
-    """Restarts the deployed commit's checkout and image, without undoing any migration"""
+    """Restarts the deployed commit's checkout and image, without running any migration:
+    the old code does not know a revision the failed commit may have applied (ADR 0007)"""
     deployed = state["deployed"]
     log(f"{sha} ne devient pas sain : retour à {deployed}")
     record_failure(state, sha)
     try:
         run("git", "checkout", "--quiet", "--detach", deployed)
-        up(deployed, "--no-build", "--pull", "never")
+        up(deployed, "--no-build", "--pull", "never", skip_db_upgrade=True)
     except subprocess.CalledProcessError:
         state["blocked"] = True
         log("Retour arrière en échec : déploiements bloqués jusqu'à une intervention manuelle")
@@ -292,9 +309,13 @@ def deploy(state, github):
         compose("build", "app", tag=sha)
     except DirtyCheckoutError as error:
         log(f"Checkout modifié à la main, déploiement refusé :\n{error}")
+        # Published once per commit, not on every 5-minute run.
+        if state.get("dirty_reported") == sha:
+            return None
+        state["dirty_reported"] = sha
         return sha, "failure"
     except (TransientError, subprocess.CalledProcessError) as error:
-        run("git", "checkout", "--quiet", "--detach", state["deployed"])
+        restore_checkout(state)
         exhausted = record_transient(state, sha)
         log(f"Échec transitoire ({error}) ; tentative {state['attempts'][sha]}")
         return (sha, "failure") if exhausted else None
@@ -330,6 +351,9 @@ def main():
             return 1
         except StateError as error:
             log(str(error))
+            return 1
+        except subprocess.CalledProcessError as error:
+            log(f"Commande en échec : {error}")
             return 1
         finally:
             save_state(state)

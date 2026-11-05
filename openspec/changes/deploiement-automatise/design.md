@@ -66,8 +66,17 @@ passe par l'environnement du sous-processus, jamais par le `.env`.
 6. `git checkout --detach <sha>` puis `docker compose build app` avec `APP_TAG=<sha>`.
 7. `docker compose up -d --wait --wait-timeout 120` avec `APP_TAG=<sha>`.
 8. Succès : état mis à jour (commit déployé, précédent), statut `success`, nettoyage des images.
-9. Échec de 7 : `git checkout --detach <précédent>`, `APP_TAG=<précédent> docker compose up -d --wait
-   --no-build --pull never`, commit marqué en échec, statut `failure`.
+9. Échec de 7 : `git checkout --detach <précédent>`, `APP_TAG=<précédent> SKIP_DB_UPGRADE=1
+   docker compose up -d --wait --no-build --pull never`, commit marqué en échec, statut `failure`.
+   `SKIP_DB_UPGRADE=1` est indispensable : si le commit en échec a appliqué une migration, le
+   `flask db upgrade` de l'ancienne image échouerait sur une révision inconnue (`Can't locate
+   revision`), et l'ancienne version ne redémarrerait jamais. Toutes les images déployées par le
+   script sont construites après ce changement et lisent cette variable.
+
+Un échec de commande hors de ces étapes (`rev-list`, retour du checkout après un échec transitoire)
+devient un échec transitoire ou un blocage, jamais une exception non rattrapée ; le nettoyage des
+images ne fait jamais échouer un déploiement réussi. Un checkout modifié ne publie `failure` qu'une
+fois par commit.
 
 `--no-build --pull never` empêche Compose de rebâtir l'ancienne étiquette avec le nouveau code
 (`questions.md` S5). Si le retour arrière échoue aussi, le script publie un échec, écrit
@@ -97,7 +106,9 @@ déploie rien.
 `deploiement/installer.sh`, idempotent, lancé depuis le checkout sous le compte qui déploiera : crée
 le dossier, copie le script, demande le jeton s'il manque, amorce au premier passage (sauvegarde,
 build et `up --wait` du commit courant avec `APP_TAG`, `etat.json`), génère les unités et les active.
-Le relancer met à jour le script et les unités installés.
+Le relancer met à jour le script et les unités installés. Base arrêtée à l'amorçage : refus, sauf
+`OUTILLERIE_SANS_SAUVEGARDE=1` explicite. Un chemin de checkout hors `[A-Za-z0-9._/-]` est refusé,
+car il est écrit dans l'unité et passe par `sed`.
 
 Alternative écartée : une procédure manuelle dans le README, qui obligeait à y écrire les chemins.
 

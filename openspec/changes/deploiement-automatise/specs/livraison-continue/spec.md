@@ -123,13 +123,19 @@ secondes qui suivent son démarrage.
 
 ### Requirement: Retour à la version précédente
 Quand la nouvelle version ne devient pas saine, le serveur MUST relancer la version précédente avec
-son image et sa configuration, sans annuler de migration, et MUST marquer le commit en échec.
+son image et sa configuration, sans annuler ni appliquer de migration, et MUST marquer le commit en
+échec.
 
 #### Scenario: Nouvelle version malsaine
 - **WHEN** l'app du nouveau commit ne devient pas saine
 - **THEN** le serveur relance l'image et le checkout du commit déployé précédemment
 - **AND** il n'annule aucune migration
 - **AND** le commit est marqué en échec
+
+#### Scenario: Migration appliquée puis app malsaine
+- **WHEN** le nouveau commit applique une migration puis son app ne devient pas saine
+- **THEN** la version précédente redémarre sans lancer de migration et devient saine
+- **AND** la base garde la révision appliquée
 
 #### Scenario: Retour arrière en échec
 - **WHEN** la version précédente ne devient pas saine non plus

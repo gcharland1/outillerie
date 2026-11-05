@@ -70,7 +70,9 @@ def test_pull_request_run_is_not_green():
     assert not is_green(make_run("a", event="pull_request"), GREEN_JOBS)
 
 
-def test_rerun_whose_latest_attempt_succeeded_is_green():
+def test_rerun_reported_successful_is_green():
+    # The API reports a run's latest attempt, and /jobs its latest attempt's jobs: a later
+    # attempt needs no handling of its own. To observe in production.
     assert is_green(make_run("a", attempt=2), GREEN_JOBS)
 
 
@@ -118,6 +120,28 @@ def test_success_makes_the_commit_deployed_and_keeps_the_previous_one():
     record_success(state, "b")
 
     assert (state["deployed"], state["previous"], state["attempts"]) == ("b", "a", {})
+
+
+def test_success_forgets_a_reported_dirty_checkout():
+    state = new_state("a")
+    state["dirty_reported"] = "b"
+
+    record_success(state, "c")
+
+    assert "dirty_reported" not in state
+
+
+def test_rollback_and_deploys_tell_compose_whether_to_migrate(monkeypatch):
+    environments = []
+    monkeypatch.setattr(
+        deployer, "run", lambda *command, env=None, stdout=None: environments.append(env)
+    )
+
+    deployer.up("new")
+    deployer.up("old", "--no-build", skip_db_upgrade=True)
+
+    assert [env["SKIP_DB_UPGRADE"] for env in environments] == ["0", "1"]
+    assert [env["APP_TAG"] for env in environments] == ["new", "old"]
 
 
 def test_failed_commit_is_excluded():

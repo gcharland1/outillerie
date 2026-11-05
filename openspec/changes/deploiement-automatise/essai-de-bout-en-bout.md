@@ -44,3 +44,14 @@ la commande au lieu de l'exécuter :
 | 5 | Script installé sans `OUTILLERIE_CHECKOUT` | refus, code 1 |
 
 Non couvert : `sudo` et systemd réels, sauvegarde de l'amorçage sur une base en marche.
+
+## Retour arrière après une migration appliquée (relecture, 2026-11-04)
+
+Constat bloquant de la relecture : l'ancienne image relancée exécutait `flask db upgrade` sur une
+base portant une révision qu'elle ignore. Essai, après le correctif `SKIP_DB_UPGRADE` :
+
+| # | Situation | Constat |
+|---|-----------|---------|
+| 7 | Commit `relecture` (correctifs) vert | déployé, statut `success` |
+| 8 | Commit `app-cassee` vert : migration valide (`e55a10000001`, crée une table), puis `main.py` qui s'arrête | `up --wait` échoue ; retour à `relecture` avec `SKIP_DB_UPGRADE=1`, `healthy` ; `alembic_version` = `e55a10000001`, table présente ; commit en échec, statut `failure`, code 1, pas de blocage |
+| 8b | Contre-épreuve : même relance sans `SKIP_DB_UPGRADE` | `unhealthy`, journal : `Can't locate revision identified by 'e55a10000001'` |

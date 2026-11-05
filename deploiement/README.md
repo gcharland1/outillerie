@@ -41,9 +41,23 @@ Le script est idempotent ; chaque passage :
 1. crée `<checkout>-deploiement/` (par `sudo` si le dossier parent n'est pas accessible en écriture) ;
 2. copie `deployer.py` ;
 3. demande le jeton s'il manque ;
-4. au premier passage seulement (pas d'`etat.json`) : refuse un checkout modifié, sauvegarde la base
-   si elle tourne, construit et démarre le commit courant avec `APP_TAG`, écrit `etat.json` ;
+4. au premier passage seulement (pas d'`etat.json`) : refuse un checkout modifié, sauvegarde la base,
+   construit et démarre le commit courant avec `APP_TAG`, écrit `etat.json`. Si la base est
+   arrêtée, il s'arrête : la démarrer, ou relancer avec `OUTILLERIE_SANS_SAUVEGARDE=1` si elle ne
+   contient aucune donnée ;
 5. régénère les unités, les lie, recharge systemd et active le timer.
+
+Le chemin du checkout ne doit contenir que lettres, chiffres, `.`, `_`, `-` et `/`.
+
+Si l'amorçage échoue au démarrage (`up --wait`), la pile reste sur la nouvelle version en échec et
+`etat.json` n'est pas écrit. Pour revenir à la version d'avant, depuis le checkout :
+
+```sh
+git checkout <commit d'avant>
+docker compose -p outillerie-prod up -d --build
+```
+
+Si une migration a été appliquée, restaurer aussi la sauvegarde de l'installation (ci-dessous).
 
 Le commit amorcé doit rester un ancêtre de `main` : amorcer sur une branche puis la fusionner par
 *squash* ou *rebase* bloque les déploiements (le journal le signale). Dans ce cas, se placer sur

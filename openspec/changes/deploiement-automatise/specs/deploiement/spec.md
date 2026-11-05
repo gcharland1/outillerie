@@ -27,6 +27,18 @@ migrations.
 - **WHEN** la migration échoue au démarrage
 - **THEN** le conteneur de l'app ne devient jamais sain
 
+### Requirement: Migrations au démarrage désactivables
+Le conteneur de l'app SHALL appliquer les migrations à son démarrage, sauf quand la variable
+`SKIP_DB_UPGRADE` vaut `1`, transmise par Docker Compose avec `0` par défaut.
+
+#### Scenario: Démarrage ordinaire
+- **WHEN** l'app démarre sans `SKIP_DB_UPGRADE`
+- **THEN** les migrations en attente sont appliquées avant que l'app serve
+
+#### Scenario: Migrations désactivées
+- **WHEN** l'app démarre avec `SKIP_DB_UPGRADE=1` sur une base dont la révision lui est inconnue
+- **THEN** elle démarre sans lancer de migration et devient saine
+
 ### Requirement: Redémarrage automatique des services
 Docker Compose SHALL redémarrer l'app et la base après un plantage ou un redémarrage de l'hôte, sauf
 si elles ont été arrêtées volontairement.

@@ -26,6 +26,8 @@ compose() {
 docker info >/dev/null 2>&1 || echec "$compte ne peut pas lancer docker"
 python3 -c 'import sys; sys.exit(sys.version_info < (3, 10))' || echec "python3 ≥ 3.10 requis"
 [[ -f $checkout/.env ]] || echec "$checkout/.env absent"
+# Written unquoted into the generated unit and through sed.
+[[ $checkout =~ ^[A-Za-z0-9._/-]+$ ]] || echec "chemin du checkout refusé (espace ou caractère spécial)"
 
 echo "Dossier de déploiement : $deploiement"
 if [[ ! -d $deploiement ]]; then
@@ -51,7 +53,8 @@ if [[ ! -f $deploiement/etat.json ]]; then
   git -C "$checkout" diff --quiet HEAD -- || echec "fichiers suivis modifiés dans $checkout"
   sha=$(git -C "$checkout" rev-parse HEAD)
   echo "Amorçage : déploiement manuel de $sha"
-  if compose ps --status running --services | grep -qx db; then
+  services=$(compose ps --status running --services) || echec "état de la pile illisible"
+  if grep -qx db <<<"$services"; then
     sauvegarde="$deploiement/sauvegardes/$(date -u +%Y%m%dT%H%M%SZ)-installation.dump"
     (umask 077 && compose exec -T db sh -c 'pg_dump -Fc -U "$POSTGRES_USER" "$POSTGRES_DB"' \
       >"$sauvegarde") || {
@@ -59,6 +62,12 @@ if [[ ! -f $deploiement/etat.json ]]; then
       echec "sauvegarde en échec"
     }
     echo "Sauvegarde : $sauvegarde"
+  elif [[ ${OUTILLERIE_SANS_SAUVEGARDE:-} == 1 ]]; then
+    echo "Base arrêtée : amorçage sans sauvegarde (OUTILLERIE_SANS_SAUVEGARDE=1)"
+  else
+    echec "base arrêtée, rien à sauvegarder avant les migrations : la démarrer" \
+      "(docker compose -p $projet up -d db), ou relancer avec OUTILLERIE_SANS_SAUVEGARDE=1" \
+      "si elle ne contient aucune donnée"
   fi
   APP_TAG=$sha compose build app
   APP_TAG=$sha compose up -d --wait --wait-timeout 120
