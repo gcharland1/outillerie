@@ -3,6 +3,9 @@ services:
     build:
       context: ./application 
       dockerfile: Dockerfile
+    # Tagged with the deployed commit in production, so a failed deploy can restart the previous one.
+    image: outillerie-app:${APP_TAG:-dev}
+    restart: unless-stopped
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       FLASK_SECRET_KEY: ${FLASK_SECRET_KEY}
@@ -14,9 +17,17 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # The slim image has no curl; start_period covers the migrations run before the app.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
 
   db:
     image: postgres:17
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}

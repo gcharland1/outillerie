@@ -41,7 +41,18 @@ Ou tout dans Docker : `docker compose up --build` (app sur :8080, migrations app
 Compose publie ses ports sur `127.0.0.1` seulement : `localhost:8080` et `localhost:5430` répondent
 sur le poste, pas depuis une autre machine ([ADR 0015](docs/decisions/0015-exposer-la-production-par-cloudflare-tunnel.md)).
 `FLASK_ENVIRONMENT` vaut `development` par défaut ; toute autre valeur (`production` sur le serveur)
-marque le cookie de session `Secure`.
+marque le cookie de session `Secure` et refuse de démarrer sans vraie `FLASK_SECRET_KEY` (la valeur
+d'exemple `dev-seulement` est refusée).
+
+L'image de l'app s'appelle `outillerie-app:dev` ; en production, `APP_TAG` l'étiquette avec le
+commit déployé. `docker compose ps` montre l'app `healthy` une fois les migrations appliquées et la
+page d'accueil servie. L'app et la base redémarrent seules après un plantage ou un redémarrage du
+poste, sauf après `docker compose stop` ou `down`.
+
+### Production
+
+Le serveur se déploie seul : voir [deploiement/README.md](deploiement/README.md)
+([ADR 0017](docs/decisions/0017-deployer-la-production-par-sondage-du-serveur.md)).
 
 ### Base existante
 
