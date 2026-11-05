@@ -104,8 +104,8 @@ def test_search_bar_offers_users_and_tools(logged_in_client):
 
     search_bar = re.search(r'<div class="nav-center">(.*?)</div>', text, re.DOTALL)[1]
     assert 'action="/search" method="get"' in search_bar
-    assert '<option value="user" selected>Utilisateur</option>' in search_bar
-    assert '<option value="tool">Outil</option>' in search_bar
+    assert '<option value="tool" selected>Outil</option>' in search_bar
+    assert '<option value="user">Utilisateur</option>' in search_bar
     assert 'type="search" name="q" value=""' in search_bar
     assert 'minlength="3"' in search_bar
 
@@ -120,7 +120,15 @@ def test_search_bar_is_type_then_text_then_button_in_one_form(logged_in_client):
 
 def test_no_page_says_voisin(client, logged_in_client):
     visitor_pages = ["/", "/login", "/register"]
-    user_pages = ["/", "/tools/mine", "/tools/new", "/contacts", "/search?type=user&q=bob"]
+    user_pages = [
+        "/",
+        "/tools/mine",
+        "/tools/new",
+        "/contacts",
+        "/loans",
+        "/tools/find",
+        "/search?type=user&q=bob",
+    ]
 
     for response in [client.get(path) for path in visitor_pages] + [
         logged_in_client.get(path) for path in user_pages

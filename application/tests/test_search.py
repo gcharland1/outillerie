@@ -135,10 +135,19 @@ def test_unknown_search_type_is_not_available(as_alice):
 
     assert "Ce type de recherche n'est pas disponible" in text
     assert usernames(text) == []
+    assert '<option value="tool" selected>Outil</option>' in text
 
 
-def test_search_text_is_kept_in_the_search_bar(as_alice):
-    assert 'type="search" name="q" value="gagnon"' in search(as_alice, " gagnon ")
+def test_search_text_and_type_are_kept_in_the_search_bar(as_alice):
+    text = search(as_alice, " gagnon ")
+
+    assert 'type="search" name="q" value="gagnon"' in text
+    assert '<option value="user" selected>Utilisateur</option>' in text
+    assert '<option value="tool">Outil</option>' in text
+
+
+def test_short_tool_search_keeps_the_tool_type(as_alice):
+    assert '<option value="tool" selected>Outil</option>' in search(as_alice, "pe", "tool")
 
 
 # Action selon la relation de contact

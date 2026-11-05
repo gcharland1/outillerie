@@ -102,7 +102,12 @@ def confirm_remove(user_id):
     contact, relation = _contact_relation(user_id)
     if relation is None:
         return _back_from_not_a_contact()
-    return render_template("contacts/confirm_remove.html", contact=contact)
+    pending = catalog.count_pending_requests(catalog.requests_between(current_user.id, contact.id))
+    return render_template(
+        "contacts/confirm_remove.html",
+        contact=contact,
+        cancel_notice=catalog.cancel_notice(pending, between=True),
+    )
 
 
 @bp.route("/<int:user_id>/remove", methods=["POST"])
@@ -111,6 +116,7 @@ def remove(user_id):
     _, relation = _contact_relation(user_id)
     if relation is None:
         return _back_from_not_a_contact()
+    catalog.cancel_pending_requests(catalog.requests_between(current_user.id, user_id))
     db.session.delete(relation)
     db.session.commit()
     return redirect(url_for("contacts.mine"))
