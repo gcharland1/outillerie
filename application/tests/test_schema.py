@@ -1,6 +1,7 @@
 import flask_migrate
 import pytest
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 
 from app import create_app
 from app.extensions import db
@@ -87,3 +88,24 @@ def test_revisions_create_the_extensions(migrated_app):
     with migrated_app.app_context():
         installed = {row[0] for row in db.session.execute(text("SELECT extname FROM pg_extension"))}
         assert set(EXTENSIONS) <= installed
+
+
+def test_revisions_hold_the_dates_of_claimed_loans(migrated_app):
+    with migrated_app.app_context():
+        db.session.execute(
+            text(
+                'INSERT INTO "user" (username, password, email, first_name, last_name) '
+                "VALUES ('alice', 'hash', 'alice@example.com', 'Alice', 'Tremblay');"
+                "INSERT INTO tool (owner_id, name, description) VALUES (1, 'Perceuse', 'Sans fil');"
+                "INSERT INTO loan (tool_id, borrower_id, start_date, end_date, status) "
+                "VALUES (1, 1, '2026-11-03', '2026-11-05', 'return_claimed')"
+            )
+        )
+        with pytest.raises(IntegrityError, match="excl_loan_tool_dates"):
+            db.session.execute(
+                text(
+                    "INSERT INTO loan (tool_id, borrower_id, start_date, end_date, status) "
+                    "VALUES (1, 1, '2026-11-04', '2026-11-06', 'handover_claimed')"
+                )
+            )
+        db.session.rollback()

@@ -97,6 +97,22 @@ def test_unknown_status_is_refused_by_the_database(mock_app, tool_id, borrower_i
         )
 
 
+@pytest.mark.parametrize("status", [LoanStatus.HANDOVER_CLAIMED, LoanStatus.RETURN_CLAIMED])
+def test_claimed_statuses_are_stored(mock_app, tool_id, borrower_id, status):
+    with mock_app.app_context():
+        loan_id = make_loan(tool_id, borrower_id, a_day(3), a_day(5), status).id
+        db.session.expire_all()
+        assert db.session.get(Loan, loan_id).status is status
+
+
+@pytest.mark.parametrize("status", [LoanStatus.HANDOVER_CLAIMED, LoanStatus.RETURN_CLAIMED])
+def test_claimed_loan_holds_its_dates(mock_app, tool_id, borrower_id, status):
+    with mock_app.app_context():
+        make_loan(tool_id, borrower_id, a_day(3), a_day(5), status)
+        with pytest.raises(IntegrityError, match="excl_loan_tool_dates"):
+            make_loan(tool_id, borrower_id, a_day(4), a_day(6), LoanStatus.ACCEPTED)
+
+
 def test_overlapping_committed_loans_are_refused(mock_app, tool_id, borrower_id):
     with mock_app.app_context():
         make_loan(tool_id, borrower_id, a_day(3), a_day(5), LoanStatus.ACCEPTED)

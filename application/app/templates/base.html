@@ -1,5 +1,5 @@
-{% macro pending_badge(count, kind) -%}
-{% if count %} <span class="badge">{{ count }} <span class="visually-hidden">demande{{ "s" if count > 1 }} {{ kind }}en attente</span></span>{% endif %}
+{% macro pending_badge(count, one, many) -%}
+{% if count %} <span class="badge">{{ count }} <span class="visually-hidden">{{ many if count > 1 else one }}</span></span>{% endif %}
 {%- endmacro -%}
 <!DOCTYPE html>
 <html lang="fr">
@@ -41,12 +41,12 @@
                 <div class="nav-right">
                     {% if current_user.is_authenticated %}
                     <details class="account-menu">
-                        <summary>{{ current_user.username }}{{ pending_badge(pending_contact_requests + pending_loan_requests, '') }}</summary>
+                        <summary>{{ current_user.username }}{{ pending_badge(pending_contact_requests + loan_actions, "élément en attente", "éléments en attente") }}</summary>
                         <div class="account-menu-items">
                             <span class="menu-item-upcoming" aria-disabled="true">Mon profil</span>
                             <a href="{{ url_for('tools.mine') }}">Gérer mes outils</a>
-                            <a href="{{ url_for('contacts.mine') }}">Mes contacts{{ pending_badge(pending_contact_requests, 'de contact ') }}</a>
-                            <a href="{{ url_for('loans.mine') }}">Mes prêts{{ pending_badge(pending_loan_requests, "d'emprunt ") }}</a>
+                            <a href="{{ url_for('contacts.mine') }}">Mes contacts{{ pending_badge(pending_contact_requests, "demande de contact en attente", "demandes de contact en attente") }}</a>
+                            <a href="{{ url_for('loans.mine') }}">Mes prêts{{ pending_badge(loan_actions, "prêt qui attend votre action", "prêts qui attendent votre action") }}</a>
                             <a href="{{ url_for('tools.find') }}">Trouver un outil</a>
                             <span class="menu-item-upcoming" aria-disabled="true">Préférences</span>
                         </div>

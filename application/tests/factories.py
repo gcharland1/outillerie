@@ -40,7 +40,7 @@ def user_id(username):
     return User.query.filter_by(username=username).one().id
 
 
-def make_loan(tool_id, borrower_id, first_day, last_day, status=None, message=None):
+def make_loan(tool_id, borrower_id, first_day, last_day, status=None, message=None, **fields):
     loan = Loan(
         tool_id=tool_id,
         borrower_id=borrower_id,
@@ -48,6 +48,7 @@ def make_loan(tool_id, borrower_id, first_day, last_day, status=None, message=No
         end_date=last_day,
         status=status,
         message=message,
+        **fields,
     )
     db.session.add(loan)
     db.session.commit()

@@ -1,11 +1,11 @@
 from datetime import UTC, date, datetime, timedelta
 
 import pytest
-from sqlalchemy import event
+from sqlalchemy import event, select
 
 from app import catalog
 from app.extensions import db
-from models import LoanStatus, ToolCondition
+from models import Loan, LoanStatus, ToolCondition
 from tests.factories import (
     make_contact_relation,
     make_contact_request,
@@ -118,6 +118,19 @@ def test_is_contact(mock_app, contacts):
         (LoanStatus.REFUSED, TODAY, TODAY + timedelta(days=2), "Disponible"),
         (LoanStatus.CANCELED, TODAY, TODAY + timedelta(days=2), "Disponible"),
         (LoanStatus.REQUESTED, TODAY - timedelta(days=9), TODAY - timedelta(days=2), "Disponible"),
+        (
+            LoanStatus.HANDOVER_CLAIMED,
+            TODAY - timedelta(days=1),
+            date(2099, 11, 3),
+            "Prêté jusqu'au 3 novembre 2099",
+        ),
+        (
+            LoanStatus.RETURN_CLAIMED,
+            TODAY - timedelta(days=9),
+            TODAY - timedelta(days=2),
+            "Prêté jusqu'au",
+        ),
+        (LoanStatus.ACCEPTED, TODAY - timedelta(days=9), TODAY - timedelta(days=1), "Disponible"),
     ],
 )
 def test_loan_status(mock_app, contacts, status, first_day, last_day, label):
@@ -126,6 +139,7 @@ def test_loan_status(mock_app, contacts, status, first_day, last_day, label):
         make_loan(tool.id, contacts["alice"], first_day, last_day, status)
         [card] = catalog.tool_cards([tool])
         assert card.status.startswith(label)
+        assert "retard" not in card.status
         assert card.available == (label == "Disponible")
 
 
@@ -172,6 +186,49 @@ def test_available_only_hides_lent_and_pending_tools(mock_app, contacts):
         )
         assert visible_names(contacts["alice"], available_only=True) == ["Perceuse"]
         assert visible_names(contacts["alice"]) == ["Perceuse", "Ponceuse", "Scie"]
+
+
+def test_available_only_hides_tools_with_a_claim_and_shows_expired_acceptances(mock_app, contacts):
+    with mock_app.app_context():
+        claimed = make_tool(contacts["bob"], name="Scie")
+        returning = make_tool(contacts["bob"], name="Rabot")
+        expired = make_tool(contacts["bob"], name="Ponceuse")
+        past = (TODAY - timedelta(days=9), TODAY - timedelta(days=1))
+        make_loan(claimed.id, contacts["alice"], *past, LoanStatus.HANDOVER_CLAIMED)
+        make_loan(returning.id, contacts["alice"], *past, LoanStatus.RETURN_CLAIMED)
+        make_loan(expired.id, contacts["alice"], *past, LoanStatus.ACCEPTED)
+        assert visible_names(contacts["alice"], available_only=True) == ["Ponceuse"]
+
+
+def test_overdue_and_expired_loans(mock_app, contacts):
+    with mock_app.app_context():
+        tool = make_tool(contacts["bob"])
+        yesterday, today = TODAY - timedelta(days=1), TODAY
+        cases = {
+            "lent until today": (LoanStatus.LENT, today, False, False),
+            "lent until yesterday": (LoanStatus.LENT, yesterday, True, False),
+            "handover claimed until yesterday": (
+                LoanStatus.HANDOVER_CLAIMED,
+                yesterday,
+                True,
+                False,
+            ),
+            "return claimed until yesterday": (LoanStatus.RETURN_CLAIMED, yesterday, False, False),
+            "accepted until today": (LoanStatus.ACCEPTED, today, False, False),
+            "accepted until yesterday": (LoanStatus.ACCEPTED, yesterday, False, True),
+        }
+        for case, (status, last_day, overdue, expired) in cases.items():
+            loan = make_loan(
+                tool.id, contacts["alice"], TODAY - timedelta(days=9), last_day, status
+            )
+            matches = db.session.execute(
+                select(catalog.overdue_loan(), catalog.expired_acceptance()).where(
+                    Loan.id == loan.id
+                )
+            ).one()
+            assert tuple(matches) == (overdue, expired), case
+            db.session.delete(loan)
+            db.session.commit()
 
 
 @pytest.mark.parametrize(
