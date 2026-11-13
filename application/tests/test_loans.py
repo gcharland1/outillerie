@@ -331,7 +331,7 @@ def test_my_loans_lists_received_and_sent_requests(mock_app, contacts, drill, as
     text = page_text(as_alice.get("/loans"))
 
     assert "<h2>Mes prêts</h2>" in text
-    received, sent = text.split("<h3>Mes demandes</h3>")
+    received, sent = text.split("<h3>Mes emprunts</h3>")
     assert "Scie" in received and "Bob Gagnon" in received
     assert "Perceuse" in sent and "je passe samedi" in sent
     assert f"du {catalog.french_date(days(1))} au {catalog.french_date(days(3))}" in sent
@@ -377,7 +377,7 @@ def test_requests_to_act_on_come_first_newest_first(mock_app, contacts, drill, a
     plane = add_tool(mock_app, contacts["bob"], name="Rabot")
     add_loan(mock_app, saw, contacts["alice"], days(1), days(2), LoanStatus.REFUSED)
     add_loan(mock_app, drill, contacts["alice"], days(1), days(2))
-    add_loan(mock_app, sander, contacts["alice"], days(1), days(2), LoanStatus.ACCEPTED)
+    add_loan(mock_app, sander, contacts["alice"], days(1), days(2), LoanStatus.RETURNED)
     add_loan(mock_app, plane, contacts["carole"], days(1), days(2))
 
     text = page_text(as_bob.get("/loans"))
@@ -393,7 +393,7 @@ def test_my_requests_to_act_on_come_first_newest_first(mock_app, contacts, drill
     add_loan(mock_app, drill, contacts["alice"], days(1), days(2))
     add_loan(mock_app, sander, contacts["alice"], days(1), days(2), LoanStatus.CANCELED)
 
-    sent = page_text(as_alice.get("/loans")).split("<h3>Mes demandes</h3>")[1]
+    sent = page_text(as_alice.get("/loans")).split("<h3>Mes emprunts</h3>")[1]
 
     assert re.findall(r"<tr>\s*<td>([^<]+)</td>", sent) == ["Perceuse", "Ponceuse", "Scie"]
 
@@ -533,6 +533,41 @@ def test_username_badge_adds_contact_and_loan_requests(mock_app, ids, as_bob):
     assert re.search(r'Mes prêts <span class="badge">1 ', text)
 
 
+@pytest.mark.parametrize(
+    ("status", "end", "bob_count", "alice_count"),
+    [
+        (LoanStatus.RETURN_CLAIMED, 2, 1, 0),
+        (LoanStatus.HANDOVER_CLAIMED, 2, 0, 1),
+        (LoanStatus.LENT, -1, 1, 1),
+        (LoanStatus.HANDOVER_CLAIMED, -1, 1, 1),
+        (LoanStatus.LENT, 2, 0, 0),
+        (LoanStatus.RETURN_CLAIMED, -1, 1, 0),
+    ],
+)
+def test_badge_counts_loans_waiting_for_the_user(
+    mock_app, contacts, drill, as_alice, as_bob, status, end, bob_count, alice_count
+):
+    loan_in(mock_app, contacts, drill, status, start=-5, end=end)
+
+    for client, count in ((as_bob, bob_count), (as_alice, alice_count)):
+        text = page_text(client.get("/"))
+        mine = re.search(r'Mes prêts <span class="badge">(\d+) ', text)
+        assert (int(mine[1]) if mine else 0) == count
+
+
+def test_username_badge_adds_a_return_to_confirm(mock_app, ids, as_bob):
+    with mock_app.app_context():
+        make_contact_relation(ids["alice"], ids["bob"])
+        make_contact_request(ids["carole"], ids["bob"])
+    drill = add_tool(mock_app, ids["bob"])
+    add_loan(mock_app, drill, ids["alice"], days(-1), days(3), LoanStatus.RETURN_CLAIMED)
+
+    summary = re.search(r"<summary>(.*?)</summary>", page_text(as_bob.get("/")), re.DOTALL)[1]
+
+    assert badges(summary) == ["2"]
+    assert "éléments en attente" in summary
+
+
 # Automatic cancellation
 
 
@@ -544,9 +579,9 @@ def test_retiring_a_tool_cancels_its_requests(mock_app, contacts, drill, request
     text = page_text(as_bob.get(f"/tools/{drill}/retire"))
     as_bob.post(f"/tools/{drill}/retire")
 
-    assert "1 demande d'emprunt en attente sera annulée" in text
+    assert "1 demande d'emprunt en attente et 1 prêt accepté seront annulés" in text
     assert status_of(mock_app, request_id) is LoanStatus.CANCELED
-    assert status_of(mock_app, accepted) is LoanStatus.ACCEPTED
+    assert status_of(mock_app, accepted) is LoanStatus.CANCELED
 
 
 def test_retire_page_without_requests_says_nothing(mock_app, drill, as_bob):
@@ -586,6 +621,88 @@ def test_removing_a_contact_cancels_requests_both_ways(mock_app, contacts, reque
     assert status_of(mock_app, other) is LoanStatus.REQUESTED
 
 
+@pytest.mark.parametrize(
+    ("first_status", "notice"),
+    [
+        (LoanStatus.REQUESTED, "1 demande d'emprunt en attente sera annulée"),
+        (LoanStatus.ACCEPTED, "1 prêt accepté sera annulé"),
+    ],
+)
+def test_retire_notice_names_what_it_cancels(
+    mock_app, contacts, drill, as_bob, first_status, notice
+):
+    add_loan(mock_app, drill, contacts["alice"], days(1), days(3), first_status)
+
+    assert notice in page_text(as_bob.get(f"/tools/{drill}/retire"))
+
+
+@pytest.mark.parametrize("change", ["retire", "out_of_order"])
+@pytest.mark.parametrize(
+    "status", [LoanStatus.HANDOVER_CLAIMED, LoanStatus.LENT, LoanStatus.RETURN_CLAIMED]
+)
+def test_a_handed_over_loan_survives_the_tool_leaving(
+    mock_app, contacts, drill, as_bob, change, status
+):
+    loan_id = add_loan(mock_app, drill, contacts["alice"], days(-2), days(2), status)
+    expired = add_loan(mock_app, drill, contacts["carole"], days(-9), days(-5), LoanStatus.ACCEPTED)
+
+    page = page_text(as_bob.get(f"/tools/{drill}/retire"))
+    if change == "retire":
+        as_bob.post(f"/tools/{drill}/retire")
+    else:
+        as_bob.post(
+            f"/tools/{drill}/edit",
+            data={"name": "Perceuse", "description": "Cassée", "condition": "out_of_order"},
+        )
+
+    assert "sera annul" not in page and "seront annul" not in page
+    assert status_of(mock_app, loan_id) is status
+    assert status_of(mock_app, expired) is LoanStatus.ACCEPTED
+
+
+def test_putting_a_tool_out_of_order_cancels_its_accepted_loans(mock_app, contacts, drill, as_bob):
+    accepted = add_loan(mock_app, drill, contacts["alice"], days(1), days(3), LoanStatus.ACCEPTED)
+
+    as_bob.post(
+        f"/tools/{drill}/edit",
+        data={"name": "Perceuse", "description": "Cassée", "condition": "out_of_order"},
+    )
+
+    assert status_of(mock_app, accepted) is LoanStatus.CANCELED
+
+
+def test_removing_a_contact_cancels_accepted_loans_only(mock_app, contacts, drill, as_bob):
+    plane = add_tool(mock_app, contacts["bob"], name="Rabot")
+    sander = add_tool(mock_app, contacts["bob"], name="Ponceuse")
+    accepted = add_loan(mock_app, plane, contacts["alice"], days(1), days(3), LoanStatus.ACCEPTED)
+    claimed = add_loan(
+        mock_app, sander, contacts["alice"], days(-1), days(3), LoanStatus.HANDOVER_CLAIMED
+    )
+    lent = add_loan(mock_app, drill, contacts["alice"], days(-1), days(3), LoanStatus.LENT)
+    saw = add_tool(mock_app, contacts["bob"], name="Scie")
+    expired = add_loan(mock_app, saw, contacts["alice"], days(-9), days(-5), LoanStatus.ACCEPTED)
+
+    text = page_text(as_bob.get(f"/contacts/{contacts['alice']}/remove"))
+    as_bob.post(f"/contacts/{contacts['alice']}/remove")
+
+    assert "1 prêt accepté entre vous sera annulé" in text
+    assert status_of(mock_app, accepted) is LoanStatus.CANCELED
+    assert status_of(mock_app, claimed) is LoanStatus.HANDOVER_CLAIMED
+    assert status_of(mock_app, lent) is LoanStatus.LENT
+    assert status_of(mock_app, expired) is LoanStatus.ACCEPTED
+
+
+def test_cancel_notice_wording():
+    assert catalog.cancel_notice(0) is None
+    assert catalog.cancel_notice(2, 0, between=True) == (
+        "2 demandes d'emprunt en attente entre vous seront annulées"
+    )
+    assert catalog.cancel_notice(0, 2) == "2 prêts acceptés seront annulés"
+    assert catalog.cancel_notice(1, 1, between=True) == (
+        "1 demande d'emprunt en attente et 1 prêt accepté entre vous seront annulés"
+    )
+
+
 # Flash categories
 
 
@@ -593,3 +710,369 @@ def test_error_messages_keep_their_look(mock_app, drill, as_alice):
     text = page_text(request_drill(as_alice, drill, start=-1))
 
     assert '<div class="flash flash-message">La date de début ne peut pas être passée</div>' in text
+
+
+# Handover and return
+
+
+def loan_in(mock_app, ids, drill, status, start=-2, end=2):
+    """Alice's loan of Bob's drill, in this status"""
+    return add_loan(mock_app, drill, ids["alice"], days(start), days(end), status)
+
+
+def loan_row(mock_app, loan_id):
+    with mock_app.app_context():
+        loan = db.session.get(Loan, loan_id)
+        return loan.status, loan.start_date, loan.end_date, loan.lent_at, loan.returned_at
+
+
+def test_owner_claims_the_handover_before_the_first_day(mock_app, contacts, drill, as_bob):
+    loan_id = loan_in(mock_app, contacts, drill, LoanStatus.ACCEPTED, start=3, end=5)
+
+    response = as_bob.post(f"/loans/{loan_id}/hand-over")
+
+    assert response.location == "/loans"
+    assert loan_row(mock_app, loan_id)[:3] == (LoanStatus.HANDOVER_CLAIMED, days(3), days(5))
+
+
+def test_no_handover_once_an_acceptance_expired(mock_app, contacts, drill, as_bob, as_alice):
+    loan_id = loan_in(mock_app, contacts, drill, LoanStatus.ACCEPTED, start=-5, end=-1)
+
+    as_bob.post(f"/loans/{loan_id}/hand-over")
+    as_alice.post(f"/loans/{loan_id}/receive")
+
+    assert status_of(mock_app, loan_id) is LoanStatus.ACCEPTED
+    assert "Ce prêt a déjà changé de statut" in page_text(as_bob.get("/loans"))
+
+
+@pytest.mark.parametrize("status", [LoanStatus.HANDOVER_CLAIMED, LoanStatus.ACCEPTED])
+def test_borrower_receives_the_tool(mock_app, contacts, drill, as_alice, status):
+    loan_id = loan_in(mock_app, contacts, drill, status)
+
+    as_alice.post(f"/loans/{loan_id}/receive")
+
+    status, *_, lent_at, returned_at = loan_row(mock_app, loan_id)
+    assert status is LoanStatus.LENT
+    assert lent_at is not None and returned_at is None
+
+
+@pytest.mark.parametrize(("action", "status"), [("receive", LoanStatus.HANDOVER_CLAIMED)])
+def test_owner_does_not_record_the_handover_himself(
+    mock_app, contacts, drill, as_bob, action, status
+):
+    loan_id = loan_in(mock_app, contacts, drill, status)
+
+    assert as_bob.post(f"/loans/{loan_id}/{action}").status_code == 404
+    assert status_of(mock_app, loan_id) is status
+
+
+@pytest.mark.parametrize(("start", "end"), [(-2, 2), (-9, -1)])
+def test_borrower_claims_the_return(mock_app, contacts, drill, as_alice, start, end):
+    loan_id = loan_in(mock_app, contacts, drill, LoanStatus.LENT, start=start, end=end)
+
+    as_alice.post(f"/loans/{loan_id}/give-back")
+
+    assert status_of(mock_app, loan_id) is LoanStatus.RETURN_CLAIMED
+
+
+@pytest.mark.parametrize("status", [LoanStatus.RETURN_CLAIMED, LoanStatus.LENT])
+def test_owner_takes_the_tool_back(mock_app, contacts, drill, as_bob, as_carole, status):
+    loan_id = loan_in(mock_app, contacts, drill, status)
+
+    as_bob.post(f"/loans/{loan_id}/take-back")
+
+    status, *_, returned_at = loan_row(mock_app, loan_id)
+    assert status is LoanStatus.RETURNED and returned_at is not None
+    assert '<p class="status-available">Disponible</p>' in page_text(as_carole.get("/tools/find"))
+
+
+def test_borrower_does_not_complete_the_loan_himself(mock_app, contacts, drill, as_alice):
+    loan_id = loan_in(mock_app, contacts, drill, LoanStatus.RETURN_CLAIMED)
+
+    assert as_alice.post(f"/loans/{loan_id}/take-back").status_code == 404
+    assert status_of(mock_app, loan_id) is LoanStatus.RETURN_CLAIMED
+
+
+def test_borrower_disputes_the_handover(mock_app, contacts, drill, as_alice, as_bob):
+    loan_id = loan_in(mock_app, contacts, drill, LoanStatus.HANDOVER_CLAIMED)
+
+    as_alice.post(f"/loans/{loan_id}/not-received")
+    assert status_of(mock_app, loan_id) is LoanStatus.ACCEPTED
+
+    as_bob.post(f"/loans/{loan_id}/hand-over")
+    assert status_of(mock_app, loan_id) is LoanStatus.HANDOVER_CLAIMED
+
+
+def test_owner_disputes_the_return(mock_app, contacts, drill, as_bob):
+    loan_id = loan_in(mock_app, contacts, drill, LoanStatus.RETURN_CLAIMED)
+
+    as_bob.post(f"/loans/{loan_id}/not-received")
+
+    assert status_of(mock_app, loan_id) is LoanStatus.LENT
+
+
+@pytest.mark.parametrize(
+    ("client", "status"),
+    [("as_alice", LoanStatus.RETURN_CLAIMED), ("as_bob", LoanStatus.HANDOVER_CLAIMED)],
+)
+def test_the_giver_does_not_dispute_his_own_claim(
+    mock_app, contacts, drill, request, client, status
+):
+    loan_id = loan_in(mock_app, contacts, drill, status)
+
+    request.getfixturevalue(client).post(f"/loans/{loan_id}/not-received")
+
+    assert status_of(mock_app, loan_id) is status
+
+
+# Cancelling an accepted loan
+
+
+@pytest.mark.parametrize("client", ["as_alice", "as_bob"])
+def test_either_party_cancels_an_accepted_loan(
+    mock_app, contacts, drill, request, as_carole, client
+):
+    loan_id = loan_in(mock_app, contacts, drill, LoanStatus.ACCEPTED, start=1, end=3)
+
+    request.getfixturevalue(client).post(f"/loans/{loan_id}/cancel")
+
+    assert status_of(mock_app, loan_id) is LoanStatus.CANCELED
+    assert '<p class="status-available">Disponible</p>' in page_text(as_carole.get("/tools/find"))
+
+
+def test_cancel_page_changes_nothing(mock_app, contacts, drill, as_bob):
+    loan_id = loan_in(mock_app, contacts, drill, LoanStatus.ACCEPTED, start=1, end=3)
+
+    text = page_text(as_bob.get(f"/loans/{loan_id}/cancel"))
+
+    assert "Perceuse" in text and "Alice Tremblay" in text
+    assert '<button type="submit" class="button error">Annuler le prêt</button>' in text
+    assert status_of(mock_app, loan_id) is LoanStatus.ACCEPTED
+
+
+@pytest.mark.parametrize(
+    "status", [LoanStatus.HANDOVER_CLAIMED, LoanStatus.LENT, LoanStatus.RETURN_CLAIMED]
+)
+def test_a_handed_over_loan_cannot_be_cancelled(mock_app, contacts, drill, as_bob, status):
+    loan_id = loan_in(mock_app, contacts, drill, status)
+
+    page = as_bob.get(f"/loans/{loan_id}/cancel")
+    response = as_bob.post(f"/loans/{loan_id}/cancel")
+
+    assert page.location == response.location == "/loans"
+    assert "Ce prêt a déjà changé de statut" in page_text(as_bob.get("/loans"))
+    assert status_of(mock_app, loan_id) is status
+
+
+# Who may act on a loan
+
+
+ALL_ACTIONS = ["hand-over", "receive", "give-back", "take-back", "not-received", "cancel"]
+
+
+@pytest.mark.parametrize("action", ALL_ACTIONS)
+def test_a_third_party_gets_404(mock_app, contacts, drill, as_carole, action):
+    loan_id = loan_in(mock_app, contacts, drill, LoanStatus.ACCEPTED)
+
+    assert as_carole.post(f"/loans/{loan_id}/{action}").status_code == 404
+    assert as_carole.post(f"/loans/999999/{action}").status_code == 404
+    assert status_of(mock_app, loan_id) is LoanStatus.ACCEPTED
+
+
+def test_cancel_page_of_a_third_party_is_404(mock_app, contacts, drill, as_carole):
+    loan_id = loan_in(mock_app, contacts, drill, LoanStatus.ACCEPTED)
+
+    assert as_carole.get(f"/loans/{loan_id}/cancel").status_code == 404
+
+
+def test_unknown_action_is_404(mock_app, contacts, drill, as_bob):
+    loan_id = loan_in(mock_app, contacts, drill, LoanStatus.ACCEPTED)
+
+    assert as_bob.post(f"/loans/{loan_id}/lend").status_code == 404
+
+
+@pytest.mark.parametrize(
+    ("client", "action", "status"),
+    [
+        ("as_bob", "give-back", LoanStatus.LENT),
+        ("as_alice", "hand-over", LoanStatus.ACCEPTED),
+        ("as_bob", "withdraw", LoanStatus.REQUESTED),
+    ],
+)
+def test_the_other_party_gets_404(mock_app, contacts, drill, request, client, action, status):
+    loan_id = loan_in(mock_app, contacts, drill, status, start=1, end=3)
+
+    assert request.getfixturevalue(client).post(f"/loans/{loan_id}/{action}").status_code == 404
+    assert status_of(mock_app, loan_id) is status
+
+
+def test_second_return_claim_changes_nothing(mock_app, contacts, drill, as_alice):
+    loan_id = loan_in(mock_app, contacts, drill, LoanStatus.LENT)
+
+    as_alice.post(f"/loans/{loan_id}/give-back")
+    response = as_alice.post(f"/loans/{loan_id}/give-back")
+
+    assert response.location == "/loans"
+    assert "Ce prêt a déjà changé de statut" in page_text(as_alice.get("/loans"))
+
+
+def test_two_parties_acting_at_once(mock_app, contacts, drill, as_alice, as_bob):
+    loan_id = loan_in(mock_app, contacts, drill, LoanStatus.LENT)
+
+    as_bob.post(f"/loans/{loan_id}/take-back")
+    as_alice.post(f"/loans/{loan_id}/give-back")
+
+    assert status_of(mock_app, loan_id) is LoanStatus.RETURNED
+    assert "Ce prêt a déjà changé de statut" in page_text(as_alice.get("/loans"))
+
+
+@pytest.mark.parametrize("retire", ["tool", "contact"])
+def test_a_loan_stays_closable(mock_app, contacts, drill, as_alice, as_bob, retire):
+    loan_id = loan_in(mock_app, contacts, drill, LoanStatus.LENT)
+    if retire == "tool":
+        as_bob.post(f"/tools/{drill}/retire")
+    else:
+        as_bob.post(f"/contacts/{contacts['alice']}/remove")
+
+    as_alice.post(f"/loans/{loan_id}/give-back")
+    as_bob.post(f"/loans/{loan_id}/take-back")
+
+    assert status_of(mock_app, loan_id) is LoanStatus.RETURNED
+
+
+def test_loan_action_needs_the_csrf_token(mock_app, contacts, drill, csrf_client):
+    loan_id = loan_in(mock_app, contacts, drill, LoanStatus.LENT)
+    log_in_with_page_token(csrf_client, "alice", USER_PASSWORD)
+
+    response = csrf_client.post(f"/loans/{loan_id}/give-back")
+
+    assert response.status_code == 400
+    assert status_of(mock_app, loan_id) is LoanStatus.LENT
+
+
+def test_visitor_acting_on_a_loan_is_sent_to_login(mock_app, contacts, drill, client):
+    loan_id = loan_in(mock_app, contacts, drill, LoanStatus.LENT)
+
+    assert client.post(f"/loans/{loan_id}/give-back").location.startswith("/login")
+    assert status_of(mock_app, loan_id) is LoanStatus.LENT
+
+
+# "Mes prêts" while a loan runs
+
+
+def row_of(text, tool_name):
+    """The text of the table row of this tool"""
+    return re.search(rf"<tr>\s*<td>{tool_name}</td>.*?</tr>", text, re.S).group(0)
+
+
+@pytest.mark.parametrize(
+    ("status", "start", "end", "label"),
+    [
+        (LoanStatus.ACCEPTED, 1, 3, "Attente de récupération"),
+        (LoanStatus.ACCEPTED, -5, -1, "Expirée"),
+        (LoanStatus.HANDOVER_CLAIMED, -1, 1, "Remise à confirmer"),
+        (LoanStatus.HANDOVER_CLAIMED, -5, -1, "En retard"),
+        (LoanStatus.LENT, -5, 0, "Prêté"),
+        (LoanStatus.LENT, -5, -1, "En retard"),
+        (LoanStatus.RETURN_CLAIMED, -5, -1, "Retour à confirmer"),
+        (LoanStatus.RETURNED, -5, -1, "Complété"),
+    ],
+)
+def test_status_labels(mock_app, contacts, drill, as_alice, as_bob, status, start, end, label):
+    loan_in(mock_app, contacts, drill, status, start=start, end=end)
+
+    for client in (as_alice, as_bob):
+        row = row_of(page_text(client.get("/loans")), "Perceuse")
+        assert f"<td>{label}" in row
+
+
+def test_expired_acceptance_offers_no_action(mock_app, contacts, drill, as_alice, as_bob):
+    loan_in(mock_app, contacts, drill, LoanStatus.ACCEPTED, start=-5, end=-1)
+
+    for client in (as_alice, as_bob):
+        assert "<button" not in row_of(page_text(client.get("/loans")), "Perceuse")
+
+
+def test_a_disputed_return_after_the_last_day_is_overdue(mock_app, contacts, drill, as_bob):
+    loan_id = loan_in(mock_app, contacts, drill, LoanStatus.RETURN_CLAIMED, start=-5, end=-1)
+
+    as_bob.post(f"/loans/{loan_id}/not-received")
+
+    assert "<td>En retard" in row_of(page_text(as_bob.get("/loans")), "Perceuse")
+
+
+def test_handover_and_return_dates_are_shown(mock_app, contacts, drill, as_alice, as_bob):
+    loan_id = loan_in(mock_app, contacts, drill, LoanStatus.ACCEPTED)
+
+    as_alice.post(f"/loans/{loan_id}/receive")
+    as_bob.post(f"/loans/{loan_id}/take-back")
+
+    today = catalog.french_date(TODAY)
+    row = row_of(page_text(as_alice.get("/loans")), "Perceuse")
+    assert f"Prêté le {today}" in row and f"Complété le {today}" in row
+
+
+def buttons_of(text, tool_name):
+    return re.findall(r'class="button ([a-z]+)"[^>]*>([^<]+)<', row_of(text, tool_name))
+
+
+@pytest.mark.parametrize(
+    ("status", "owner_buttons", "borrower_buttons"),
+    [
+        (
+            LoanStatus.ACCEPTED,
+            [("error", "Annuler le prêt"), ("primary", "J'ai remis l'outil")],
+            [("error", "Annuler le prêt"), ("primary", "J'ai reçu l'outil")],
+        ),
+        (
+            LoanStatus.HANDOVER_CLAIMED,
+            [],
+            [("error", "Pas reçu"), ("primary", "Confirmer la réception")],
+        ),
+        (LoanStatus.LENT, [("primary", "J'ai reçu l'outil")], [("primary", "J'ai rendu l'outil")]),
+        (
+            LoanStatus.RETURN_CLAIMED,
+            [("error", "Pas reçu"), ("primary", "Confirmer la réception")],
+            [],
+        ),
+    ],
+)
+def test_buttons_by_role(
+    mock_app, contacts, drill, as_alice, as_bob, status, owner_buttons, borrower_buttons
+):
+    loan_in(mock_app, contacts, drill, status)
+
+    assert buttons_of(page_text(as_bob.get("/loans")), "Perceuse") == owner_buttons
+    assert buttons_of(page_text(as_alice.get("/loans")), "Perceuse") == borrower_buttons
+
+
+def test_overdue_loans_come_first_oldest_first(mock_app, contacts, drill, as_bob):
+    saw = add_tool(mock_app, contacts["bob"], name="Scie")
+    plane = add_tool(mock_app, contacts["bob"], name="Rabot")
+    add_loan(mock_app, plane, contacts["carole"], days(1), days(2))
+    add_loan(mock_app, drill, contacts["alice"], days(-5), days(-1), LoanStatus.LENT)
+    add_loan(mock_app, saw, contacts["alice"], days(-9), days(-3), LoanStatus.LENT)
+
+    lent = page_text(as_bob.get("/loans")).split("<h3>Mes emprunts</h3>")[0]
+
+    assert re.findall(r"<tr>\s*<td>([^<]+)</td>", lent) == ["Scie", "Perceuse", "Rabot"]
+
+
+@pytest.mark.parametrize("change", ["retire", "out_of_order", "contact"])
+def test_a_disputed_handover_is_cancelled_once_the_tool_left(
+    mock_app, contacts, drill, as_alice, as_bob, change
+):
+    loan_id = loan_in(mock_app, contacts, drill, LoanStatus.HANDOVER_CLAIMED)
+    if change == "retire":
+        as_bob.post(f"/tools/{drill}/retire")
+    elif change == "out_of_order":
+        as_bob.post(
+            f"/tools/{drill}/edit",
+            data={"name": "Perceuse", "description": "Cassée", "condition": "out_of_order"},
+        )
+    else:
+        as_bob.post(f"/contacts/{contacts['alice']}/remove")
+
+    as_alice.post(f"/loans/{loan_id}/not-received")
+
+    assert status_of(mock_app, loan_id) is LoanStatus.CANCELED

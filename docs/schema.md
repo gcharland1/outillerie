@@ -30,6 +30,8 @@ erDiagram
     ENUM status
     VARCHAR(500) message "nullable"
     DATETIME created_at
+    DATETIME lent_at "nullable"
+    DATETIME returned_at "nullable"
   }
 
   tool {

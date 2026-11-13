@@ -12,7 +12,9 @@ class LoanStatus(StrEnum):
     ACCEPTED = "accepted"
     REFUSED = "refused"
     CANCELED = "canceled"
+    HANDOVER_CLAIMED = "handover_claimed"
     LENT = "lent"
+    RETURN_CLAIMED = "return_claimed"
     RETURNED = "returned"
 
 
@@ -38,6 +40,8 @@ class Loan(db.Model):
     # Shown to the owner and the borrower only.
     message = db.Column(db.String(500), nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, server_default=func.now())
+    lent_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    returned_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
     tool = db.relationship("Tool")
     borrower = db.relationship("User")
@@ -50,7 +54,7 @@ class Loan(db.Model):
             (literal_column("daterange(start_date, end_date, '[]')"), "&&"),
             name="excl_loan_tool_dates",
             using="gist",
-            where=text("status IN ('accepted', 'lent')"),
+            where=text("status IN ('accepted', 'handover_claimed', 'lent', 'return_claimed')"),
         ),
     )
 

@@ -3,7 +3,7 @@ from typing import NamedTuple
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
-from sqlalchemy import select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 
@@ -11,6 +11,7 @@ from app import catalog, photos
 from app.extensions import db
 from models.loan import Loan, LoanStatus
 from models.tool import Tool
+from models.user import User
 
 MAX_LEAD_DAYS = 14
 MAX_LOAN_DAYS = 30
@@ -25,33 +26,106 @@ MESSAGE_TOO_LONG = f"Le message ne doit pas dépasser {MESSAGE_MAX_LENGTH} carac
 NOT_AVAILABLE = "Cet outil n'est plus disponible"
 NO_LONGER_PENDING = "Cette demande n'est plus en attente"
 DATES_TAKEN = "Ces dates ne sont plus libres"
+STATUS_CHANGED = "Ce prêt a déjà changé de statut"
 
 STATUS_LABELS = {
     LoanStatus.REQUESTED: "En attente",
-    LoanStatus.ACCEPTED: "Acceptée",
+    LoanStatus.ACCEPTED: "Attente de récupération",
+    LoanStatus.HANDOVER_CLAIMED: "Remise à confirmer",
+    LoanStatus.LENT: "Prêté",
+    LoanStatus.RETURN_CLAIMED: "Retour à confirmer",
+    LoanStatus.RETURNED: "Complété",
     LoanStatus.REFUSED: "Refusée",
     LoanStatus.CANCELED: "Annulée",
-    LoanStatus.LENT: "Prêté",
-    LoanStatus.RETURNED: "Rendu",
 }
 EXPIRED = "Expirée"
+OVERDUE = "En retard"
+RECEIVED = "J'ai reçu l'outil"
+CONFIRM_RECEIPT = "Confirmer la réception"
 
 bp = Blueprint("loans", __name__, url_prefix="/loans")
 
 
+class Button(NamedTuple):
+    action: str
+    label: str
+    style: str
+
+
 class LoanRow(NamedTuple):
     loan: Loan
+    other: User
     dates: str
     status: str
-    pending: bool
+    history: list[str]
+    overdue: bool
+    buttons: list[Button]
+
+
+class Transition(NamedTuple):
+    by_owner: bool
+    sources: tuple[LoanStatus, ...]
+    target: LoanStatus
+    stamp: str | None = None
+
+
+S = LoanStatus
+# Who may move a loan from which statuses with each action: whoever gives the tool claims it,
+# whoever receives it confirms, answers "Pas reçu", or records it without a claim.
+ACTIONS = {
+    "accept": [Transition(True, (S.REQUESTED,), S.ACCEPTED)],
+    "refuse": [Transition(True, (S.REQUESTED,), S.REFUSED)],
+    "withdraw": [Transition(False, (S.REQUESTED,), S.CANCELED)],
+    "hand-over": [Transition(True, (S.ACCEPTED,), S.HANDOVER_CLAIMED)],
+    "receive": [Transition(False, (S.ACCEPTED, S.HANDOVER_CLAIMED), S.LENT, "lent_at")],
+    "give-back": [Transition(False, (S.LENT,), S.RETURN_CLAIMED)],
+    "take-back": [Transition(True, (S.LENT, S.RETURN_CLAIMED), S.RETURNED, "returned_at")],
+    "not-received": [
+        Transition(False, (S.HANDOVER_CLAIMED,), S.ACCEPTED),
+        Transition(True, (S.RETURN_CLAIMED,), S.LENT),
+    ],
+    "cancel": [
+        Transition(True, (S.ACCEPTED,), S.CANCELED),
+        Transition(False, (S.ACCEPTED,), S.CANCELED),
+    ],
+}
+REQUEST_ACTIONS = {"accept", "refuse", "withdraw"}
+# The buttons of "Mes prêts", in the order they are shown; cancelling opens its own page.
+BUTTONS = (
+    Button("refuse", "Refuser", "error"),
+    Button("accept", "Accepter", "success"),
+    Button("withdraw", "Retirer ma demande", "error"),
+    Button("cancel", "Annuler le prêt", "error"),
+    Button("not-received", "Pas reçu", "error"),
+    Button("hand-over", "J'ai remis l'outil", "primary"),
+    Button("receive", RECEIVED, "primary"),
+    Button("give-back", "J'ai rendu l'outil", "primary"),
+    Button("take-back", RECEIVED, "primary"),
+)
 
 
 @bp.app_context_processor
-def inject_pending_loan_requests():
+def inject_loan_actions():
+    """How many loans wait for the user: answers and confirmations to give, overdue loans"""
     if not current_user.is_authenticated:
-        return {"pending_loan_requests": 0}
+        return {"loan_actions": 0}
     my_tools = select(Tool.id).where(Tool.owner_id == current_user.id)
-    return {"pending_loan_requests": catalog.count_pending_requests(Loan.tool_id.in_(my_tools))}
+    as_owner = and_(
+        Loan.tool_id.in_(my_tools),
+        or_(
+            catalog.pending_request(),
+            Loan.status == LoanStatus.RETURN_CLAIMED,
+            catalog.overdue_loan(),
+        ),
+    )
+    as_borrower = and_(
+        Loan.borrower_id == current_user.id,
+        or_(Loan.status == LoanStatus.HANDOVER_CLAIMED, catalog.overdue_loan()),
+    )
+    count = db.session.scalar(
+        select(func.count()).select_from(Loan).where(or_(as_owner, as_borrower))
+    )
+    return {"loan_actions": count}
 
 
 @bp.route("/new/<int:tool_id>", methods=["GET"])
@@ -104,6 +178,7 @@ def create(tool_id):
 @bp.route("")
 @login_required
 def mine():
+    today = catalog.site_today()
     received = db.session.scalars(
         select(Loan)
         .join(Tool, Loan.tool_id == Tool.id)
@@ -119,47 +194,50 @@ def mine():
     ).all()
     return render_template(
         "loans/mine.html",
-        received=_rows(received),
-        sent=_rows(sent),
+        lent=_rows(received, by_owner=True, today=today),
+        borrowed=_rows(sent, by_owner=False, today=today),
     )
 
 
-@bp.route("/<int:loan_id>/accept", methods=["POST"])
+@bp.route("/<int:loan_id>/cancel", methods=["GET"])
 @login_required
-def accept(loan_id):
-    loan = _pending_loan(loan_id, owner=True)
-    if loan is None:
-        return _back_from_answered_request()
-    loan.status = LoanStatus.ACCEPTED
+def confirm_cancel(loan_id):
+    loan, transition = _loan_for(loan_id, "cancel", lock=False)
+    if transition is None:
+        flash(STATUS_CHANGED)
+        return redirect(url_for("loans.mine"))
+    other = loan.borrower if loan.tool.owner_id == current_user.id else loan.lender
+    return render_template("loans/confirm_cancel.html", loan=loan, other=other, dates=_dates(loan))
+
+
+@bp.route("/<int:loan_id>/<action>", methods=["POST"])
+@login_required
+def act(loan_id, action):
+    if action not in ACTIONS:
+        abort(404)
+    loan, transition = _loan_for(loan_id, action)
+    if transition is None:
+        flash(NO_LONGER_PENDING if action in REQUEST_ACTIONS else STATUS_CHANGED)
+        return redirect(url_for("loans.mine"))
+    target = transition.target
+    if action == "not-received" and target == LoanStatus.ACCEPTED and not _still_lendable(loan):
+        # The cascade spared the claimed handover; once disputed, it would have cancelled it.
+        target = LoanStatus.CANCELED
+    loan.status = target
+    if transition.stamp is not None:
+        setattr(loan, transition.stamp, func.now())
     try:
         db.session.commit()
     except IntegrityError:
-        # Another committed loan of the tool shares a day with this one.
+        # Only an acceptance changes which days are taken: another committed loan has one of them.
         db.session.rollback()
         flash(DATES_TAKEN)
     return redirect(url_for("loans.mine"))
 
 
-@bp.route("/<int:loan_id>/refuse", methods=["POST"])
-@login_required
-def refuse(loan_id):
-    loan = _pending_loan(loan_id, owner=True)
-    if loan is None:
-        return _back_from_answered_request()
-    loan.status = LoanStatus.REFUSED
-    db.session.commit()
-    return redirect(url_for("loans.mine"))
-
-
-@bp.route("/<int:loan_id>/withdraw", methods=["POST"])
-@login_required
-def withdraw(loan_id):
-    loan = _pending_loan(loan_id, owner=False)
-    if loan is None:
-        return _back_from_answered_request()
-    loan.status = LoanStatus.CANCELED
-    db.session.commit()
-    return redirect(url_for("loans.mine"))
+def _still_lendable(loan):
+    """Whether the tool is still in circulation and both people still contacts"""
+    return catalog.visible_tool(loan.borrower_id, loan.tool_id) is not None
 
 
 def _render_confirm(tool, values, origin):
@@ -224,44 +302,107 @@ def _origin_url(origin, tool):
     return url_for("tools.find", **filters)
 
 
+def _dates(loan):
+    return f"{catalog.french_date(loan.start_date)} au {catalog.french_date(loan.end_date)}"
+
+
 def _back_from_unavailable(tool, origin):
     flash(NOT_AVAILABLE)
     return redirect(_origin_url(origin, tool))
 
 
-def _pending_loan(loan_id, owner):
-    """The loan, locked until commit, if still pending; 404 unless it is the user's to answer"""
-    loan = db.session.execute(
-        select(Loan).where(Loan.id == loan_id).with_for_update()
-    ).scalar_one_or_none()
+def _loan_for(loan_id, action, lock=True):
+    """The loan, locked until commit unless told not to, and the transition the user may make now
+
+    404 unless the user is the actor of one of the action's transitions; no transition if the
+    loan's status no longer allows it.
+    """
+    query = select(Loan).where(Loan.id == loan_id)
+    if lock:
+        query = query.with_for_update()
+    loan = db.session.execute(query).scalar_one_or_none()
     if loan is None:
         abort(404)
-    actor_id = loan.tool.owner_id if owner else loan.borrower_id
-    if actor_id != current_user.id:
+    is_owner = loan.tool.owner_id == current_user.id
+    if not is_owner and loan.borrower_id != current_user.id:
         abort(404)
-    if not _is_pending(loan):
-        return None
-    return loan
+    transitions = [t for t in ACTIONS[action] if t.by_owner == is_owner]
+    if not transitions:
+        abort(404)
+    today = catalog.site_today()
+    allowed = [t for t in transitions if _allows(t, loan, today)]
+    return loan, allowed[0] if allowed else None
 
 
-def _is_pending(loan):
-    return loan.status == LoanStatus.REQUESTED and loan.start_date >= catalog.site_today()
+def _allows(transition, loan, today):
+    if loan.status not in transition.sources:
+        return False
+    if loan.status == LoanStatus.REQUESTED:
+        return loan.start_date >= today
+    if loan.status == LoanStatus.ACCEPTED:
+        return loan.end_date >= today
+    return True
 
 
-def _rows(loans):
-    """Requests the user can still act on first, each group in the order given"""
-    return sorted((_row(loan) for loan in loans), key=lambda row: not row.pending)
+def _rows(loans, by_owner, today):
+    """Overdue loans first, oldest last day first, then loans the user can act on"""
+    rows = [_row(loan, by_owner, today) for loan in loans]
+    return sorted(
+        rows,
+        key=lambda row: (
+            not row.overdue,
+            row.loan.end_date if row.overdue else date.min,
+            not row.buttons,
+        ),
+    )
 
 
-def _row(loan):
-    pending = _is_pending(loan)
-    expired = loan.status == LoanStatus.REQUESTED and not pending
-    dates = f"du {catalog.french_date(loan.start_date)} au {catalog.french_date(loan.end_date)}"
-    status = EXPIRED if expired else STATUS_LABELS[loan.status]
-    return LoanRow(loan=loan, dates=dates, status=status, pending=pending)
+def _row(loan, by_owner, today):
+    overdue = loan.status in catalog.HANDED_OVER and loan.end_date < today
+    expired = (loan.status == LoanStatus.REQUESTED and loan.start_date < today) or (
+        loan.status == LoanStatus.ACCEPTED and loan.end_date < today
+    )
+    if overdue:
+        status = OVERDUE
+    elif expired:
+        status = EXPIRED
+    else:
+        status = STATUS_LABELS[loan.status]
+    return LoanRow(
+        loan=loan,
+        other=loan.borrower if by_owner else loan.lender,
+        dates=f"du {_dates(loan)}",
+        status=status,
+        history=_history(loan),
+        overdue=overdue,
+        buttons=[
+            _button(button, loan)
+            for button in BUTTONS
+            if _may(button.action, loan, by_owner, today)
+        ],
+    )
 
 
-def _back_from_answered_request():
-    """Where Back or a second submit lands once a request is answered, withdrawn or expired"""
-    flash(NO_LONGER_PENDING)
-    return redirect(url_for("loans.mine"))
+def _may(action, loan, by_owner, today):
+    return any(t.by_owner == by_owner and _allows(t, loan, today) for t in ACTIONS[action])
+
+
+def _button(button, loan):
+    if button.action in ("receive", "take-back") and loan.status in (
+        LoanStatus.HANDOVER_CLAIMED,
+        LoanStatus.RETURN_CLAIMED,
+    ):
+        return button._replace(label=CONFIRM_RECEIPT)
+    return button
+
+
+def _history(loan):
+    def on(moment):
+        return catalog.french_date(moment.astimezone(catalog.SITE_TIMEZONE).date())
+
+    history = []
+    if loan.lent_at is not None:
+        history.append(f"Prêté le {on(loan.lent_at)}")
+    if loan.returned_at is not None:
+        history.append(f"Complété le {on(loan.returned_at)}")
+    return history

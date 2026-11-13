@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% macro loan_table(rows, other_label, show_owner_actions) %}
+{% macro loan_table(rows, other_label) %}
     <table>
         <thead>
             <tr><th>Outil</th><th>{{ other_label }}</th><th>Dates</th><th>Message</th><th>Statut</th><th></th></tr>
@@ -8,31 +8,25 @@
         <tbody>
         {% for row in rows %}
             {% set loan = row.loan %}
-            {% set other = loan.borrower if show_owner_actions else loan.tool.owner %}
             <tr>
                 <td>{{ loan.tool.name }}</td>
-                <td>{{ other.first_name }} {{ other.last_name }}</td>
+                <td>{{ row.other.first_name }} {{ row.other.last_name }}</td>
                 <td>{{ row.dates }}</td>
                 <td class="loan-text">{{ loan.message or "" }}</td>
-                <td>{{ row.status }}</td>
+                <td>{{ row.status }}{% for line in row.history %}<br>{{ line }}{% endfor %}</td>
                 <td>
-                {% if row.pending %}
+                {% if row.buttons %}
                     <div class="actions">
-                    {% if show_owner_actions %}
-                        <form action="{{ url_for('loans.refuse', loan_id=loan.id) }}" method="post">
+                    {% for button in row.buttons %}
+                        {% if button.action == "cancel" %}
+                        <a class="button {{ button.style }}" href="{{ url_for('loans.confirm_cancel', loan_id=loan.id) }}">{{ button.label }}</a>
+                        {% else %}
+                        <form action="{{ url_for('loans.act', loan_id=loan.id, action=button.action) }}" method="post">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="button error">Refuser</button>
+                            <button type="submit" class="button {{ button.style }}">{{ button.label }}</button>
                         </form>
-                        <form action="{{ url_for('loans.accept', loan_id=loan.id) }}" method="post">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="button success">Accepter</button>
-                        </form>
-                    {% else %}
-                        <form action="{{ url_for('loans.withdraw', loan_id=loan.id) }}" method="post">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="button error">Retirer ma demande</button>
-                        </form>
-                    {% endif %}
+                        {% endif %}
+                    {% endfor %}
                     </div>
                 {% endif %}
                 </td>
@@ -44,16 +38,16 @@
 
 {% block content %}
     <h2>Mes prêts</h2>
-    <h3>Demandes reçues</h3>
-{% if received %}
-{{ loan_table(received, "Emprunteur", True) }}
+    <h3>Mes prêts</h3>
+{% if lent %}
+{{ loan_table(lent, "Emprunteur") }}
 {% else %}
-    <p>Vous n'avez reçu aucune demande d'emprunt</p>
+    <p>Vous n'avez encore prêté aucun outil</p>
 {% endif %}
-    <h3>Mes demandes</h3>
-{% if sent %}
-{{ loan_table(sent, "Propriétaire", False) }}
+    <h3>Mes emprunts</h3>
+{% if borrowed %}
+{{ loan_table(borrowed, "Propriétaire") }}
 {% else %}
-    <p>Vous n'avez fait aucune demande d'emprunt</p>
+    <p>Vous n'avez encore emprunté aucun outil</p>
 {% endif %}
 {% endblock %}

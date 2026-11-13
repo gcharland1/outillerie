@@ -102,11 +102,15 @@ def confirm_remove(user_id):
     contact, relation = _contact_relation(user_id)
     if relation is None:
         return _back_from_not_a_contact()
-    pending = catalog.count_pending_requests(catalog.requests_between(current_user.id, contact.id))
+    between = catalog.requests_between(current_user.id, contact.id)
     return render_template(
         "contacts/confirm_remove.html",
         contact=contact,
-        cancel_notice=catalog.cancel_notice(pending, between=True),
+        cancel_notice=catalog.cancel_notice(
+            catalog.count_pending_requests(between),
+            catalog.count_upcoming_acceptances(between),
+            between=True,
+        ),
     )
 
 
@@ -116,7 +120,7 @@ def remove(user_id):
     _, relation = _contact_relation(user_id)
     if relation is None:
         return _back_from_not_a_contact()
-    catalog.cancel_pending_requests(catalog.requests_between(current_user.id, user_id))
+    catalog.cancel_unstarted_loans(catalog.requests_between(current_user.id, user_id))
     db.session.delete(relation)
     db.session.commit()
     return redirect(url_for("contacts.mine"))

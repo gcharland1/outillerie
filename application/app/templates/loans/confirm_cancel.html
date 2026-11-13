@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row is-center">
+    <div class="col-12 col-8-md card">
+        <header>
+            <h3>Annuler le prêt de « {{ loan.tool.name }} » avec {{ other.first_name }} {{ other.last_name }} ?</h3>
+        </header>
+        <p>Du {{ dates }}. L'outil redeviendra disponible.</p>
+        <form action="{{ url_for('loans.act', loan_id=loan.id, action='cancel') }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="actions">
+                <a class="button" href="{{ url_for('loans.mine') }}">Retour à « Mes prêts »</a>
+                <button type="submit" class="button error">Annuler le prêt</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

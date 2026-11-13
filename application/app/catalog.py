@@ -41,6 +41,11 @@ MONTHS = (
     "décembre",
 )
 
+# A claimed handover counts as done until the borrower answers "Pas reçu".
+HANDED_OVER = (LoanStatus.HANDOVER_CLAIMED, LoanStatus.LENT)
+# The tool may be with the borrower: it stays out until its return is confirmed.
+OUT = (*HANDED_OVER, LoanStatus.RETURN_CLAIMED)
+
 AVAILABLE = "Disponible"
 PENDING = "En attente de prêt"
 NO_CONTACT = "Vous n'avez encore aucun contact"
@@ -104,19 +109,26 @@ def is_available(tool_id):
 
 def count_pending_requests(*conditions):
     """How many unexpired requests meet these conditions on Loan"""
-    return db.session.scalar(
-        select(func.count()).select_from(Loan).where(pending_request(), *conditions)
-    )
+    return _count(pending_request(), *conditions)
 
 
-def cancel_pending_requests(*conditions):
-    """Cancels the unexpired requests meeting these conditions on Loan; the caller commits"""
+def count_upcoming_acceptances(*conditions):
+    """How many accepted loans, not handed over nor expired, meet these conditions on Loan"""
+    return _count(upcoming_acceptance(), *conditions)
+
+
+def cancel_unstarted_loans(*conditions):
+    """Cancels unexpired requests and acceptances meeting these conditions; the caller commits"""
     db.session.execute(
         update(Loan)
-        .where(pending_request(), *conditions)
+        .where(or_(pending_request(), upcoming_acceptance()), *conditions)
         .values(status=LoanStatus.CANCELED)
         .execution_options(synchronize_session=False)
     )
+
+
+def _count(*conditions):
+    return db.session.scalar(select(func.count()).select_from(Loan).where(*conditions))
 
 
 def requests_for_tool(tool_id):
@@ -135,14 +147,25 @@ def requests_between(user_id, other_id):
     )
 
 
-def cancel_notice(count, between=False):
-    """What a confirmation page says about the requests its action will cancel, if any"""
-    if not count:
+def cancel_notice(requests, acceptances=0, between=False):
+    """What a confirmation page says about the requests and loans its action will cancel"""
+
+    def plural(count):
+        return "s" if count > 1 else ""
+
+    parts = []
+    if requests:
+        parts.append(f"{requests} demande{plural(requests)} d'emprunt en attente")
+    if acceptances:
+        parts.append(f"{acceptances} prêt{plural(acceptances)} accepté{plural(acceptances)}")
+    if not parts:
         return None
     where = " entre vous" if between else ""
-    if count == 1:
-        return f"1 demande d'emprunt en attente{where} sera annulée"
-    return f"{count} demandes d'emprunt en attente{where} seront annulées"
+    if len(parts) == 2:
+        return f"{parts[0]} et {parts[1]}{where} seront annulés"
+    count = requests or acceptances
+    verb = "seront" if count > 1 else "sera"
+    return f"{parts[0]}{where} {verb} annulé{'e' if requests else ''}{plural(count)}"
 
 
 def has_contacts(user_id):
@@ -230,11 +253,26 @@ def pending_request():
     return and_(Loan.status == LoanStatus.REQUESTED, Loan.start_date >= site_today())
 
 
+def upcoming_acceptance():
+    """An accepted loan not handed over whose last day has not passed"""
+    return and_(Loan.status == LoanStatus.ACCEPTED, Loan.end_date >= site_today())
+
+
+def expired_acceptance():
+    """An accepted loan whose last day passed without the tool being handed over"""
+    return and_(Loan.status == LoanStatus.ACCEPTED, Loan.end_date < site_today())
+
+
+def overdue_loan():
+    """A loan whose tool is with the borrower past its last day, until a return is claimed"""
+    return and_(Loan.status.in_(HANDED_OVER), Loan.end_date < site_today())
+
+
 def blocking_loan():
-    """A loan that keeps the tool from being requested now: lent, accepted and not over, pending"""
+    """A loan that keeps the tool from being requested now: out, accepted and not over, pending"""
     return or_(
-        Loan.status == LoanStatus.LENT,
-        and_(Loan.status == LoanStatus.ACCEPTED, Loan.end_date >= site_today()),
+        Loan.status.in_(OUT),
+        upcoming_acceptance(),
         pending_request(),
     )
 
@@ -260,7 +298,7 @@ def _loan_states(tool_ids, viewer_id):
         )
     )
     for tool_id, status, end_date, borrower_id in rows:
-        if status == LoanStatus.LENT:
+        if status in OUT:
             lent_until[tool_id] = max(end_date, lent_until.get(tool_id, end_date))
             continue
         statuses[tool_id] = PENDING

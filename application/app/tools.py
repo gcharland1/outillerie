@@ -98,7 +98,7 @@ def edit(tool_id):
         jpeg, error = _read_photo(error, photo_file)
         if error is None:
             if values["condition"] == ToolCondition.OUT_OF_ORDER:
-                catalog.cancel_pending_requests(catalog.requests_for_tool(tool.id))
+                catalog.cancel_unstarted_loans(catalog.requests_for_tool(tool.id))
             for field, value in values.items():
                 setattr(tool, field, value)
             if jpeg is not None:
@@ -126,10 +126,12 @@ def confirm_retire(tool_id):
     tool = _owned_tool(tool_id)
     if not tool.is_active:
         return _back_from_already_retired()
-    pending = catalog.count_pending_requests(catalog.requests_for_tool(tool.id))
-    return render_template(
-        "tools/confirm_retire.html", tool=tool, cancel_notice=catalog.cancel_notice(pending)
+    loans_of_tool = catalog.requests_for_tool(tool.id)
+    notice = catalog.cancel_notice(
+        catalog.count_pending_requests(loans_of_tool),
+        catalog.count_upcoming_acceptances(loans_of_tool),
     )
+    return render_template("tools/confirm_retire.html", tool=tool, cancel_notice=notice)
 
 
 @bp.route("/<int:tool_id>/retire", methods=["POST"])
@@ -139,7 +141,7 @@ def retire(tool_id):
     if not tool.is_active:
         return _back_from_already_retired()
     tool.is_active = False
-    catalog.cancel_pending_requests(catalog.requests_for_tool(tool.id))
+    catalog.cancel_unstarted_loans(catalog.requests_for_tool(tool.id))
     if request.form.get("erase_private_notes"):
         tool.private_notes = None
     db.session.commit()
