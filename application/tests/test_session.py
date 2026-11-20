@@ -13,7 +13,7 @@ def is_logged_in(client):
 
 
 def test_session_cookie_is_httponly_and_samesite_lax(client, user):
-    response = client.post("/login", data={"username": user, "password": USER_PASSWORD})
+    response = client.post("/login", data={"email": user, "password": USER_PASSWORD})
 
     session_cookie = next(c for c in response.headers.getlist("Set-Cookie") if "session=" in c)
     assert "HttpOnly" in session_cookie

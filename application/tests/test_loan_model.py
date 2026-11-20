@@ -10,13 +10,13 @@ from tests.factories import a_day, make_loan, make_tool, make_user
 @pytest.fixture
 def owner_id(mock_app, user):
     with mock_app.app_context():
-        return User.query.filter_by(username=user).one().id
+        return User.query.filter_by(email=user).one().id
 
 
 @pytest.fixture
 def borrower_id(mock_app):
     with mock_app.app_context():
-        borrower = make_user("bob", "bob@example.com")
+        borrower = make_user("bob@example.com")
         db.session.add(borrower)
         db.session.commit()
         return borrower.id

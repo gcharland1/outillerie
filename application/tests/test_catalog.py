@@ -20,7 +20,7 @@ TODAY = catalog.site_today()
 @pytest.fixture
 def ids(mock_app, user, bob, carole):
     with mock_app.app_context():
-        return {name: user_id(name) for name in (user, bob, carole)}
+        return {email.partition("@")[0]: user_id(email) for email in (user, bob, carole)}
 
 
 @pytest.fixture

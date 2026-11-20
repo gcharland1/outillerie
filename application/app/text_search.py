@@ -31,6 +31,11 @@ def contains(column, text):
     return normalized(column).ilike("%" + escaped + "%", escape="\\")
 
 
+def sort_key(column):
+    """The column as names are ordered: regardless of case and accents"""
+    return func.lower(normalized(column))
+
+
 def similarity(column, text):
     """How closely a word of the column resembles the text, from 0 to 1"""
     return func.word_similarity(normalized(text), normalized(column))

@@ -41,7 +41,7 @@
                 <div class="nav-right">
                     {% if current_user.is_authenticated %}
                     <details class="account-menu">
-                        <summary>{{ current_user.username }}{{ pending_badge(pending_contact_requests + loan_actions, "élément en attente", "éléments en attente") }}</summary>
+                        <summary><span class="account-name">{{ current_user.first_name }} {{ current_user.last_name }}</span>{{ pending_badge(pending_contact_requests + loan_actions, "élément en attente", "éléments en attente") }}</summary>
                         <div class="account-menu-items">
                             <span class="menu-item-upcoming" aria-disabled="true">Mon profil</span>
                             <a href="{{ url_for('tools.mine') }}">Gérer mes outils</a>

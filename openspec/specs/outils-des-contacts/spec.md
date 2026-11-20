@@ -47,7 +47,7 @@ une session ouverte : un visiteur est redirigé vers `/login`.
 
 #### Scenario: Entrée du menu du compte
 - **WHEN** un utilisateur connecté ouvre une page du site
-- **THEN** son nom d'utilisateur ouvre un menu qui contient « Trouver un outil », qui mène à la page « Trouver un outil »
+- **THEN** son prénom et son nom ouvrent un menu qui contient « Trouver un outil », qui mène à la page « Trouver un outil »
 
 #### Scenario: Visiteur
 - **WHEN** un visiteur demande la page « Trouver un outil »

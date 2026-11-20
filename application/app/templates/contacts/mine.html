@@ -1,49 +1,25 @@
 {% extends "base.html" %}
+{% from "contacts/_requests.html" import received_requests %}
 
 {% block content %}
     <h2>Mes contacts</h2>
 {% if received %}
     <h3>Demandes reçues</h3>
-    <table>
-        <thead>
-            <tr><th>Nom d'utilisateur</th><th>Nom</th><th></th></tr>
-        </thead>
-        <tbody>
-        {% for contact_request in received %}
-            <tr>
-                <td>{{ contact_request.requester.username }}</td>
-                <td>{{ contact_request.requester.first_name }} {{ contact_request.requester.last_name }}</td>
-                <td>
-                    <div class="actions">
-                        <form action="{{ url_for('contacts.refuse', request_id=contact_request.id) }}" method="post">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="button">Refuser</button>
-                        </form>
-                        <form action="{{ url_for('contacts.accept', request_id=contact_request.id) }}" method="post">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="button primary">Accepter</button>
-                        </form>
-                    </div>
-                </td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+    {{ received_requests(received) }}
 {% endif %}
     <h3>Contacts</h3>
 {% if contacts %}
     <table>
         <thead>
-            <tr><th>Nom d'utilisateur</th><th>Nom</th><th></th></tr>
+            <tr><th>Nom</th><th></th></tr>
         </thead>
         <tbody>
         {% for contact in contacts %}
             <tr>
-                <td><a href="{{ url_for('contacts.show', user_id=contact.id) }}">{{ contact.username }}</a></td>
                 <td><a href="{{ url_for('contacts.show', user_id=contact.id) }}">{{ contact.first_name }} {{ contact.last_name }}</a></td>
                 <td>
                     <div class="actions">
-                        <a class="button error" href="{{ url_for('contacts.confirm_remove', user_id=contact.id) }}">Retirer</a>
+                        <a class="button" href="{{ url_for('contacts.confirm_remove', user_id=contact.id) }}">Retirer</a>
                     </div>
                 </td>
             </tr>

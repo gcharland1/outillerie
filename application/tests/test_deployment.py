@@ -27,10 +27,8 @@ def app_in(mock_app, monkeypatch):
             db.engine.dispose()
 
 
-def session_cookie_after_login(app, username):
-    response = app.test_client().post(
-        "/login", data={"username": username, "password": USER_PASSWORD}
-    )
+def session_cookie_after_login(app, email):
+    response = app.test_client().post("/login", data={"email": email, "password": USER_PASSWORD})
     return next(c for c in response.headers.getlist("Set-Cookie") if "session=" in c)
 
 

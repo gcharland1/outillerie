@@ -161,8 +161,10 @@ l'autre personne, les dates, le message, les dates de remise et de retour connue
 Chaque liste de « Mes prêts » SHALL montrer d'abord les prêts en retard, de la date de fin la plus
 ancienne à la plus récente, puis les lignes sur lesquelles l'utilisateur peut agir, puis les autres,
 ces deux groupes de la plus récente à la plus ancienne selon la date d'envoi. Une ligne « En retard »
-SHALL être mise en évidence en rouge. « Accepter » SHALL être affiché en vert, et « Refuser »,
-« Annuler le prêt » et « Pas reçu » en rouge.
+SHALL être mise en évidence en rouge. Les boutons suivent l'ADR 0019 : « Accepter », « J'ai remis
+l'outil », « J'ai reçu l'outil », « J'ai rendu l'outil » et « Confirmer la réception » SHALL être
+affichés en bleu ; « Refuser », « Retirer ma demande », « Annuler le prêt » et « Pas reçu » en
+neutre. Aucun bouton n'est rouge.
 
 #### Scenario: Ordre des demandes
 - **WHEN** Bob a reçu, dans cet ordre, des demandes de la scie, de la perceuse, de la ponceuse et du rabot
@@ -179,7 +181,11 @@ SHALL être mise en évidence en rouge. « Accepter » SHALL être affiché en v
 
 #### Scenario: Couleur des réponses
 - **WHEN** Bob a une demande reçue en attente
-- **THEN** « Accepter » est affiché en vert et « Refuser » en rouge
+- **THEN** « Accepter » est affiché en bleu et « Refuser » en neutre, comme sur une demande de contact
+
+#### Scenario: Annulation en neutre
+- **WHEN** Bob a accepté la demande d'Alice
+- **THEN** « Annuler le prêt » est affiché en neutre et « J'ai remis l'outil » en bleu
 
 ### Requirement: Réponse du propriétaire
 Le propriétaire SHALL pouvoir accepter ou refuser une demande en attente de son outil ; seul lui

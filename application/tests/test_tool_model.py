@@ -10,7 +10,7 @@ from tests.factories import a_day, make_tool, make_user
 @pytest.fixture
 def owner_id(mock_app, user):
     with mock_app.app_context():
-        return User.query.filter_by(username=user).one().id
+        return User.query.filter_by(email=user).one().id
 
 
 def test_complete_tool_is_stored(mock_app, owner_id):
@@ -104,7 +104,7 @@ def test_retired_tool_keeps_its_photo_and_loans(mock_app, owner_id):
         db.session.add(
             Loan(
                 tool=tool,
-                borrower=make_user("bob", "bob@example.com"),
+                borrower=make_user("bob@example.com"),
                 start_date=a_day(3),
                 end_date=a_day(5),
                 status=LoanStatus.RETURNED,

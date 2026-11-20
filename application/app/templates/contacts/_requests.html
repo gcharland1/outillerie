@@ -1,0 +1,32 @@
+{% macro received_requests(requests, origin=None) %}
+<table>
+    <thead>
+        <tr><th>Nom</th><th></th></tr>
+    </thead>
+    <tbody>
+    {% for contact_request in requests %}
+        <tr>
+            <td>{{ contact_request.requester.first_name }} {{ contact_request.requester.last_name }}</td>
+            <td>
+                <div class="actions">
+                    <form action="{{ url_for('contacts.refuse', request_id=contact_request.id) }}" method="post">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        {% if origin %}
+                        <input type="hidden" name="origin" value="{{ origin }}">
+                        {% endif %}
+                        <button type="submit" class="button">Refuser</button>
+                    </form>
+                    <form action="{{ url_for('contacts.accept', request_id=contact_request.id) }}" method="post">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        {% if origin %}
+                        <input type="hidden" name="origin" value="{{ origin }}">
+                        {% endif %}
+                        <button type="submit" class="button primary">Accepter</button>
+                    </form>
+                </div>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endmacro %}

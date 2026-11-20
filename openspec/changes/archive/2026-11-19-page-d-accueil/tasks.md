@@ -17,7 +17,7 @@
 
 ## 4. Sections du tableau de bord
 
-- [x] 4.1 `loans.dashboard_rows` (filtres SQL, rang de catégorie, date de fin, départage par id, 5 lignes plus une par groupe) et section « Gestion des prêts » avec « Voir tous mes prêts » sous chaque groupe qui dépasse ; vérifier par des tests pytest (date du site fixée) chaque scénario de « Contenu de « Gestion des prêts » », « Ordre de « Gestion des prêts » », « Tri dans une catégorie de « Gestion des prêts » » et « Lignes de « Gestion des prêts » limitées »
+- [x] 4.1 `loans.dashboard` (filtres SQL, rang de catégorie, date de fin, départage par id, 5 lignes plus une par groupe) et section « Gestion des prêts » avec « Voir tous mes prêts » sous chaque groupe qui dépasse ; vérifier par des tests pytest (date du site fixée) chaque scénario de « Contenu de « Gestion des prêts » », « Ordre de « Gestion des prêts » », « Tri dans une catégorie de « Gestion des prêts » » et « Lignes de « Gestion des prêts » limitées »
 - [x] 4.2 Style de retard dans `site.css`, appliqué sur l'accueil et sur « Mes prêts » ; vérifier par des tests pytest « Ligne en retard » et « Retard en rouge »
 - [x] 4.3 `contacts.received_requests` (extraite de `contacts.mine`) et `contacts.recent_contacts` (30 jours) ; section « Gestion des contacts » avec lien vers « Mes contacts » ; vérifier par des tests pytest chaque scénario de « Gestion des contacts »
 - [x] 4.4 `catalog.recent_tools` (visibilité de `_visible`, `created_at` depuis 30 jours, plus récent d'abord, 7 lus) et section « Nouveaux outils » avec « Voir plus » vers `tools.find` trié `added-desc` ; vérifier par des tests pytest chaque scénario de « Nouveaux outils » et de « Date qui rend un outil nouveau »

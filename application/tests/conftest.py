@@ -65,11 +65,10 @@ def client(mock_app):
 
 @pytest.fixture
 def user(mock_app):
-    """Username of a registered user whose password is USER_PASSWORD"""
+    """Email of a registered user whose password is USER_PASSWORD"""
     with mock_app.app_context():
         db.session.add(
             User(
-                username="alice",
                 password=generate_password_hash(USER_PASSWORD, method="pbkdf2:sha256"),
                 first_name="Alice",
                 last_name="Tremblay",
@@ -77,16 +76,15 @@ def user(mock_app):
             )
         )
         db.session.commit()
-    return "alice"
+    return "alice@example.com"
 
 
 @pytest.fixture
 def bob(mock_app):
-    """Username of a second registered user, for checks across accounts"""
+    """Email of a second registered user, for checks across accounts"""
     with mock_app.app_context():
         db.session.add(
             User(
-                username="bob",
                 password=generate_password_hash(USER_PASSWORD, method="pbkdf2:sha256"),
                 first_name="Bob",
                 last_name="Gagnon",
@@ -94,16 +92,15 @@ def bob(mock_app):
             )
         )
         db.session.commit()
-    return "bob"
+    return "bob@example.com"
 
 
 @pytest.fixture
 def carole(mock_app):
-    """Username of a third registered user"""
+    """Email of a third registered user"""
     with mock_app.app_context():
         db.session.add(
             User(
-                username="carole",
                 password=generate_password_hash(USER_PASSWORD, method="pbkdf2:sha256"),
                 first_name="Carole",
                 last_name="Roy",
@@ -111,14 +108,13 @@ def carole(mock_app):
             )
         )
         db.session.commit()
-    return "carole"
+    return "carole@example.com"
 
 
 @pytest.fixture
 def logged_in_client(client, user):
     """A client logged in as `user`"""
-    client.post("/login", data={"username": user, "password": USER_PASSWORD})
-    return client
+    return login(client, user)
 
 
 @pytest.fixture
@@ -132,17 +128,21 @@ def token_in(response):
     return re.search(r'name="csrf_token" value="([^"]+)"', response.get_data(as_text=True))[1]
 
 
-def log_in_with_page_token(client, username, password):
+def login(client, email):
+    """The client, logged in as the user with this email and USER_PASSWORD"""
+    client.post("/login", data={"email": email, "password": USER_PASSWORD})
+    return client
+
+
+def log_in_with_page_token(client, email, password):
     token = token_in(client.get("/login"))
-    return client.post(
-        "/login", data={"username": username, "password": password, "csrf_token": token}
-    )
+    return client.post("/login", data={"email": email, "password": password, "csrf_token": token})
 
 
-def user_id_in(mock_app, username):
+def user_id_in(mock_app, email):
     """A registered user's id, from outside any app context (unlike factories.user_id)"""
     with mock_app.app_context():
-        return User.query.filter_by(username=username).one().id
+        return User.query.filter_by(email=email).one().id
 
 
 @pytest.fixture

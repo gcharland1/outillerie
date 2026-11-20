@@ -7,7 +7,7 @@ from flask_login import login_user
 from app.contacts import NO_LONGER_PENDING, NOT_A_CONTACT, relation_states
 from app.extensions import db
 from models import ContactRelation, ContactRequest, User
-from tests.conftest import USER_PASSWORD
+from tests.conftest import login
 from tests.factories import make_contact_relation, make_contact_request, make_user, user_id
 
 
@@ -15,25 +15,20 @@ def page_text(response):
     return unescape(response.get_data(as_text=True))
 
 
-def login(client, username):
-    client.post("/login", data={"username": username, "password": USER_PASSWORD})
-    return client
-
-
 @pytest.fixture
 def ids(mock_app, user, bob, carole):
     with mock_app.app_context():
-        return {name: user_id(name) for name in (user, bob, carole)}
+        return {email.partition("@")[0]: user_id(email) for email in (user, bob, carole)}
 
 
 @pytest.fixture
 def as_bob(mock_app, ids):
-    return login(mock_app.test_client(), "bob")
+    return login(mock_app.test_client(), "bob@example.com")
 
 
 @pytest.fixture
 def as_alice(mock_app, ids):
-    return login(mock_app.test_client(), "alice")
+    return login(mock_app.test_client(), "alice@example.com")
 
 
 def add_request(mock_app, requester_id, recipient_id):
@@ -46,14 +41,14 @@ def add_relation(mock_app, first_id, second_id):
         make_contact_relation(first_id, second_id)
 
 
-def contact_names(mock_app, username):
+def contact_first_names(mock_app, email):
     with mock_app.app_context():
-        me = user_id(username)
+        me = user_id(email)
         relations = ContactRelation.query.filter(
             (ContactRelation.user_a_id == me) | (ContactRelation.user_b_id == me)
         ).all()
         other_ids = [r.user_b_id if r.user_a_id == me else r.user_a_id for r in relations]
-        return {db.session.get(User, other_id).username for other_id in other_ids}
+        return {db.session.get(User, other_id).first_name for other_id in other_ids}
 
 
 def request_pairs(mock_app):
@@ -81,7 +76,8 @@ def test_received_request_is_listed_with_its_actions(mock_app, ids, as_bob):
     text = page_text(as_bob.get("/contacts"))
 
     assert "Demandes reçues" in text
-    assert "alice" in text and "Alice Tremblay" in text
+    assert "Alice Tremblay" in text
+    assert "Nom d'utilisateur" not in text
     assert ">Accepter<" in text and ">Refuser<" in text
 
 
@@ -103,20 +99,19 @@ def test_sent_request_is_not_listed(mock_app, ids, as_alice):
     assert "Bob Gagnon" not in text
 
 
-def test_contacts_are_listed_by_username_regardless_of_case(mock_app, ids, as_bob):
+def test_contacts_are_listed_by_first_then_last_name(mock_app, ids, as_bob):
     with mock_app.app_context():
-        db.session.add(make_user("Albert", "albert@example.com"))
+        db.session.add(make_user("elise@example.com", first_name="Élise", last_name="Roy"))
+        db.session.get(User, ids["carole"]).first_name = "carole"
         db.session.commit()
-        albert_id = user_id("Albert")
-    add_relation(mock_app, ids["bob"], ids["carole"])
-    add_relation(mock_app, ids["bob"], albert_id)
-    add_relation(mock_app, ids["alice"], ids["bob"])
+        elise_id = user_id("elise@example.com")
+    for other_id in (elise_id, ids["carole"], ids["alice"]):
+        add_relation(mock_app, ids["bob"], other_id)
 
     text = page_text(as_bob.get("/contacts"))
 
-    assert text.index(">Albert<") < text.index(">alice<") < text.index(">carole<")
-    assert text.count(">Retirer<") == 3
-    assert 'class="button error"' in text
+    assert text.index(">Alice Tremblay<") < text.index(">carole Roy<") < text.index(">Élise Roy<")
+    assert len(re.findall(r'<a class="button" href="/contacts/\d+/remove">Retirer</a>', text)) == 3
 
 
 def test_no_contact(as_bob):
@@ -164,8 +159,8 @@ def test_accepting_links_both_neighbours(mock_app, ids, as_bob):
     assert response.status_code == 302
     assert response.headers["Location"] == "/contacts"
     assert request_pairs(mock_app) == []
-    assert contact_names(mock_app, "bob") == {"alice"}
-    assert contact_names(mock_app, "alice") == {"bob"}
+    assert contact_first_names(mock_app, "bob@example.com") == {"Alice"}
+    assert contact_first_names(mock_app, "alice@example.com") == {"Bob"}
     text = page_text(as_bob.get("/contacts"))
     assert "Demandes reçues" not in text
     assert "Alice Tremblay" in text
@@ -178,25 +173,25 @@ def test_refusing_deletes_the_request_without_linking(mock_app, ids, as_bob):
 
     assert response.headers["Location"] == "/contacts"
     assert request_pairs(mock_app) == []
-    assert contact_names(mock_app, "bob") == set()
+    assert contact_first_names(mock_app, "bob@example.com") == set()
     assert "Demandes reçues" not in page_text(as_bob.get("/contacts"))
 
 
 @pytest.mark.parametrize("answer", ["accept", "refuse"])
 def test_request_addressed_to_someone_else_is_not_found(mock_app, ids, answer):
     request_id = add_request(mock_app, ids["alice"], ids["bob"])
-    as_carole = login(mock_app.test_client(), "carole")
+    as_carole = login(mock_app.test_client(), "carole@example.com")
 
     assert as_carole.post(f"/contacts/requests/{request_id}/{answer}").status_code == 404
     assert request_pairs(mock_app) == [(ids["alice"], ids["bob"])]
-    assert contact_names(mock_app, "bob") == set()
+    assert contact_first_names(mock_app, "bob@example.com") == set()
 
 
 def test_requester_cannot_accept_her_own_request(mock_app, ids, as_alice):
     request_id = add_request(mock_app, ids["alice"], ids["bob"])
 
     assert as_alice.post(f"/contacts/requests/{request_id}/accept").status_code == 404
-    assert contact_names(mock_app, "alice") == set()
+    assert contact_first_names(mock_app, "alice@example.com") == set()
 
 
 def test_refusing_after_accepting_changes_nothing(mock_app, ids, as_bob):
@@ -207,7 +202,7 @@ def test_refusing_after_accepting_changes_nothing(mock_app, ids, as_bob):
 
     assert response.request.path == "/contacts"
     assert NO_LONGER_PENDING in page_text(response)
-    assert contact_names(mock_app, "bob") == {"alice"}
+    assert contact_first_names(mock_app, "bob@example.com") == {"Alice"}
 
 
 # Envoi d'une demande
@@ -272,11 +267,9 @@ def test_new_request_after_a_refusal(mock_app, ids, as_alice, as_bob):
 
 def test_relation_states(mock_app, ids):
     with mock_app.app_context():
-        db.session.add_all(
-            [make_user("dave", "dave@example.com"), make_user("eve", "eve@example.com")]
-        )
+        db.session.add_all([make_user("dave@example.com"), make_user("eve@example.com")])
         db.session.commit()
-        dave_id, eve_id = user_id("dave"), user_id("eve")
+        dave_id, eve_id = user_id("dave@example.com"), user_id("eve@example.com")
     add_request(mock_app, ids["alice"], ids["bob"])
     add_request(mock_app, ids["carole"], ids["alice"])
     add_relation(mock_app, ids["alice"], dave_id)
@@ -301,10 +294,10 @@ def test_remove_page_asks_for_confirmation(mock_app, ids, as_bob):
 
     text = page_text(as_bob.get(f"/contacts/{ids['alice']}/remove"))
 
-    assert "Retirer Alice Tremblay (alice) de vos contacts ?" in text
+    assert "Retirer Alice Tremblay de vos contacts ?" in text
     assert ">Annuler<" in text
-    assert '<button type="submit" class="button error">Retirer</button>' in text
-    assert contact_names(mock_app, "bob") == {"alice"}
+    assert '<button type="submit" class="button primary">Retirer</button>' in text
+    assert contact_first_names(mock_app, "bob@example.com") == {"Alice"}
 
 
 def test_confirmed_removal_unlinks_both_sides(mock_app, ids, as_bob):
@@ -313,8 +306,8 @@ def test_confirmed_removal_unlinks_both_sides(mock_app, ids, as_bob):
     response = as_bob.post(f"/contacts/{ids['alice']}/remove")
 
     assert response.headers["Location"] == "/contacts"
-    assert contact_names(mock_app, "bob") == set()
-    assert contact_names(mock_app, "alice") == set()
+    assert contact_first_names(mock_app, "bob@example.com") == set()
+    assert contact_first_names(mock_app, "alice@example.com") == set()
 
 
 @pytest.mark.parametrize("method", ["get", "post"])
@@ -325,7 +318,7 @@ def test_removing_someone_who_is_not_a_contact_changes_nothing(mock_app, ids, as
 
     assert response.request.path == "/contacts"
     assert NOT_A_CONTACT in page_text(response)
-    assert contact_names(mock_app, "alice") == {"carole"}
+    assert contact_first_names(mock_app, "alice@example.com") == {"Carole"}
 
 
 def test_second_removal_changes_nothing(mock_app, ids, as_bob):
@@ -393,7 +386,7 @@ def test_answer_again_from_home_goes_back_home(mock_app, ids, as_bob):
 
     assert response.location == "/"
     assert "Cette demande n'est plus en attente" in page_text(as_bob.get("/"))
-    assert contact_names(mock_app, "bob") == {"alice"}
+    assert contact_first_names(mock_app, "bob@example.com") == {"Alice"}
 
 
 def test_unknown_origin_goes_back_to_my_contacts(mock_app, ids, as_bob):

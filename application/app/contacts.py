@@ -4,7 +4,7 @@ from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 
-from app import catalog
+from app import catalog, text_search
 from app.extensions import db
 from models.contact import ContactRelation, ContactRequest
 from models.user import User
@@ -188,8 +188,13 @@ def relation_states(user_ids):
     return states
 
 
+def by_name():
+    """The order of lists of accounts: first name, last name, then the oldest account first"""
+    return (text_search.sort_key(User.first_name), text_search.sort_key(User.last_name), User.id)
+
+
 def _my_contacts():
-    """The current user's contacts, by username regardless of case"""
+    """The current user's contacts, by first then last name regardless of case and accents"""
     me = current_user.id
     return db.session.scalars(
         select(User)
@@ -200,7 +205,7 @@ def _my_contacts():
                 and_(ContactRelation.user_b_id == me, ContactRelation.user_a_id == User.id),
             ),
         )
-        .order_by(func.lower(User.username), User.id)
+        .order_by(*by_name())
     ).all()
 
 
