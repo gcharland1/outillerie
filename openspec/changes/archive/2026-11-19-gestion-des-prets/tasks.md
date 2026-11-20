@@ -30,7 +30,7 @@
 
 ## 7. Vérification
 
-- [ ] 7.1 Vérifier à la main dans `docker compose up --build`, avec deux comptes en contact et un troisième : remise déclarée puis confirmée, réception directe, retour déclaré puis contesté puis confirmé, annulation, prêt en retard (date de fin passée en base), pastilles, retrait d'un outil prêté
+- [x] 7.1 Vérifier à la main dans `docker compose up --build`, avec deux comptes en contact et un troisième : remise déclarée puis confirmée, réception directe, retour déclaré puis contesté puis confirmé, annulation, prêt en retard (date de fin passée en base), pastilles, retrait d'un outil prêté
 - [x] 7.2 Lancer `/verifier` ; il doit rendre « terminé »
 
 ## Workflow follow-up
