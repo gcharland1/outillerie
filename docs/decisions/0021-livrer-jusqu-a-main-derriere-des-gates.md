@@ -26,14 +26,19 @@ fixe le comportement, et que les gates vérifient que le code la respecte mieux 
 
 Règles, mises en œuvre par le skill `/livrer` :
 
-* Seul un accord explicite de l'utilisateur sur la spec des changements livrés ouvre la livraison.
-* Gates, dans l'ordre : `/verifier` « terminé » ; relecture par l'agent `relecteur`, deux passages, aucun
-  constat bloquant au second ; CI verte sur le dernier commit ; PR `MERGEABLE` et `CLEAN`.
+* Seul un accord explicite de l'utilisateur sur la spec des changements livrés ouvre la livraison. Cet accord
+  vaut aussi pour les ADR `proposed` que la spec cite, nommés dans le récapitulatif qui le demande, et pour
+  la fermeture, par `Closes`, des issues que la spec résout entièrement.
+* Gates, dans l'ordre : `/verifier` « terminé » ; relecture par l'agent `relecteur` des commits, deux
+  passages, aucun constat bloquant au second, une révision qui contredit *expand/contract* (0007) étant
+  bloquante ; CI verte sur le dernier commit ; PR `MERGEABLE` et `CLEAN`.
 * Une gate qui échoue arrête tout et rend la main ; aucun contournement (test sauté, `--no-verify`,
   `--admin`, force push sur `main`).
 * Les tâches d'un changement sont menées par un agent seul : une vérification qui exige un humain est
   notée comme limite dans le design et dans la PR, pas comme tâche.
-* Ouvrir ou fermer une issue, ou toucher la production, reste soumis à l'accord de l'utilisateur.
+* Ouvrir une issue, en fermer une autrement, ou toucher la production, reste soumis à l'accord de
+  l'utilisateur.
+* GitHub n'exige pas la CI pour merger `main` : seule la gate CI du skill l'impose.
 
 ### Conséquences
 

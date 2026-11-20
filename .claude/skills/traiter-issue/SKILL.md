@@ -101,6 +101,7 @@ Récapitulatif court :
 - la liste des décisions `convention`, que l'utilisateur peut renverser ;
 - les artefacts et ADR créés ;
 - le worktree et sa branche, s'il y en a un ;
+- les ADR `proposed` que l'accord fera passer à `accepted`, et les issues que la PR fermera (`Closes`) ;
 - ce que fera `/livrer` : implémentation, vérifications, relecture, archivage, PR et merge dans `main`,
   donc déploiement (ADR 0017).
 
