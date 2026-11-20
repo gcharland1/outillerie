@@ -16,7 +16,7 @@
 
 ## 4. Vérification
 
-- [ ] 4.1 Vérifier à la main dans `docker compose up --build` : « fred » trouve « Fréd » dans la recherche d'utilisateurs et « ％％％ » ne liste rien dans les deux recherches
+- [x] 4.1 Vérifier à la main dans `docker compose up --build` : « fred » trouve « Fréd » dans la recherche d'utilisateurs et « ％％％ » ne liste rien dans les deux recherches
 - [x] 4.2 Lancer `/verifier` ; il doit rendre « terminé »
 
 ## Workflow follow-up
