@@ -28,6 +28,14 @@ def inject_pending_contact_requests():
     return {"pending_contact_requests": count}
 
 
+@bp.app_context_processor
+def inject_contact_ids():
+    """Who the user's contacts are, so that a name links to the contact's page"""
+    if not current_user.is_authenticated:
+        return {"contact_ids": set()}
+    return {"contact_ids": catalog.contact_ids(current_user.id)}
+
+
 @bp.route("")
 @login_required
 def mine():

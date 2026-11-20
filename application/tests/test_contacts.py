@@ -111,7 +111,10 @@ def test_contacts_are_listed_by_first_then_last_name(mock_app, ids, as_bob):
     text = page_text(as_bob.get("/contacts"))
 
     assert text.index(">Alice Tremblay<") < text.index(">carole Roy<") < text.index(">Élise Roy<")
-    assert len(re.findall(r'<a class="button" href="/contacts/\d+/remove">Retirer</a>', text)) == 3
+    assert (
+        len(re.findall(r'<a class="button error" href="/contacts/\d+/remove">Retirer</a>', text))
+        == 3
+    )
 
 
 def test_no_contact(as_bob):
@@ -294,9 +297,11 @@ def test_remove_page_asks_for_confirmation(mock_app, ids, as_bob):
 
     text = page_text(as_bob.get(f"/contacts/{ids['alice']}/remove"))
 
-    assert "Retirer Alice Tremblay de vos contacts ?" in text
-    assert ">Annuler<" in text
-    assert '<button type="submit" class="button primary">Retirer</button>' in text
+    assert (
+        f'Retirer <a href="/contacts/{ids["alice"]}">Alice Tremblay</a> de vos contacts ?' in text
+    )
+    assert '<a class="button" href="/contacts">Annuler</a>' in text
+    assert '<button type="submit" class="button error">Retirer</button>' in text
     assert contact_first_names(mock_app, "bob@example.com") == {"Alice"}
 
 

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% from "_user_name.html" import user_name with context %}
+
+{% block content %}
+<div class="row is-center">
+    <div class="col-12 col-8-md card">
+        <header>
+            <h3>Retirer votre demande de « {{ loan.tool.name }} » à {{ user_name(loan.lender) }} ?</h3>
+        </header>
+        <p>Du {{ dates }}. L'outil redeviendra disponible.</p>
+        <form action="{{ url_for('loans.act', loan_id=loan.id, action='withdraw') }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if origin %}
+            <input type="hidden" name="origin" value="{{ origin }}">
+            {% endif %}
+
+            <label for="reason">Raison (facultatif) :</label>
+            <textarea id="reason" name="reason" maxlength="{{ reason_max_length }}">{{ reason }}</textarea>
+
+            <div class="actions">
+                <a class="button" href="{{ back_url }}">Retour</a>
+                <button type="submit" class="button error">Retirer ma demande</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

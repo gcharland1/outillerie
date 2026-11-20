@@ -121,6 +121,11 @@ def is_contact(user_id, other_id):
     return db.session.get(ContactRelation, ContactRelation.pair(user_id, other_id)) is not None
 
 
+def contact_ids(user_id):
+    """The ids of the user's contacts"""
+    return set(db.session.scalars(_contact_ids(user_id)))
+
+
 def visible_tool(user_id, tool_id):
     """One of the contacts' tools the user may see, or None"""
     query = select(Tool).options(joinedload(Tool.owner)).where(Tool.id == tool_id)

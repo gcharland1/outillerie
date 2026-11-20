@@ -33,7 +33,7 @@
                             <option value="user"{% if chosen_type == "user" %} selected{% endif %}>Utilisateur</option>
                         </select>
                         <input type="search" name="q" value="{{ search_text|default('') }}" minlength="3" required aria-label="Texte à chercher" placeholder="Rechercher…">
-                        <button type="submit" class="button">Rechercher</button>
+                        <button type="submit" class="button primary">Rechercher</button>
                     </form>
                 </div>
                 {% endif %}

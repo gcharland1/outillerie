@@ -1,5 +1,6 @@
 {% extends "base.html" %}
-{% from "contacts/_requests.html" import received_requests %}
+{% from "contacts/_requests.html" import received_requests with context %}
+{% from "_user_name.html" import user_name with context %}
 
 {% block content %}
     <h2>Mes contacts</h2>
@@ -16,10 +17,10 @@
         <tbody>
         {% for contact in contacts %}
             <tr>
-                <td><a href="{{ url_for('contacts.show', user_id=contact.id) }}">{{ contact.first_name }} {{ contact.last_name }}</a></td>
+                <td>{{ user_name(contact) }}</td>
                 <td>
                     <div class="actions">
-                        <a class="button" href="{{ url_for('contacts.confirm_remove', user_id=contact.id) }}">Retirer</a>
+                        <a class="button error" href="{{ url_for('contacts.confirm_remove', user_id=contact.id) }}">Retirer</a>
                     </div>
                 </td>
             </tr>

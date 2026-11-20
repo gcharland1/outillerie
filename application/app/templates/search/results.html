@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_user_name.html" import user_name with context %}
 
 {% block content %}
     <h2>Résultats de recherche</h2>
@@ -13,7 +14,7 @@
         <tbody>
         {% for user, state in results %}
             <tr>
-                <td>{{ user.first_name }} {{ user.last_name }}</td>
+                <td>{{ user_name(user) }}</td>
                 <td>
                     <div class="actions">
                     {% if state == "none" %}

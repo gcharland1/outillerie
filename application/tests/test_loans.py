@@ -6,6 +6,7 @@ import pytest
 
 from app import catalog
 from app.extensions import db
+from app.loans import MESSAGE_MAX_LENGTH
 from models import Loan, LoanStatus, ToolCondition
 from tests.conftest import (
     USER_PASSWORD,
@@ -98,16 +99,16 @@ def request_drill(client, drill, **form):
 # Confirmation page
 
 
-def test_confirmation_page(mock_app, drill, as_alice):
+def test_confirmation_page(mock_app, contacts, drill, as_alice):
     text = page_text(as_alice.get(f"/loans/new/{drill}"))
 
     assert "Emprunter « Perceuse »" in text
     assert "Perceuse sans fil " + "x" * 200 in text
     assert "État : Fonctionnel" in text
-    assert "Propriétaire : Bob Gagnon" in text
+    assert f'Propriétaire : <a href="/contacts/{contacts["bob"]}">Bob Gagnon</a>' in text
     assert f'name="start" value="{TODAY.isoformat()}"' in text
     assert 'name="end" value=""' in text
-    assert "Message pour Bob Gagnon (facultatif)" in text
+    assert '<label for="message">Message pour Bob Gagnon (facultatif) :</label>' in text
     assert "code du cadenas 1234" not in text
     assert loans(mock_app) == []
 
@@ -503,16 +504,135 @@ def test_borrower_withdraws(mock_app, request_id, as_alice, as_carole):
     assert '<p class="status-available">Disponible</p>' in page_text(as_carole.get("/tools/find"))
 
 
-def test_only_the_borrower_withdraws(mock_app, request_id, as_bob):
-    assert as_bob.post(f"/loans/{request_id}/withdraw").status_code == 404
+@pytest.mark.parametrize("client", ["as_bob", "as_carole"])
+def test_only_the_borrower_withdraws(mock_app, request, request_id, client):
+    acting = request.getfixturevalue(client)
+
+    assert acting.get(f"/loans/{request_id}/withdraw").status_code == 404
+    assert acting.post(f"/loans/{request_id}/withdraw").status_code == 404
     assert status_of(mock_app, request_id) is LoanStatus.REQUESTED
 
 
 def test_second_withdrawal_changes_nothing(mock_app, request_id, as_alice):
     as_alice.post(f"/loans/{request_id}/withdraw")
+    response = as_alice.post(f"/loans/{request_id}/withdraw")
+
+    assert response.location == "/loans"
+    assert "Cette demande n'est plus en attente" in page_text(as_alice.get("/loans"))
+
+
+# Withdrawal confirmation
+
+
+def message_of(mock_app, loan_id):
+    with mock_app.app_context():
+        return db.session.get(Loan, loan_id).message
+
+
+def request_with(mock_app, contacts, drill, message):
+    return add_loan(mock_app, drill, contacts["alice"], days(1), days(3), message=message)
+
+
+def test_withdraw_button_opens_the_confirmation(mock_app, request_id, as_alice):
+    text = page_text(as_alice.get("/loans"))
+
+    assert (
+        f'<a class="button error" href="/loans/{request_id}/withdraw">Retirer ma demande</a>'
+        in text
+    )
+
+
+def test_withdraw_page_changes_nothing(mock_app, request_id, as_alice):
+    text = page_text(as_alice.get(f"/loans/{request_id}/withdraw"))
+
+    assert "Perceuse" in text and "Bob Gagnon" in text
+    assert f"{catalog.french_date(days(1))} au {catalog.french_date(days(3))}" in text
+    assert '<textarea id="reason" name="reason"' in text
+    assert 'name="csrf_token"' in text
+    assert '<a class="button" href="/loans">Retour</a>' in text
+    assert '<button type="submit" class="button error">Retirer ma demande</button>' in text
+    assert status_of(mock_app, request_id) is LoanStatus.REQUESTED
+
+
+def test_withdrawing_without_a_reason_keeps_the_message(mock_app, contacts, drill, as_alice):
+    loan_id = request_with(mock_app, contacts, drill, "Pour samedi")
+
+    as_alice.post(f"/loans/{loan_id}/withdraw", data={"reason": "  "})
+
+    assert status_of(mock_app, loan_id) is LoanStatus.CANCELED
+    assert message_of(mock_app, loan_id) == "Pour samedi"
+
+
+@pytest.mark.parametrize(
+    ("message", "stored"),
+    [
+        ("Pour samedi", "Pour samedi — Raison du retrait : J'en ai trouvé une"),
+        (None, "Raison du retrait : J'en ai trouvé une"),
+    ],
+)
+def test_withdrawing_with_a_reason_adds_it_to_the_message(
+    mock_app, contacts, drill, as_alice, message, stored
+):
+    loan_id = request_with(mock_app, contacts, drill, message)
+
+    as_alice.post(f"/loans/{loan_id}/withdraw", data={"reason": " J'en ai trouvé une "})
+
+    assert status_of(mock_app, loan_id) is LoanStatus.CANCELED
+    assert message_of(mock_app, loan_id) == stored
+
+
+def test_reason_too_long(mock_app, contacts, drill, as_alice):
+    message = "x" * 400
+    loan_id = request_with(mock_app, contacts, drill, message)
+    room = MESSAGE_MAX_LENGTH - len(f"{message} — Raison du retrait : ")
+    reason = "y" * (room + 1)
+
+    response = as_alice.post(f"/loans/{loan_id}/withdraw", data={"reason": reason})
+
+    text = page_text(response)
+    assert response.status_code == 200
+    assert f"La raison ne doit pas dépasser {room} caractères" in text
+    assert f'maxlength="{room}">{reason}</textarea>' in text
+    assert status_of(mock_app, loan_id) is LoanStatus.REQUESTED
+    assert message_of(mock_app, loan_id) == message
+
+
+def test_longest_reason_fits(mock_app, contacts, drill, as_alice):
+    message = "x" * 400
+    loan_id = request_with(mock_app, contacts, drill, message)
+    room = MESSAGE_MAX_LENGTH - len(f"{message} — Raison du retrait : ")
+
+    as_alice.post(f"/loans/{loan_id}/withdraw", data={"reason": "y" * room})
+
+    assert status_of(mock_app, loan_id) is LoanStatus.CANCELED
+    assert len(message_of(mock_app, loan_id)) == MESSAGE_MAX_LENGTH
+
+
+def test_withdraw_page_of_a_request_no_longer_pending(mock_app, request_id, as_alice):
     as_alice.post(f"/loans/{request_id}/withdraw")
 
-    assert "Cette demande n'est plus en attente" in page_text(as_alice.get("/loans"))
+    response = as_alice.get(f"/loans/{request_id}/withdraw?origin=home")
+
+    assert response.location == "/"
+    assert "Cette demande n'est plus en attente" in page_text(as_alice.get("/"))
+
+
+def test_withdrawal_needs_the_csrf_token(mock_app, request_id, csrf_client):
+    log_in_with_page_token(csrf_client, "alice@example.com", USER_PASSWORD)
+
+    response = csrf_client.post(f"/loans/{request_id}/withdraw")
+
+    assert response.status_code == 400
+    assert status_of(mock_app, request_id) is LoanStatus.REQUESTED
+
+
+def test_withdrawal_with_the_csrf_token(mock_app, request_id, csrf_client):
+    log_in_with_page_token(csrf_client, "alice@example.com", USER_PASSWORD)
+    token = token_in(csrf_client.get(f"/loans/{request_id}/withdraw"))
+
+    csrf_client.post(f"/loans/{request_id}/withdraw", data={"csrf_token": token})
+
+    assert status_of(mock_app, request_id) is LoanStatus.CANCELED
 
 
 # Badges
@@ -863,7 +983,8 @@ def test_cancel_page_changes_nothing(mock_app, contacts, drill, as_bob):
     text = page_text(as_bob.get(f"/loans/{loan_id}/cancel"))
 
     assert "Perceuse" in text and "Alice Tremblay" in text
-    assert '<button type="submit" class="button primary">Annuler le prêt</button>' in text
+    assert '<button type="submit" class="button error">Annuler le prêt</button>' in text
+    assert '<a class="button" href="/loans">Retour à « Mes prêts »</a>' in text
     assert status_of(mock_app, loan_id) is LoanStatus.ACCEPTED
 
 
@@ -1040,8 +1161,8 @@ def buttons_of(text, tool_name):
     [
         (
             LoanStatus.ACCEPTED,
-            [("", "Annuler le prêt"), ("primary", "J'ai remis l'outil")],
-            [("", "Annuler le prêt"), ("primary", "J'ai reçu l'outil")],
+            [("error", "Annuler le prêt"), ("primary", "J'ai remis l'outil")],
+            [("error", "Annuler le prêt"), ("primary", "J'ai reçu l'outil")],
         ),
         (
             LoanStatus.HANDOVER_CLAIMED,
@@ -1063,6 +1184,25 @@ def test_buttons_by_role(
 
     assert buttons_of(page_text(as_bob.get("/loans")), "Perceuse") == owner_buttons
     assert buttons_of(page_text(as_alice.get("/loans")), "Perceuse") == borrower_buttons
+
+
+def test_withdrawing_a_request_is_red(mock_app, contacts, drill, as_alice):
+    loan_in(mock_app, contacts, drill, LoanStatus.REQUESTED, start=1, end=3)
+
+    borrowed = page_text(as_alice.get("/loans")).split("<h3>Mes emprunts</h3>")[1]
+
+    assert buttons_of(borrowed, "Perceuse") == [("error", "Retirer ma demande")]
+
+
+def test_not_received_is_grey(mock_app, contacts, drill, as_alice):
+    loan_in(mock_app, contacts, drill, LoanStatus.HANDOVER_CLAIMED)
+
+    borrowed = page_text(as_alice.get("/loans")).split("<h3>Mes emprunts</h3>")[1]
+
+    assert buttons_of(borrowed, "Perceuse") == [
+        ("", "Pas reçu"),
+        ("primary", "Confirmer la réception"),
+    ]
 
 
 def test_overdue_loans_come_first_oldest_first(mock_app, contacts, drill, as_bob):
