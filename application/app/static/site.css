@@ -380,6 +380,11 @@ form:has(#photo-replace:checked):has(#photo-remove:checked) [type="submit"] {
     font-weight: bold;
 }
 
+/* A deleted account's name, kept in the loans' history (ADR 0023). */
+.user-deleted {
+    color: var(--color-grey);
+}
+
 .dashboard-section {
     margin-bottom: calc(2 * var(--gap));
 }

@@ -78,7 +78,11 @@ def recent_contacts(user_id, since):
 def show(user_id):
     """A contact's page; the same 404 for anyone who is not a contact"""
     contact = db.session.get(User, user_id)
-    if contact is None or not catalog.is_contact(current_user.id, contact.id):
+    if (
+        contact is None
+        or contact.deleted_at is not None
+        or not catalog.is_contact(current_user.id, contact.id)
+    ):
         abort(404)
     page = catalog.tool_list(current_user.id, request.args, owner=contact)
     return render_template("contacts/show.html", contact=contact, **page)
@@ -87,18 +91,18 @@ def show(user_id):
 @bp.route("/requests", methods=["POST"])
 @login_required
 def send_request():
-    recipient = db.session.get(User, request.form.get("recipient_id", type=int) or 0)
-    if recipient is None or recipient.id == current_user.id:
+    recipient_id = request.form.get("recipient_id", type=int) or 0
+    if recipient_id == current_user.id or not lock_live_accounts(current_user.id, recipient_id):
         abort(404)
     back_to_search = redirect(url_for("search.results", type="user", q=request.form.get("q", "")))
 
-    state = relation_states([recipient.id])[recipient.id]
+    state = relation_states([recipient_id])[recipient_id]
     if state == "received":
         return redirect(url_for("contacts.mine"))
     if state in ("sent", "contact"):
         return back_to_search
 
-    db.session.add(ContactRequest(requester_id=current_user.id, recipient_id=recipient.id))
+    db.session.add(ContactRequest(requester_id=current_user.id, recipient_id=recipient_id))
     try:
         db.session.commit()
     except IntegrityError:
@@ -110,6 +114,12 @@ def send_request():
 @bp.route("/requests/<int:request_id>/accept", methods=["POST"])
 @login_required
 def accept(request_id):
+    requester_id = db.session.scalar(
+        select(ContactRequest.requester_id).where(ContactRequest.id == request_id)
+    )
+    if requester_id is not None:
+        # Accounts before the request, as a deletion takes them; a deleted requester's is gone.
+        lock_live_accounts(requester_id, current_user.id)
     contact_request = _received_request(request_id)
     if contact_request is None:
         return _back_from_answered_request()
@@ -194,6 +204,17 @@ def relation_states(user_ids):
     states.update(dict.fromkeys(received, "received"))
     states.update({a if b == me else b: "contact" for a, b in relations})
     return states
+
+
+def lock_live_accounts(*user_ids):
+    """Locks these accounts against a deletion until commit; whether all exist, none deleted"""
+    deleted_at = db.session.scalars(
+        select(User.deleted_at)
+        .where(User.id.in_(user_ids))
+        .order_by(User.id)
+        .with_for_update(read=True)
+    ).all()
+    return len(deleted_at) == len(set(user_ids)) and all(when is None for when in deleted_at)
 
 
 def by_name():

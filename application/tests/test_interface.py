@@ -75,6 +75,20 @@ def test_a_name_is_escaped(mock_app, user, bob):
     assert "&lt;b&gt;Bob&lt;/b&gt; Gagnon</a>" in rendered_name(mock_app, user, bob)
 
 
+def test_a_deleted_accounts_name_is_greyed_text_even_for_a_contact(mock_app, user, bob):
+    with mock_app.app_context():
+        bob_id = user_id(bob)
+        make_contact_relation(user_id(user), bob_id)
+        account = db.session.get(User, bob_id)
+        account.first_name = "<b>Bob</b>"
+        account.deleted_at = db.func.now()
+        db.session.commit()
+
+    assert rendered_name(mock_app, user, bob) == (
+        '[<span class="user-deleted">&lt;b&gt;Bob&lt;/b&gt; Gagnon (supprimé)</span>]'
+    )
+
+
 # Names on the pages
 
 

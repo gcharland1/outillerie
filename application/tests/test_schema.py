@@ -113,6 +113,31 @@ def test_username_removal_round_trips(migrated_app):
         assert "uq_user_username" not in constraint_names("user")
 
 
+def test_account_deletion_columns_round_trip(migrated_app):
+    with migrated_app.app_context():
+        db.session.execute(
+            text(
+                'INSERT INTO "user" (password, email, first_name, last_name, deleted_at) '
+                "VALUES ('hash', NULL, 'Alice', 'Tremblay', now()), "
+                "('hash', NULL, 'Bob', 'Gagnon', now())"
+            )
+        )
+        db.session.commit()
+        user_ids = db.session.scalars(text('SELECT id FROM "user" ORDER BY id')).all()
+        db.session.remove()
+
+        flask_migrate.downgrade(revision="99a7a6825085")
+        emails = db.session.scalars(text('SELECT email FROM "user" ORDER BY id')).all()
+        assert emails == [f"supprime-{user_id}@invalid" for user_id in user_ids]
+        assert "deleted_at" not in user_columns()
+        db.session.remove()
+
+        flask_migrate.upgrade()
+        assert "deleted_at" in user_columns()
+        db.session.execute(text('UPDATE "user" SET email = NULL, deleted_at = now()'))
+        db.session.commit()
+
+
 def test_revisions_create_the_extensions(migrated_app):
     with migrated_app.app_context():
         installed = {row[0] for row in db.session.execute(text("SELECT extname FROM pg_extension"))}

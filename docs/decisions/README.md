@@ -42,3 +42,5 @@ structure de l'app, outil de dev, convention transverse. Un détail d'implément
 | 0019 | [Couleurs des boutons : positif en bleu, négatif en neutre](0019-couleurs-des-boutons-positif-en-bleu-negatif-en-neutre.md) | accepted |
 | 0020 | [Le courriel est l'identifiant de connexion](0020-le-courriel-est-l-identifiant-de-connexion.md) | accepted |
 | 0021 | [Livrer jusqu'à `main` derrière des gates, après l'accord sur la spec](0021-livrer-jusqu-a-main-derriere-des-gates.md) | accepted |
+| 0022 | [Couleurs des boutons : action en bleu, action dangereuse en rouge, le reste neutre](0022-couleurs-des-boutons-action-en-bleu-danger-en-rouge.md) | proposed |
+| 0023 | [Supprimer un compte par anonymisation](0023-supprimer-un-compte-par-anonymisation.md) | proposed |

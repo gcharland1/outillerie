@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 
 from app import catalog, photos
+from app.contacts import lock_live_accounts
 from app.extensions import db
 from models.loan import Loan, LoanStatus
 from models.tool import Tool
@@ -216,6 +217,9 @@ def new(tool_id):
 @bp.route("/new/<int:tool_id>", methods=["POST"])
 @login_required
 def create(tool_id):
+    owner_id = db.session.scalar(select(Tool.owner_id).where(Tool.id == tool_id))
+    if owner_id is None or not lock_live_accounts(current_user.id, owner_id):
+        abort(404)
     # Serializes concurrent requests for the tool until commit.
     db.session.execute(select(Tool.id).where(Tool.id == tool_id).with_for_update())
     tool = _requestable_tool(tool_id)

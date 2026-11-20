@@ -57,7 +57,7 @@ def _matching_users(search_text, fuzzy):
         ordering = [case((contained, 0), else_=1), score.desc()]
     return db.session.scalars(
         select(User)
-        .where(User.id != current_user.id, condition)
+        .where(User.id != current_user.id, User.deleted_at.is_(None), condition)
         .order_by(*ordering, *by_name())
         .limit(USER_RESULTS_MAX + 1)
     ).all()

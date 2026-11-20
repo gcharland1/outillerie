@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row is-center">
+    <div class="col-12 col-8-md card">
+        <header>
+            <h3>Supprimer mon compte ?</h3>
+        </header>
+        <p>La suppression de votre compte est irréversible.</p>
+        {% if cancel_notice %}
+        <p>{{ cancel_notice }}.</p>
+        {% endif %}
+        <form action="{{ url_for('profile.delete_account') }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label for="name">Votre nom complet:</label>
+            <input type="text" id="name" name="name" value="{{ name }}" autocomplete="off" />
+
+            <label for="password">Votre mot de passe actuel:</label>
+            <input type="password" id="password" name="password" autocomplete="current-password" />
+
+            <div class="actions">
+                <a class="button" href="{{ url_for('profile.show') }}">Annuler</a>
+                <button type="submit" class="button error">Confirmer la suppression</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -42,6 +42,14 @@ def test_logged_out_page_shows_configured_lifetime(mock_app, client):
     assert "Votre session a expiré après 15 minutes d'inactivité" in text
 
 
+def test_logged_out_page_after_account_deletion(client):
+    text = page_text(client.get("/logged-out?reason=account-deleted"))
+
+    assert "Votre compte a été supprimé" in text
+    assert "Vous êtes déconnecté" not in text
+    assert 'href="/login"' in text
+
+
 def test_logged_out_page_ignores_unknown_reason(client):
     assert "Vous êtes déconnecté" in page_text(client.get("/logged-out?reason=autre"))
 

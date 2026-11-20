@@ -6,11 +6,7 @@
         <header>
             <h3>Session terminée</h3>
         </header>
-        {% if expired %}
-        <p>Votre session a expiré après {{ minutes }} minutes d'inactivité</p>
-        {% else %}
-        <p>Vous êtes déconnecté</p>
-        {% endif %}
+        <p>{{ message }}</p>
         <div class="actions">
             <a class="button primary" href="/login">Se reconnecter</a>
         </div>

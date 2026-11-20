@@ -47,10 +47,22 @@ def test_full_name_opens_the_account_menu(logged_in_client, user):
 def test_account_menu_shows_upcoming_pages_greyed_out(logged_in_client):
     menu = account_menu(page_text(logged_in_client.get("/")))
 
-    for label in ["Mon profil", "Préférences"]:
-        assert f'<span class="menu-item-upcoming" aria-disabled="true">{label}</span>' in menu
-    assert menu.index("Mon profil") < menu.index("Gérer mes outils") < menu.index("Préférences")
+    assert '<span class="menu-item-upcoming" aria-disabled="true">Préférences</span>' in menu
+    assert "Mon profil" not in re.findall(r'<span class="menu-item-upcoming"[^>]*>([^<]*)<', menu)
     assert "Me déconnecter" not in menu
+
+
+def test_my_profile_is_the_first_entry_of_the_account_menu(logged_in_client):
+    menu = account_menu(page_text(logged_in_client.get("/")))
+
+    items = re.search(r'<div class="account-menu-items">(.*?)</div>', menu, re.DOTALL)[1]
+    assert re.search(r"<(?:a|span)\b[^>]*>([^<]*)<", items)[1] == "Mon profil"
+    assert '<a href="/profile">Mon profil</a>' in menu
+    assert menu.index("Mon profil") < menu.index("Gérer mes outils") < menu.index("Préférences")
+
+
+def test_visitor_navigation_has_no_profile(client):
+    assert "Mon profil" not in page_text(client.get("/login"))
 
 
 def assert_styled_by_the_site_stylesheet(client, pages):
@@ -66,7 +78,9 @@ def test_visitor_pages_use_the_site_stylesheet(client):
 
 
 def test_logged_in_pages_use_the_site_stylesheet(logged_in_client):
-    assert_styled_by_the_site_stylesheet(logged_in_client, ["/", "/tools/mine", "/tools/new"])
+    assert_styled_by_the_site_stylesheet(
+        logged_in_client, ["/", "/tools/mine", "/tools/new", "/profile", "/profile/delete"]
+    )
 
 
 def test_logged_in_page_refreshes_to_expiry_page_after_lifetime(mock_app, logged_in_client):
@@ -132,6 +146,8 @@ def test_no_page_says_voisin(client, logged_in_client):
         "/loans",
         "/tools/find",
         "/search?type=user&q=bob",
+        "/profile",
+        "/profile/delete",
     ]
 
     for response in [client.get(path) for path in visitor_pages] + [
@@ -157,7 +173,14 @@ def test_one_blue_button_per_group(client):
     assert '<button type="submit" class="button primary">Se connecter</button>' in text
 
 
-DESTRUCTIVE_LABELS = {"Retirer", "Confirmer le retrait", "Annuler le prêt", "Retirer ma demande"}
+DESTRUCTIVE_LABELS = {
+    "Retirer",
+    "Confirmer le retrait",
+    "Annuler le prêt",
+    "Retirer ma demande",
+    "Supprimer mon compte",
+    "Confirmer la suppression",
+}
 
 
 def test_only_destructive_buttons_are_red_and_none_is_green():

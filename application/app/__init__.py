@@ -25,7 +25,7 @@ def create_app(test_config=None):
     login_manager.init_app(app)
     csrf.init_app(app)
 
-    from app import auth, catalog, contacts, loans, search, tools
+    from app import auth, catalog, contacts, loans, profile, search, tools
     from models.user import User
 
     app.register_blueprint(auth.bp)
@@ -33,6 +33,7 @@ def create_app(test_config=None):
     app.register_blueprint(contacts.bp)
     app.register_blueprint(search.bp)
     app.register_blueprint(loans.bp)
+    app.register_blueprint(profile.bp)
 
     @app.route("/")
     def index():
@@ -70,7 +71,9 @@ def create_app(test_config=None):
 
     @login_manager.user_loader
     def load_user(user_id):
-        return db.session.get(User, int(user_id))
+        # None makes it a visitor's session: a deleted account's end everywhere (ADR 0023).
+        user = db.session.get(User, int(user_id))
+        return user if user is not None and user.deleted_at is None else None
 
     return app
 
