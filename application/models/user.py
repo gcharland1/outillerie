@@ -7,7 +7,6 @@ from app.extensions import db
 class User(UserMixin, db.Model):
     # Champs obligatoires
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(250), unique=True, nullable=True)
     password = db.Column(db.String(250), nullable=False)
     email = db.Column(db.String(250), nullable=False)
     first_name = db.Column(db.String(250), nullable=False)
