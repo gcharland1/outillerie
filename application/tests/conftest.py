@@ -44,7 +44,7 @@ def mock_app():
     with app.app_context():
         # Needed by the GiST exclusion constraint on loan; the Alembic revision creates it too.
         db.session.execute(text("CREATE EXTENSION IF NOT EXISTS btree_gist"))
-        # Needed by the tool search (ADR 0016); the Alembic revision creates them too.
+        # Needed by the tool and user searches (ADR 0018); the Alembic revision creates them too.
         db.session.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
         db.session.execute(text("CREATE EXTENSION IF NOT EXISTS unaccent"))
         db.session.commit()

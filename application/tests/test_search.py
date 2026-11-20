@@ -52,6 +52,79 @@ def test_matches_username_first_name_last_name_or_full_name(as_alice, q):
     assert usernames(search(as_alice, q)) == ["bob"]
 
 
+@pytest.fixture
+def named(mock_app):
+    """Adds accounts named (username, first name, last name)"""
+
+    def add(*accounts):
+        with mock_app.app_context():
+            for username, first_name, last_name in accounts:
+                db.session.add(
+                    make_user(
+                        username,
+                        f"{username}@example.com",
+                        first_name=first_name,
+                        last_name=last_name,
+                    )
+                )
+            db.session.commit()
+
+    return add
+
+
+@pytest.mark.parametrize(
+    ("account", "q"),
+    [
+        (("fred", "Fréd", "Côté"), "fred cote"),
+        (("fred", "Fred", "Cote"), "FRÉD CÔTÉ"),
+        (("jp", "Jean-Pierre", "Roy"), "jean pierre"),
+        (("frederic", "Frédéric", "Lavoie"), "frederik"),
+    ],
+)
+def test_accents_hyphens_and_typos_are_forgiven(as_alice, named, account, q):
+    named(account)
+    assert usernames(search(as_alice, q)) == [account[0]]
+
+
+@pytest.mark.parametrize("q", ["bob    gagnon", "gagnion", "gagnon bob"])
+def test_bob_is_found_despite_spaces_typos_or_order(as_alice, q):
+    assert usernames(search(as_alice, q)) == ["bob"]
+
+
+@pytest.mark.parametrize("q", ["gax", "ga\u0301x"])
+def test_no_resemblance_below_four_normalized_characters(as_alice, q):
+    assert usernames(search(as_alice, q)) == []
+
+
+def test_a_username_alone_can_resemble(as_alice, named):
+    named(("gagnion", "Zed", "Roy"))
+    assert usernames(search(as_alice, "gagnon")) == ["bob", "gagnion"]
+
+
+def test_email_is_not_searched(mock_app, as_alice):
+    with mock_app.app_context():
+        User.query.filter_by(username="bob").one().email = "courrielbob@example.com"
+        db.session.commit()
+
+    assert usernames(search(as_alice, "courrielbob")) == []
+
+
+@pytest.mark.parametrize("q", ["％％％", "%%%"])
+def test_full_width_wildcards_are_searched_literally(as_alice, named, q):
+    named(("sam500", "Sam", "Cinq"))
+    assert usernames(search(as_alice, q)) == []
+
+
+def test_wildcards_in_a_name_are_found(as_alice, named):
+    named(("bob%%%", "Robert", "Pourcent"))
+    assert usernames(search(as_alice, "%%%")) == ["bob%%%"]
+
+
+def test_contained_comes_before_resembling(as_alice, named):
+    named(("albert", "Albert", "Gagnon"), ("zoe", "Zoé", "Gagné"))
+    assert usernames(search(as_alice, "gagne")) == ["zoe", "albert", "bob"]
+
+
 def test_own_account_is_excluded(as_alice):
     assert usernames(search(as_alice, "tremblay")) == []
 
@@ -96,12 +169,19 @@ def test_results_hide_contact_details(mock_app, as_alice):
         assert detail not in text
 
 
-@pytest.mark.parametrize("q", ["  bo  ", "", "   "])
+@pytest.mark.parametrize("q", ["  bo  ", "", "   ", "---", "–––", "e\u0301\u0301\u0301"])
 def test_text_shorter_than_three_characters_is_not_searched(as_alice, q):
     text = search(as_alice, q)
 
     assert TOO_SHORT in text
     assert usernames(text) == []
+
+
+def test_tool_search_of_hyphens_only_is_too_short(as_alice):
+    response = as_alice.get("/search", query_string={"type": "tool", "q": "---"})
+
+    assert response.status_code == 200
+    assert TOO_SHORT in page_text(response)
 
 
 def test_no_result(as_alice):
