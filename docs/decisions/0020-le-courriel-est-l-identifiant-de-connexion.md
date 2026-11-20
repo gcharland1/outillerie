@@ -13,7 +13,7 @@ plus d'un courriel unique sans égard à la casse. L'issue #38 demande de se con
 et de retirer le nom d'utilisateur de la base, du code et de l'affichage. Le nom d'utilisateur
 servait aussi d'identité publique (listes, tri, titre de la page d'un contact) et fondait le
 compromis d'énumération accepté à l'inscription, qui le jugeait public.
-Changement OpenSpec : `openspec/changes/authentification-par-courriel/`. Complète 0007.
+Changement OpenSpec : `openspec/changes/archive/2026-11-20-authentification-par-courriel/`. Complète 0007.
 
 ## Options considérées
 
@@ -32,11 +32,12 @@ Règles :
   l'index `uq_user_email_lower` ; il est enregistré sans espaces autour.
 * À la connexion, un courriel inconnu et un mauvais mot de passe donnent la même réponse et la
   même vérification de hachage.
-* L'identité affichée d'un compte est « Prénom Nom ». Les listes de comptes trient par prénom,
-  puis nom, sans égard à la casse ni aux accents, puis par id. Le courriel n'est jamais affiché à
+* L'identité affichée d'un compte est « Prénom Nom ». Les listes de comptes sans ordre propre (contacts, résultats
+  de recherche) trient par prénom, puis nom, sans égard à la casse ni aux accents, puis par id. Le courriel n'est jamais affiché à
   un autre utilisateur ni cherché.
 * La colonne `user.username` est retirée en deux passes (0007) : d'abord nullable et inutilisée,
-  puis supprimée après le déploiement. Un `downgrade` qui la recrée la remplit avec `'user' || id`.
+  puis supprimée après le déploiement. Un `downgrade` qui la recrée la remplit avec `user<id>`, suffixé de `_` tant
+  qu'un ancien nom d'utilisateur occupe déjà la valeur.
 
 ### Conséquences
 

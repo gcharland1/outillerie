@@ -22,7 +22,22 @@ def upgrade():
 
 
 def downgrade():
-    # Accounts created since the upgrade have none; 'user' || id cannot collide (ADR 0020).
-    op.execute("UPDATE \"user\" SET username = 'user' || id WHERE username IS NULL")
+    # Accounts created since the upgrade have none; an old sign-up may already hold "user<id>".
+    connection = op.get_bind()
+    taken = set(
+        connection.scalars(sa.text('SELECT username FROM "user" WHERE username IS NOT NULL'))
+    )
+    nameless = connection.scalars(
+        sa.text('SELECT id FROM "user" WHERE username IS NULL ORDER BY id')
+    )
+    for user_id in nameless.all():
+        username = f"user{user_id}"
+        while username in taken:
+            username += "_"
+        taken.add(username)
+        connection.execute(
+            sa.text('UPDATE "user" SET username = :username WHERE id = :id'),
+            {"username": username, "id": user_id},
+        )
     with op.batch_alter_table("user", schema=None) as batch_op:
         batch_op.alter_column("username", existing_type=sa.VARCHAR(length=250), nullable=False)

@@ -12,7 +12,7 @@ Chaque page a choisi ses couleurs de bouton : « Accepter » / « Refuser » son
 une demande de contact mais vert / rouge pour une demande d'emprunt, les actions de retrait sont
 rouges, les boutons de connexion et d'inscription n'ont pas de classe. La relecture de la PR #43
 (issue #44) a relevé l'écart ; l'utilisateur demande une règle unique pour tout le site.
-Changement OpenSpec : `openspec/changes/suites-de-la-page-d-accueil/`.
+Changement OpenSpec : `openspec/changes/archive/2026-11-20-suites-de-la-page-d-accueil/`.
 
 ## Options considérées
 

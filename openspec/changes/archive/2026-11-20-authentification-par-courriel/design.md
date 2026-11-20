@@ -8,13 +8,15 @@ L'ADR 0017 revient à l'image précédente sans `downgrade` si un déploiement �
 impose donc *expand/contract*. Cette PR (*expand*) :
 
 - révision `user.username` nullable, `uq_user_username` gardée (un index unique admet plusieurs
-  NULL) ; son `downgrade` remplit les NULL avec `'user' || id`, unique, puis remet `NOT NULL` ;
+  NULL) ; son `downgrade` remplit les NULL avec `user<id>`, suffixé de `_` tant qu'un
+  ancien nom d'utilisateur occupe la valeur, puis remet `NOT NULL` ;
 - le modèle garde `username = db.Column(db.String(250), unique=True, nullable=True)`, seule
   référence restante, pour que `flask db check` reste vide ; aucun code ne le lit ni ne l'écrit.
 
 La PR suivante (*contract*), une fois cette version déployée : supprime la colonne du modèle,
 révision `drop_constraint("uq_user_username")` puis `drop_column`, `downgrade` qui recrée la
-colonne nullable, la remplit avec `'user' || id`, la remet `NOT NULL` et recrée la contrainte.
+colonne nullable, la remplit avec `user<id>` (plus aucun ancien nom ne peut alors occuper la
+valeur), la remet `NOT NULL` et recrée la contrainte.
 L'issue #38 n'est fermée qu'après elle.
 
 ## Connexion
