@@ -149,13 +149,13 @@ réservé à l'utilisateur connecté.
 - **THEN** la réponse porte l'en-tête `Cache-Control: no-store`
 
 #### Scenario: Pages de visiteur cachables
-- **WHEN** un visiteur ouvre une page du site
+- **WHEN** un visiteur ouvre la page de connexion ou de création de compte
 - **THEN** la réponse ne porte pas `Cache-Control: no-store`
 
 #### Scenario: Retour arrière après déconnexion
-- **WHEN** un utilisateur se déconnecte puis utilise le bouton « Précédent » du navigateur
+- **WHEN** un utilisateur se déconnecte puis utilise le bouton « Précédent » du navigateur pour revenir à l'accueil
 - **THEN** le navigateur redemande la page au serveur
-- **AND** la page affichée est celle d'un visiteur
+- **AND** il est redirigé vers la page de connexion
 
 ### Requirement: Protection du cookie de session
 Le cookie de session MUST être inaccessible au JavaScript de la page et MUST NOT être envoyé lors

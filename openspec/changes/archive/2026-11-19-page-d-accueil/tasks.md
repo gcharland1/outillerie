@@ -27,4 +27,4 @@
 ## 5. Vérification
 
 - [ ] 5.1 QA manuelle dans `docker compose up --build`, avec trois comptes : accueil vide, demandes et prêts dans chaque catégorie, retard (date de fin passée en base), actions depuis l'accueil, contact noué, nouveaux outils et « Voir plus », tri de « Trouver un outil » ; y joindre la tâche 7.1 restée ouverte de `gestion-des-prets`
-- [ ] 5.2 Exécuter `/verifier` jusqu'à « terminé »
+- [x] 5.2 Exécuter `/verifier` jusqu'à « terminé »
