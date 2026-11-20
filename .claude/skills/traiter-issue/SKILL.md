@@ -19,7 +19,9 @@ autre question tant qu'aucune gate n'échoue. Plusieurs issues : un changement p
 2. `gh issue view <n> --json number,title,state,body,labels,comments` (sans `--json`, la sortie peut être
    vide). Issue fermée ou introuvable : s'arrêter et le dire.
 3. Choisir un nom de changement en kebab-case français.
-4. Si les consignes demandent un worktree : `EnterWorktree` avec ce nom, avant toute écriture. Le worktree
+4. Si les consignes demandent un worktree : `EnterWorktree` avec ce nom, avant toute écriture. Sinon, depuis
+   `main` à jour, créer une branche à ce nom (plusieurs issues : un nom commun) ; une branche courante qui
+   porte d'autres commits ou modifications ne sert pas, car `/livrer` les mergerait. Le worktree
    part de `origin/main` : les fichiers non commités du poste n'y sont pas, et les agents reçoivent son
    chemin comme racine.
 5. Repérer le travail en cours ailleurs : `git worktree list`, `git branch`, puis les ADR et changements
