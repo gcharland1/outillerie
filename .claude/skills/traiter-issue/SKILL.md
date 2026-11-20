@@ -1,17 +1,20 @@
 ---
 name: traiter-issue
-description: Prend une issue GitHub jusqu'à une spec OpenSpec prête à valider — des agents en parallèle répondent à tout ce que le dépôt sait, l'utilisateur ne tranche que le reste. Utiliser sur "/traiter-issue <n>" ou "prendre l'issue <n>". S'arrête avant l'implémentation.
-argument-hint: <numéro d'issue> [consignes, ex. « dans un worktree »]
+description: Prend une ou plusieurs issues GitHub jusqu'au merge dans main — des agents en parallèle répondent à tout ce que le dépôt sait, l'utilisateur ne tranche que le reste et valide la spec, puis `/livrer` implémente et merge derrière des gates. Utiliser sur "/traiter-issue <n>" ou "prendre l'issue <n>".
+argument-hint: <numéro d'issue> [<numéro>…] [consignes, ex. « dans un worktree », « sans livrer »]
 allowed-tools: Read, Write, Edit, Grep, Glob, Agent, Skill, EnterWorktree, Bash(gh issue view:*), Bash(openspec:*), Bash(git log:*), Bash(git branch:*), Bash(git worktree list:*), Bash(git ls-tree:*)
 ---
 
 # Traiter une issue
 
-Raccourci des étapes 1 à 3 du workflow de `CLAUDE.md`. Aucun code applicatif, aucun commit : s'arrêter à la spec.
+Workflow complet de `CLAUDE.md`. Deux interventions humaines seulement : les décisions `utilisateur` (étape 4) et
+l'accord sur la spec (étape 8). Avant cet accord : aucun code applicatif, aucun commit. Après : `/livrer`, sans
+autre question tant qu'aucune gate n'échoue. Plusieurs issues : un changement par issue, une seule branche,
+étapes 1 à 7 menées pour chacune, une seule question à la fois pour l'ensemble.
 
 ## 1. Cadrer
 
-1. Arguments : `$ARGUMENTS`. Le premier nombre est le numéro d'issue ; le reste, ce sont des consignes
+1. Arguments : `$ARGUMENTS`. Les nombres sont les numéros d'issue ; le reste, ce sont des consignes
    à suivre pendant tout le skill. Sans numéro : le demander.
 2. `gh issue view <n> --json number,title,state,body,labels,comments` (sans `--json`, la sortie peut être
    vide). Issue fermée ou introuvable : s'arrêter et le dire.
@@ -80,20 +83,32 @@ Un seul passage supplémentaire ; ce qui reste ouvert passe à l'étape 7.
 2. Passer `questions.md` en revue : chaque décision qui ajoute une dépendance, touche le schéma ou la
    structure, ou déroge à une règle transverse (hook global, convention d'un ADR) va dans un ADR via `/adr`,
    en `proposed`, cité par le proposal. Plusieurs décisions liées peuvent partager un ADR.
-3. `openspec validate <nom> --strict --no-interactive`.
+3. `tasks.md` ne contient que des tâches qu'un agent mène seul : pas de QA à la main, pas d'accès à la
+   production ; une vérification qui exige un humain va dans le design, comme limite connue. La dernière
+   tâche est « `/verifier` rend terminé ».
+4. `openspec validate <nom> --strict --no-interactive`.
 
 ## 7. Se griller
 
 Appliquer la grille de `.claude/skills/grill-spec/SKILL.md` §3 aux artefacts produits. Corriger ce que `questions.md`
 tranche déjà ; poser le reste comme à l'étape 4.
 
-## 8. Rendre la main
+## 8. Gate : accord de l'utilisateur
 
 Récapitulatif court :
 
 - nombre de questions par `Décidé par` ;
 - la liste des décisions `convention`, que l'utilisateur peut renverser ;
 - les artefacts et ADR créés ;
-- le worktree et sa branche, s'il y en a un.
+- le worktree et sa branche, s'il y en a un ;
+- ce que fera `/livrer` : implémentation, vérifications, relecture, archivage, PR et merge dans `main`,
+  donc déploiement (ADR 0017).
 
-Terminer par : « Valider la spec, puis `/opsx:apply <nom>`. »
+Terminer par : « Valider la spec pour lancer la livraison jusqu'à `main`. » Puis attendre. Seul un accord
+explicite sur ces changements ouvre l'étape 9 ; une remarque ou une question reprend à l'étape 4 ou 6.
+Consigne « sans livrer » : s'arrêter ici.
+
+## 9. Livrer
+
+`/livrer <changement>…` avec tous les changements validés. Ses gates (vérification, relecture, CI, état de la
+PR) remplacent toute question : une gate qui échoue arrête la livraison et rend la main.
