@@ -101,15 +101,30 @@ n'en est pas informé et peut envoyer une nouvelle demande.
 - **THEN** une demande d'Alice à Bob est enregistrée
 
 ### Requirement: Demande qui n'existe plus
-Répondre à une demande qui n'existe plus, parce qu'on y a déjà répondu (retour arrière, second
-envoi), MUST laisser tout inchangé : l'utilisateur est redirigé vers « Mes contacts » avec le
-message « Cette demande n'est plus en attente ».
+« Accepter » et « Refuser » SHALL ramener à la page d'où ils ont été envoyés, « Mes contacts » ou
+l'accueil ; une origine inconnue ramène à « Mes contacts ». Accepter affiche « Vous êtes maintenant
+en contact avec <prénom> <nom> » et refuser « Demande refusée », comme message de succès. Répondre
+à une demande qui n'existe plus, parce qu'on y a déjà répondu (retour arrière, second envoi), MUST
+laisser tout inchangé :
+l'utilisateur revient sur cette page avec le message « Cette demande n'est plus en attente ».
 
 #### Scenario: Refus après acceptation
 - **WHEN** Bob a accepté la demande d'Alice
-- **AND** Bob soumet le refus de la même demande
+- **AND** Bob soumet le refus de la même demande depuis « Mes contacts »
 - **THEN** il est redirigé vers « Mes contacts », qui affiche « Cette demande n'est plus en attente »
 - **AND** Alice et Bob restent en contact
+
+#### Scenario: Réponse depuis l'accueil
+- **WHEN** Bob accepte la demande d'Alice depuis l'accueil
+- **THEN** il revient sur l'accueil et Alice et Bob sont en contact
+
+#### Scenario: Message de succès
+- **WHEN** Bob accepte la demande d'Alice depuis « Mes contacts »
+- **THEN** la page affiche « Vous êtes maintenant en contact avec Alice Tremblay » comme un message de succès
+
+#### Scenario: Origine inconnue
+- **WHEN** Bob refuse la demande d'Alice avec l'origine « https://exemple.com »
+- **THEN** il est redirigé vers « Mes contacts »
 
 ### Requirement: Liste de mes contacts
 La page « Mes contacts » SHALL lister les contacts de l'utilisateur, triés par nom d'utilisateur
@@ -132,10 +147,10 @@ contact ».
 ### Requirement: Retrait d'un contact
 « Retirer » SHALL mener à une page de confirmation qui nomme le contact, avec « Retirer » et
 « Annuler ». La confirmation défait la relation pour les deux voisins, sans les informer, et annule
-les demandes d'emprunt en attente de l'un pour un outil de l'autre ; la page de confirmation
-annonce leur nombre. Retirer quelqu'un qui n'est pas ou plus un contact MUST laisser tout
-inchangé : redirection vers « Mes contacts » avec « Cette personne ne fait pas partie de vos
-contacts ».
+les demandes d'emprunt en attente et les prêts acceptés non expirés, sans remise déclarée, de l'un
+pour un outil de l'autre ; la page de confirmation annonce leur nombre. Les prêts en cours restent intacts. Retirer
+quelqu'un qui n'est pas ou plus un contact MUST laisser tout inchangé : redirection vers « Mes
+contacts » avec « Cette personne ne fait pas partie de vos contacts ».
 
 #### Scenario: Page de confirmation
 - **WHEN** Bob clique « Retirer » à côté d'Alice
@@ -152,6 +167,12 @@ contacts ».
 - **AND** Bob ouvre la confirmation du retrait d'Alice
 - **THEN** la page annonce « 2 demandes d'emprunt en attente entre vous seront annulées »
 - **AND** une fois le retrait confirmé, les deux demandes sont annulées
+
+#### Scenario: Prêts acceptés annulés, prêt en cours gardé
+- **WHEN** Bob a accepté de prêter son rabot à Alice, a déclaré lui avoir remis sa ponceuse, et Alice a sa perceuse
+- **AND** Bob ouvre la confirmation du retrait d'Alice
+- **THEN** la page annonce « 1 prêt accepté entre vous sera annulé »
+- **AND** une fois le retrait confirmé, le prêt du rabot est « Annulée », celui de la ponceuse reste « Remise à confirmer » et celui de la perceuse « Prêté »
 
 #### Scenario: Retrait déjà fait
 - **WHEN** Bob a retiré Alice de ses contacts
@@ -173,8 +194,8 @@ Le menu du compte d'un utilisateur connecté SHALL contenir « Mes contacts », 
 ### Requirement: Pastille des demandes en attente
 Quand un utilisateur connecté a des demandes reçues en attente, chaque page SHALL afficher une
 pastille portant leur nombre à côté de « Mes contacts » dans le menu du compte, et une pastille
-portant le total de ses demandes de contact et d'emprunt en attente à côté de son nom
-d'utilisateur. Sans demande en attente, aucune pastille n'est affichée.
+portant le total de ses demandes de contact en attente et du nombre de la pastille de « Mes prêts »
+à côté de son nom d'utilisateur. Sans rien en attente, aucune pastille n'est affichée.
 
 #### Scenario: Deux demandes en attente
 - **WHEN** Alice et Carole ont chacune envoyé une demande à Bob
@@ -187,8 +208,13 @@ d'utilisateur. Sans demande en attente, aucune pastille n'est affichée.
 - **THEN** une pastille « 2 » est affichée à côté de son nom d'utilisateur
 - **AND** une pastille « 1 » à côté de « Mes contacts » et une pastille « 1 » à côté de « Mes prêts »
 
+#### Scenario: Demande de contact et retour à confirmer
+- **WHEN** Carole a envoyé une demande de contact à Bob et Alice a déclaré avoir rendu la perceuse de Bob
+- **AND** Bob ouvre une page du site
+- **THEN** une pastille « 2 » est affichée à côté de son nom d'utilisateur
+
 #### Scenario: Aucune demande en attente
-- **WHEN** Bob a accepté ou refusé toutes ses demandes reçues
+- **WHEN** Bob a accepté ou refusé toutes ses demandes reçues et aucun prêt n'attend son action
 - **THEN** aucune pastille n'est affichée
 
 #### Scenario: Demande envoyée sans pastille

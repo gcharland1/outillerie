@@ -222,6 +222,17 @@ def test_request_is_sent_and_goes_back_to_the_filtered_list(mock_app, contacts, 
     assert '<div class="flash flash-success">Demande envoyée à Bob Gagnon</div>' in text
 
 
+def test_request_goes_back_to_the_sorted_list(mock_app, contacts, drill, as_alice):
+    find = page_text(as_alice.get("/tools/find?q=perc&sort=added-desc"))
+    assert f"/loans/new/{drill}?origin=find&q=perc&sort=added-desc" in find
+    confirm = page_text(as_alice.get(f"/loans/new/{drill}?origin=find&q=perc&sort=added-desc"))
+    assert '<input type="hidden" name="sort" value="added-desc">' in confirm
+
+    response = request_drill(as_alice, drill, origin="find", q="perc", sort="added-desc")
+
+    assert response.location == "/tools/find?q=perc&sort=added-desc"
+
+
 def test_request_from_the_contact_page_goes_back_there(mock_app, contacts, drill, as_alice):
     response = request_drill(as_alice, drill, origin="contact")
 
@@ -382,7 +393,7 @@ def test_requests_to_act_on_come_first_newest_first(mock_app, contacts, drill, a
 
     text = page_text(as_bob.get("/loans"))
 
-    names = re.findall(r"<tr>\s*<td>([^<]+)</td>", text)
+    names = re.findall(r"<tr(?: class=\"loan-overdue\")?>\s*<td>([^<]+)</td>", text)
     assert names == ["Rabot", "Perceuse", "Ponceuse", "Scie"]
 
 
@@ -395,7 +406,11 @@ def test_my_requests_to_act_on_come_first_newest_first(mock_app, contacts, drill
 
     sent = page_text(as_alice.get("/loans")).split("<h3>Mes emprunts</h3>")[1]
 
-    assert re.findall(r"<tr>\s*<td>([^<]+)</td>", sent) == ["Perceuse", "Ponceuse", "Scie"]
+    assert re.findall(r"<tr(?: class=\"loan-overdue\")?>\s*<td>([^<]+)</td>", sent) == [
+        "Perceuse",
+        "Ponceuse",
+        "Scie",
+    ]
 
 
 def test_answer_buttons_are_green_and_red(mock_app, request_id, as_bob):
@@ -962,7 +977,9 @@ def test_visitor_acting_on_a_loan_is_sent_to_login(mock_app, contacts, drill, cl
 
 def row_of(text, tool_name):
     """The text of the table row of this tool"""
-    return re.search(rf"<tr>\s*<td>{tool_name}</td>.*?</tr>", text, re.S).group(0)
+    return re.search(
+        rf"<tr(?: class=\"loan-overdue\")?>\s*<td>{tool_name}</td>.*?</tr>", text, re.S
+    ).group(0)
 
 
 @pytest.mark.parametrize(
@@ -1055,7 +1072,11 @@ def test_overdue_loans_come_first_oldest_first(mock_app, contacts, drill, as_bob
 
     lent = page_text(as_bob.get("/loans")).split("<h3>Mes emprunts</h3>")[0]
 
-    assert re.findall(r"<tr>\s*<td>([^<]+)</td>", lent) == ["Scie", "Perceuse", "Rabot"]
+    assert re.findall(r"<tr(?: class=\"loan-overdue\")?>\s*<td>([^<]+)</td>", lent) == [
+        "Scie",
+        "Perceuse",
+        "Rabot",
+    ]
 
 
 @pytest.mark.parametrize("change", ["retire", "out_of_order", "contact"])
@@ -1076,3 +1097,118 @@ def test_a_disputed_handover_is_cancelled_once_the_tool_left(
     as_alice.post(f"/loans/{loan_id}/not-received")
 
     assert status_of(mock_app, loan_id) is LoanStatus.CANCELED
+
+
+# Acting from home, success messages
+
+
+def flash_success(text):
+    return re.findall(r'<div class="flash flash-success">(.*?)</div>', text)
+
+
+def test_accepting_says_so(mock_app, request_id, as_bob):
+    response = as_bob.post(f"/loans/{request_id}/accept")
+
+    assert response.location == "/loans"
+    text = page_text(as_bob.get(response.location))
+    assert flash_success(text) == ["Demande de Alice Tremblay acceptée"]
+
+
+@pytest.mark.parametrize(
+    ("status", "client", "action", "message"),
+    [
+        (LoanStatus.REQUESTED, "bob", "refuse", "Demande de Alice Tremblay refusée"),
+        (LoanStatus.REQUESTED, "alice", "withdraw", "Demande retirée"),
+        (
+            LoanStatus.ACCEPTED,
+            "bob",
+            "hand-over",
+            "Remise déclarée, Alice Tremblay doit la confirmer",
+        ),
+        (LoanStatus.ACCEPTED, "alice", "receive", "Outil reçu, prêt en cours"),
+        (LoanStatus.LENT, "alice", "give-back", "Retour déclaré, Bob Gagnon doit le confirmer"),
+        (LoanStatus.RETURN_CLAIMED, "bob", "take-back", "Outil reçu, prêt complété"),
+        (LoanStatus.RETURN_CLAIMED, "bob", "not-received", "Réponse envoyée : pas reçu"),
+        (LoanStatus.ACCEPTED, "alice", "cancel", "Prêt annulé"),
+    ],
+)
+def test_each_action_says_so(
+    mock_app, contacts, drill, as_alice, as_bob, status, client, action, message
+):
+    loan_id = loan_in(mock_app, contacts, drill, status, start=0, end=2)
+    acting = as_alice if client == "alice" else as_bob
+
+    response = acting.post(f"/loans/{loan_id}/{action}")
+
+    assert flash_success(page_text(acting.get(response.location))) == [message]
+
+
+def test_action_from_home_goes_back_home(mock_app, contacts, drill, as_bob):
+    loan_id = loan_in(mock_app, contacts, drill, LoanStatus.RETURN_CLAIMED)
+
+    response = as_bob.post(f"/loans/{loan_id}/take-back", data={"origin": "home"})
+
+    assert response.location == "/"
+    assert flash_success(page_text(as_bob.get("/"))) == ["Outil reçu, prêt complété"]
+
+
+def test_action_again_from_home_goes_back_home(mock_app, contacts, drill, as_alice):
+    loan_id = loan_in(mock_app, contacts, drill, LoanStatus.LENT)
+    as_alice.post(f"/loans/{loan_id}/give-back", data={"origin": "home"})
+
+    response = as_alice.post(f"/loans/{loan_id}/give-back", data={"origin": "home"})
+
+    assert response.location == "/"
+    assert "Ce prêt a déjà changé de statut" in page_text(as_alice.get("/"))
+
+
+@pytest.mark.parametrize("action", ["accept", "withdraw"])
+def test_request_answer_from_home_goes_back_home(mock_app, request_id, as_alice, as_bob, action):
+    acting = as_bob if action == "accept" else as_alice
+
+    response = acting.post(f"/loans/{request_id}/{action}", data={"origin": "home"})
+
+    assert response.location == "/"
+
+
+def test_expired_request_from_home_goes_back_home(mock_app, contacts, drill, as_bob, monkeypatch):
+    loan_id = loan_in(mock_app, contacts, drill, LoanStatus.REQUESTED, start=0, end=2)
+    monkeypatch.setattr(catalog, "site_today", lambda: days(1))
+
+    response = as_bob.post(f"/loans/{loan_id}/accept", data={"origin": "home"})
+
+    assert response.location == "/"
+    assert "Cette demande n'est plus en attente" in page_text(as_bob.get("/"))
+
+
+def test_unknown_origin_goes_back_to_my_loans(mock_app, contacts, drill, as_bob):
+    loan_id = loan_in(mock_app, contacts, drill, LoanStatus.ACCEPTED, start=0, end=2)
+
+    response = as_bob.post(f"/loans/{loan_id}/hand-over", data={"origin": "https://exemple.com"})
+
+    assert response.location == "/loans"
+
+
+def test_request_from_home_goes_back_home(mock_app, contacts, drill, as_alice):
+    response = request_drill(as_alice, drill, origin="home")
+
+    assert response.location == "/"
+    assert flash_success(page_text(as_alice.get("/"))) == ["Demande envoyée à Bob Gagnon"]
+
+
+def test_my_loans_buttons_carry_no_origin(mock_app, contacts, drill, as_bob):
+    loan_in(mock_app, contacts, drill, LoanStatus.RETURN_CLAIMED)
+
+    mine = page_text(as_bob.get("/loans"))
+
+    assert 'name="origin"' not in mine
+
+
+def test_overdue_row_is_highlighted(mock_app, contacts, drill, as_bob):
+    loan_in(mock_app, contacts, drill, LoanStatus.LENT, start=-3, end=-1)
+
+    row = re.search(
+        r'<tr class="loan-overdue">(.*?)</tr>', page_text(as_bob.get("/loans")), re.DOTALL
+    )
+
+    assert "En retard" in row[1]

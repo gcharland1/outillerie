@@ -75,12 +75,12 @@ d'environnement `APP_TAG`, `dev` par défaut.
 - **THEN** l'image construite ou démarrée est `outillerie-app:<SHA>`
 
 ### Requirement: Healthcheck de l'app
-Docker Compose MUST déclarer un healthcheck pour l'app : elle est saine quand sa page d'accueil
-répond avec succès depuis l'intérieur du conteneur, après un délai de démarrage qui couvre les
-migrations.
+Docker Compose MUST déclarer un healthcheck pour l'app : elle est saine quand sa page de connexion
+répond avec succès depuis l'intérieur du conteneur, sans session, après un délai de démarrage qui
+couvre les migrations.
 
 #### Scenario: App démarrée
-- **WHEN** les migrations sont appliquées et l'app répond sur sa page d'accueil
+- **WHEN** les migrations sont appliquées et l'app répond sur sa page de connexion
 - **THEN** le conteneur de l'app est sain
 
 #### Scenario: Migration en échec

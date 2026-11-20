@@ -294,6 +294,17 @@ form:has(#photo-replace:checked):has(#photo-remove:checked) [type="submit"] {
     margin: 0;
 }
 
+.tool-sort {
+    display: flex;
+    align-items: center;
+    gap: var(--gap);
+    margin: 0;
+}
+
+.tool-sort select {
+    width: auto;
+}
+
 /* One card per row on a phone, three from a medium screen up. */
 .tool-cards {
     display: grid;
@@ -340,4 +351,14 @@ form:has(#photo-replace:checked):has(#photo-remove:checked) [type="submit"] {
 /* Free text typed by a user: shown as is, line breaks kept. */
 .loan-text {
     white-space: pre-line;
+}
+
+/* An overdue loan stands out, on the home page and on "Mes prêts". */
+.loan-overdue td {
+    color: var(--color-error);
+    font-weight: bold;
+}
+
+.dashboard-section {
+    margin-bottom: calc(2 * var(--gap));
 }

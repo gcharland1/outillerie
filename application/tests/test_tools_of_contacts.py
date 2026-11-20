@@ -1,5 +1,5 @@
 import re
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from html import unescape
 
 import pytest
@@ -111,6 +111,43 @@ def test_lent_tool_shows_its_return_date(mock_app, contacts, as_alice):
     assert '<p class="status-unavailable">Prêté jusqu\'au 3 novembre 2099</p>' in find(as_alice)
 
 
+def test_card_shows_the_last_loan_without_the_borrower(mock_app, contacts, as_alice):
+    tool_id = add_tool(mock_app, contacts["bob"])
+    for first, last in ((3, 5), (12, 14)):
+        add_loan(
+            mock_app,
+            tool_id,
+            contacts["carole"],
+            date(2026, 11, first),
+            date(2026, 11, last),
+            LoanStatus.RETURNED,
+        )
+
+    text = find(as_alice)
+
+    assert "<p>Dernier emprunt le 12 novembre 2026</p>" in text
+    assert "Carole" not in text
+
+
+def test_claimed_handover_counts_as_a_loan(mock_app, contacts, as_alice):
+    tool_id = add_tool(mock_app, contacts["bob"])
+    first = TODAY + timedelta(days=1)
+    add_loan(mock_app, tool_id, contacts["carole"], first, first, LoanStatus.HANDOVER_CLAIMED)
+
+    assert f"<p>Dernier emprunt le {catalog.french_date(first)}</p>" in find(as_alice)
+
+
+def test_never_borrowed_tool_shows_no_loan(mock_app, contacts, as_alice):
+    tool_id = add_tool(mock_app, contacts["bob"])
+    for status in (LoanStatus.REFUSED, LoanStatus.CANCELED, LoanStatus.ACCEPTED):
+        add_loan(
+            mock_app, tool_id, contacts["carole"], date(2026, 11, 3), date(2026, 11, 3), status
+        )
+    add_loan(mock_app, tool_id, contacts["carole"], date(2026, 11, 4), date(2026, 11, 4))
+
+    assert "Dernier emprunt le" not in find(as_alice)
+
+
 def test_available_only(mock_app, contacts, as_alice):
     add_tool(mock_app, contacts["bob"], name="Perceuse")
     lent = add_tool(mock_app, contacts["bob"], name="Scie")
@@ -189,7 +226,7 @@ def test_navigation_offers_find_a_tool(mock_app, ids, as_alice):
         r'<div class="account-menu-items">(.*?)</div>', page_text(as_alice.get("/")), re.DOTALL
     )[1]
     assert '<a href="/tools/find">Trouver un outil</a>' in account_menu
-    assert "Trouver un outil" not in page_text(mock_app.test_client().get("/"))
+    assert "Trouver un outil" not in page_text(mock_app.test_client().get("/login"))
 
 
 def test_contact_page(mock_app, contacts, as_alice):
@@ -279,3 +316,43 @@ def test_a_non_contact_does_not_see_the_photo(mock_app, bobs_drill, contacts):
     as_carole = login(mock_app.test_client(), "carole")
 
     assert as_carole.get(f"/tools/{bobs_drill}/photo").status_code == 404
+
+
+def sort_menu(text):
+    return re.search(r'<select name="sort">(.*?)</select>', text, re.DOTALL)[1]
+
+
+def test_sort_menu_shows_relevance_by_default(mock_app, contacts, as_alice):
+    menu = sort_menu(find(as_alice))
+
+    assert '<option value="relevance" selected>Pertinence</option>' in menu
+    labels = re.findall(r">([^<]+)</option>", menu)
+    assert labels == [
+        "Pertinence",
+        "Ajout : plus récents",
+        "Ajout : plus anciens",
+        "Dernier emprunt : plus récents",
+        "Dernier emprunt : plus anciens",
+    ]
+
+
+def test_sort_on_a_contact_page(mock_app, contacts, as_alice):
+    with mock_app.app_context():
+        for name, day in (("Scie", 1), ("Perceuse", 10)):
+            make_tool(contacts["bob"], name=name, created_at=datetime(2026, 11, day, tzinfo=UTC))
+
+    text = page_text(as_alice.get(f"/contacts/{contacts['bob']}?sort=added-desc"))
+
+    assert card_names(text) == ["Perceuse", "Scie"]
+    assert '<option value="added-desc" selected>' in sort_menu(text)
+
+
+def test_unknown_sort_is_relevance(mock_app, contacts, as_alice):
+    add_tool(mock_app, contacts["bob"], name="Scie")
+
+    response = as_alice.get("/tools/find?sort=au-hasard")
+
+    assert response.status_code == 200
+    assert '<option value="relevance" selected>Pertinence</option>' in sort_menu(
+        page_text(response)
+    )

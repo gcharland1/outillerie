@@ -92,19 +92,23 @@ l'emprunteur, en texte brut avec ses retours à la ligne.
 
 ### Requirement: Envoi d'une demande
 « Confirmer » SHALL créer une demande en attente pour l'outil, l'utilisateur et les dates, puis
-ramener l'utilisateur à la liste d'où il est venu, avec ses filtres, et afficher « Demande envoyée
-à <prénom> <nom> » comme un message de succès. « Annuler » ramène à cette liste sans rien créer.
-La liste d'origine est « Trouver un outil » ou la page du propriétaire ; aucune autre adresse
-n'est acceptée.
+ramener l'utilisateur à la liste d'où il est venu, avec ses filtres et son tri, et afficher
+« Demande envoyée à <prénom> <nom> » comme un message de succès. « Annuler » ramène à cette liste
+sans rien créer. La liste d'origine est « Trouver un outil », la page du propriétaire ou l'accueil ;
+aucune autre adresse n'est acceptée.
 
 #### Scenario: Demande envoyée
-- **WHEN** Alice confirme une demande de la perceuse de Bob du 3 au 5, depuis « Trouver un outil » filtré par « perc »
+- **WHEN** Alice confirme une demande de la perceuse de Bob du 3 au 5, depuis « Trouver un outil » filtré par « perc » et trié par « Ajout : plus récents »
 - **THEN** une demande en attente du 3 au 5 est enregistrée pour Alice
-- **AND** Alice revient sur « Trouver un outil » filtré par « perc », qui affiche « Demande envoyée à Bob Gagnon » en message de succès
+- **AND** Alice revient sur « Trouver un outil » filtré par « perc » et trié par « Ajout : plus récents », qui affiche « Demande envoyée à Bob Gagnon » en message de succès
 
 #### Scenario: Depuis la page du contact
 - **WHEN** Alice confirme une demande depuis la page de Bob
 - **THEN** elle revient sur la page de Bob
+
+#### Scenario: Depuis l'accueil
+- **WHEN** Alice confirme une demande depuis « Nouveaux outils » de l'accueil
+- **THEN** elle revient sur l'accueil
 
 #### Scenario: Annuler
 - **WHEN** Alice clique « Annuler » sur la page de confirmation
@@ -134,28 +138,44 @@ ramènent alors à la liste d'origine avec « Cet outil n'est plus disponible »
 - **THEN** une seule demande est créée
 
 ### Requirement: Page « Mes prêts »
-Le menu du compte SHALL offrir « Mes prêts », une page qui liste les demandes reçues pour les
-outils de l'utilisateur et ses propres demandes, avec l'outil, l'autre personne, les dates, le
-message et le statut : « En attente », « Expirée », « Acceptée », « Refusée », « Annulée »,
-« Prêté » ou « Rendu ». La page exige une session ouverte.
+Le menu du compte SHALL offrir « Mes prêts », une page à deux listes : « Mes prêts », les prêts et
+demandes des outils de l'utilisateur, et « Mes emprunts », les siens. Chaque ligne montre l'outil,
+l'autre personne, les dates, le message, les dates de remise et de retour connues et le statut :
+« En attente », « Expirée », « Attente de récupération », « Remise à confirmer », « Prêté »,
+« En retard », « Retour à confirmer », « Complété », « Refusée » ou « Annulée ». Session requise.
 
 #### Scenario: Demandes reçues et envoyées
 - **WHEN** Alice a demandé la perceuse de Bob et Bob a demandé la scie d'Alice
-- **THEN** la page « Mes prêts » d'Alice montre sa demande de la perceuse et la demande de Bob pour sa scie
+- **THEN** la liste « Mes emprunts » d'Alice montre sa demande de la perceuse
+- **AND** sa liste « Mes prêts » montre la demande de Bob pour sa scie
 
 #### Scenario: Entrée du menu
 - **WHEN** un utilisateur connecté ouvre une page du site
 - **THEN** son menu du compte contient « Mes prêts »
 
+#### Scenario: Dates de remise et de retour
+- **WHEN** Alice a reçu la perceuse de Bob le 3 novembre 2026 et Bob a reçu son retour le 5 novembre 2026
+- **THEN** la ligne affiche « Prêté le 3 novembre 2026 » et « Complété le 5 novembre 2026 »
+
 ### Requirement: Ordre et couleurs de « Mes prêts »
-Chaque liste de « Mes prêts » SHALL montrer d'abord les demandes sur lesquelles l'utilisateur peut
-agir (accepter, refuser ou retirer), puis les autres, chaque groupe de la plus récente à la plus
-ancienne selon la date d'envoi. « Accepter » SHALL être affiché en vert et « Refuser » en rouge.
+Chaque liste de « Mes prêts » SHALL montrer d'abord les prêts en retard, de la date de fin la plus
+ancienne à la plus récente, puis les lignes sur lesquelles l'utilisateur peut agir, puis les autres,
+ces deux groupes de la plus récente à la plus ancienne selon la date d'envoi. Une ligne « En retard »
+SHALL être mise en évidence en rouge. « Accepter » SHALL être affiché en vert, et « Refuser »,
+« Annuler le prêt » et « Pas reçu » en rouge.
 
 #### Scenario: Ordre des demandes
 - **WHEN** Bob a reçu, dans cet ordre, des demandes de la scie, de la perceuse, de la ponceuse et du rabot
-- **AND** il a refusé celle de la scie et accepté celle de la ponceuse
-- **THEN** ses demandes reçues sont listées dans l'ordre : rabot, perceuse, ponceuse, scie
+- **AND** il a refusé celle de la scie et celle de la ponceuse est « Complété »
+- **THEN** sa liste « Mes prêts » est dans l'ordre : rabot, perceuse, ponceuse, scie
+
+#### Scenario: Retards d'abord
+- **WHEN** Bob a une demande en attente pour son rabot, et sa scie et sa perceuse sont en retard, la scie depuis plus longtemps
+- **THEN** sa liste « Mes prêts » est dans l'ordre : scie, perceuse, rabot
+
+#### Scenario: Retard en rouge
+- **WHEN** la scie de Bob est en retard
+- **THEN** sa ligne porte « En retard » et le style de retard
 
 #### Scenario: Couleur des réponses
 - **WHEN** Bob a une demande reçue en attente
@@ -163,10 +183,11 @@ ancienne selon la date d'envoi. « Accepter » SHALL être affiché en vert et �
 
 ### Requirement: Réponse du propriétaire
 Le propriétaire SHALL pouvoir accepter ou refuser une demande en attente de son outil ; seul lui
-le peut, sinon le système répond 404. Une demande qui n'est plus en attente, ou expirée, ramène à
-« Mes prêts » avec « Cette demande n'est plus en attente », sans rien changer. Une acceptation
-dont les dates chevauchent un prêt accepté ou en cours est refusée avec « Ces dates ne sont plus
-libres ».
+le peut, sinon le système répond 404. La réponse ramène à la page d'où elle a été envoyée,
+« Mes prêts » ou l'accueil. Une demande qui n'est plus en attente, ou expirée, y ramène avec
+« Cette demande n'est plus en attente », sans rien changer. Une acceptation dont les dates
+chevauchent un prêt accepté ou en cours est refusée avec « Ces dates ne sont plus libres ». Une
+origine inconnue ramène à « Mes prêts ».
 
 #### Scenario: Acceptation
 - **WHEN** Bob accepte la demande d'Alice pour sa perceuse
@@ -181,13 +202,22 @@ libres ».
 - **THEN** le système répond 404 et la demande reste en attente
 
 #### Scenario: Réponse en double
-- **WHEN** Bob a refusé la demande d'Alice et envoie de nouveau l'acceptation
+- **WHEN** Bob a refusé la demande d'Alice et envoie de nouveau l'acceptation depuis « Mes prêts »
 - **THEN** il revient sur « Mes prêts » avec « Cette demande n'est plus en attente »
+
+#### Scenario: Demande expirée depuis l'accueil
+- **WHEN** la demande d'Alice a expiré à minuit et Bob clique « Accepter » sur l'accueil resté ouvert
+- **THEN** il revient sur l'accueil avec « Cette demande n'est plus en attente »
+
+#### Scenario: Origine inconnue
+- **WHEN** Bob accepte la demande d'Alice avec l'origine « https://exemple.com »
+- **THEN** il revient sur « Mes prêts »
 
 ### Requirement: Retrait d'une demande par l'emprunteur
 L'emprunteur SHALL pouvoir retirer sa demande tant qu'elle est en attente : elle devient annulée et
-l'outil redevient disponible. Seul lui le peut, sinon le système répond 404 ; une demande qui
-n'est plus en attente ramène à « Mes prêts » avec « Cette demande n'est plus en attente ».
+l'outil redevient disponible. Seul lui le peut, sinon le système répond 404. Le retrait ramène à la
+page d'où il a été envoyé, « Mes prêts » ou l'accueil ; une demande qui n'est plus en attente y
+ramène avec « Cette demande n'est plus en attente ».
 
 #### Scenario: Retrait
 - **WHEN** Alice retire sa demande pour la perceuse de Bob
@@ -198,8 +228,12 @@ n'est plus en attente ramène à « Mes prêts » avec « Cette demande n'est pl
 - **THEN** le système répond 404 et la demande reste en attente
 
 #### Scenario: Retrait en double
-- **WHEN** Alice a retiré sa demande et envoie de nouveau le retrait
+- **WHEN** Alice a retiré sa demande et envoie de nouveau le retrait depuis « Mes prêts »
 - **THEN** elle revient sur « Mes prêts » avec « Cette demande n'est plus en attente »
+
+#### Scenario: Retrait depuis l'accueil
+- **WHEN** Alice retire sa demande depuis l'accueil
+- **THEN** elle revient sur l'accueil
 
 ### Requirement: Expiration d'une demande
 Une demande restée en attente après son premier jour SHALL être expirée : elle n'apparaît plus
@@ -211,8 +245,10 @@ dans la pastille, ne peut plus être acceptée ni retirée, et apparaît comme �
 - **THEN** la page « Mes prêts » de Bob montre la demande « Expirée », sans « Accepter » ni « Refuser »
 
 ### Requirement: Pastille des demandes d'emprunt
-Quand un utilisateur a des demandes d'emprunt reçues en attente, non expirées, chaque page SHALL
-afficher leur nombre dans une pastille à côté de « Mes prêts » dans le menu du compte.
+Quand un utilisateur a des prêts qui attendent son action, chaque page SHALL afficher leur nombre
+dans une pastille à côté de « Mes prêts » dans le menu du compte. Comptent : pour le propriétaire,
+les demandes reçues en attente non expirées, les retours à confirmer et les prêts de ses outils en
+retard ; pour l'emprunteur, les remises à confirmer et ses prêts en retard.
 
 #### Scenario: Une demande reçue
 - **WHEN** Alice a demandé la perceuse de Bob et Bob ouvre une page du site
@@ -222,9 +258,35 @@ afficher leur nombre dans une pastille à côté de « Mes prêts » dans le men
 - **WHEN** la seule demande reçue par Bob est expirée
 - **THEN** aucune pastille n'est affichée à côté de « Mes prêts »
 
+#### Scenario: Retour à confirmer
+- **WHEN** Alice a déclaré avoir rendu la perceuse de Bob
+- **THEN** Bob voit une pastille « 1 » à côté de « Mes prêts » et Alice n'en voit aucune
+
+#### Scenario: Remise à confirmer
+- **WHEN** Bob a déclaré avoir remis sa perceuse à Alice
+- **THEN** Alice voit une pastille « 1 » à côté de « Mes prêts » et Bob n'en voit aucune
+
+#### Scenario: Prêt en retard
+- **WHEN** Alice a la perceuse de Bob et sa date de fin était hier
+- **THEN** Alice et Bob voient chacun une pastille « 1 » à côté de « Mes prêts »
+
 ### Requirement: Messages de succès
-Un message qui confirme une action SHALL être affiché distinctement d'un message d'erreur.
+Un message qui confirme une action SHALL être affiché distinctement d'un message d'erreur. Chaque
+action réussie sur une demande ou un prêt (envoi, réponse, retrait, remise, réception, retour,
+« Pas reçu », annulation) SHALL afficher un message de succès sur la page où elle ramène.
 
 #### Scenario: Succès et erreur
 - **WHEN** Alice envoie une demande avec succès
 - **THEN** « Demande envoyée à Bob Gagnon » est affiché comme un message de succès, pas comme une erreur
+
+#### Scenario: Demande acceptée
+- **WHEN** Bob accepte la demande d'Alice depuis « Mes prêts »
+- **THEN** il revient sur « Mes prêts », qui affiche « Demande de Alice Tremblay acceptée » comme un message de succès
+
+#### Scenario: Remise déclarée
+- **WHEN** Bob clique « J'ai remis l'outil » pour le prêt de sa perceuse à Alice
+- **THEN** « Remise déclarée, Alice Tremblay doit la confirmer » est affiché comme un message de succès
+
+#### Scenario: Retour confirmé
+- **WHEN** Bob confirme la réception du retour de sa perceuse depuis l'accueil
+- **THEN** il revient sur l'accueil, la ligne n'y est plus et « Outil reçu, prêt complété » est affiché comme un message de succès

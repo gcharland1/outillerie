@@ -349,3 +349,58 @@ def test_badge_label_is_singular_for_one_request(mock_app, ids, as_bob):
     assert '<span class="visually-hidden">demande de contact en attente</span>' in page_text(
         as_bob.get("/")
     )
+
+
+# Answering from home, success messages
+
+
+def flash_success(text):
+    return re.findall(r'<div class="flash flash-success">(.*?)</div>', text)
+
+
+def test_accepting_says_so(mock_app, ids, as_bob):
+    request_id = add_request(mock_app, ids["alice"], ids["bob"])
+
+    response = as_bob.post(f"/contacts/requests/{request_id}/accept")
+
+    assert response.location == "/contacts"
+    text = page_text(as_bob.get(response.location))
+    assert flash_success(text) == ["Vous êtes maintenant en contact avec Alice Tremblay"]
+
+
+def test_refusing_says_so_to_the_one_who_refuses(mock_app, ids, as_bob):
+    request_id = add_request(mock_app, ids["alice"], ids["bob"])
+
+    response = as_bob.post(f"/contacts/requests/{request_id}/refuse")
+
+    assert flash_success(page_text(as_bob.get(response.location))) == ["Demande refusée"]
+
+
+@pytest.mark.parametrize("answer", ["accept", "refuse"])
+def test_answer_from_home_goes_back_home(mock_app, ids, as_bob, answer):
+    request_id = add_request(mock_app, ids["alice"], ids["bob"])
+
+    response = as_bob.post(f"/contacts/requests/{request_id}/{answer}", data={"origin": "home"})
+
+    assert response.location == "/"
+
+
+def test_answer_again_from_home_goes_back_home(mock_app, ids, as_bob):
+    request_id = add_request(mock_app, ids["alice"], ids["bob"])
+    as_bob.post(f"/contacts/requests/{request_id}/accept", data={"origin": "home"})
+
+    response = as_bob.post(f"/contacts/requests/{request_id}/refuse", data={"origin": "home"})
+
+    assert response.location == "/"
+    assert "Cette demande n'est plus en attente" in page_text(as_bob.get("/"))
+    assert contact_names(mock_app, "bob") == {"alice"}
+
+
+def test_unknown_origin_goes_back_to_my_contacts(mock_app, ids, as_bob):
+    request_id = add_request(mock_app, ids["alice"], ids["bob"])
+
+    response = as_bob.post(
+        f"/contacts/requests/{request_id}/refuse", data={"origin": "https://exemple.com"}
+    )
+
+    assert response.location == "/contacts"

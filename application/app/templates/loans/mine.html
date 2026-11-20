@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "loans/_buttons.html" import loan_buttons %}
 
 {% macro loan_table(rows, other_label) %}
     <table>
@@ -8,28 +9,13 @@
         <tbody>
         {% for row in rows %}
             {% set loan = row.loan %}
-            <tr>
+            <tr{% if row.overdue %} class="loan-overdue"{% endif %}>
                 <td>{{ loan.tool.name }}</td>
                 <td>{{ row.other.first_name }} {{ row.other.last_name }}</td>
                 <td>{{ row.dates }}</td>
                 <td class="loan-text">{{ loan.message or "" }}</td>
                 <td>{{ row.status }}{% for line in row.history %}<br>{{ line }}{% endfor %}</td>
-                <td>
-                {% if row.buttons %}
-                    <div class="actions">
-                    {% for button in row.buttons %}
-                        {% if button.action == "cancel" %}
-                        <a class="button {{ button.style }}" href="{{ url_for('loans.confirm_cancel', loan_id=loan.id) }}">{{ button.label }}</a>
-                        {% else %}
-                        <form action="{{ url_for('loans.act', loan_id=loan.id, action=button.action) }}" method="post">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="button {{ button.style }}">{{ button.label }}</button>
-                        </form>
-                        {% endif %}
-                    {% endfor %}
-                    </div>
-                {% endif %}
-                </td>
+                <td>{{ loan_buttons(row) }}</td>
             </tr>
         {% endfor %}
         </tbody>

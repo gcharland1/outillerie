@@ -9,7 +9,7 @@ def page_text(response):
 
 
 def is_logged_in(client):
-    return "Rebonjour" in page_text(client.get("/"))
+    return 'class="account-menu"' in page_text(client.get("/"))
 
 
 def test_session_cookie_is_httponly_and_samesite_lax(client, user):

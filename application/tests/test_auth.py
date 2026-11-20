@@ -73,7 +73,7 @@ def test_login_with_valid_credentials(client, user):
 
     assert response.status_code == 302
     assert response.headers["Location"] == "/"
-    assert f"Rebonjour {user}" in page_text(client.get("/"))
+    assert f"<summary>{user}" in page_text(client.get("/"))
 
 
 @pytest.mark.parametrize(
@@ -86,7 +86,7 @@ def test_login_with_invalid_credentials(client, user, username, password):
 
     assert response.status_code == 200
     assert "Le nom d'utilisateur ou le mot de passe est invalide" in page_text(response)
-    assert "Rebonjour" not in page_text(client.get("/"))
+    assert client.get("/").status_code == 302
 
 
 def test_unknown_username_is_indistinguishable_from_wrong_password(client, user, monkeypatch):

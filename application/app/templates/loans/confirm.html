@@ -17,6 +17,7 @@
             <input type="hidden" name="origin" value="{{ origin.origin }}">
             <input type="hidden" name="q" value="{{ origin.q }}">
             <input type="hidden" name="available" value="{{ origin.available }}">
+            <input type="hidden" name="sort" value="{{ origin.sort }}">
 
             <label for="start">Du :</label>
             <input type="date" id="start" name="start" value="{{ values.start }}" min="{{ bounds.first }}" max="{{ bounds.last_start }}" required>

@@ -46,7 +46,7 @@ d'exemple `dev-seulement` est refusée).
 
 L'image de l'app s'appelle `outillerie-app:dev` ; en production, `APP_TAG` l'étiquette avec le
 commit déployé. `docker compose ps` montre l'app `healthy` une fois les migrations appliquées et la
-page d'accueil servie. L'app et la base redémarrent seules après un plantage ou un redémarrage du
+page de connexion servie. L'app et la base redémarrent seules après un plantage ou un redémarrage du
 poste, sauf après `docker compose stop` ou `down`.
 
 ### Production

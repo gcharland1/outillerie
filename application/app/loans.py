@@ -15,6 +15,7 @@ from models.user import User
 
 MAX_LEAD_DAYS = 14
 MAX_LOAN_DAYS = 30
+DASHBOARD_ROWS = 5
 MESSAGE_MAX_LENGTH = Loan.message.type.length
 
 INVALID_DATES = "Indiquez des dates valides"
@@ -90,6 +91,18 @@ ACTIONS = {
     ],
 }
 REQUEST_ACTIONS = {"accept", "refuse", "withdraw"}
+# What each action says once done; {other} is the other party's name.
+SUCCESS = {
+    "accept": "Demande de {other} acceptée",
+    "refuse": "Demande de {other} refusée",
+    "withdraw": "Demande retirée",
+    "hand-over": "Remise déclarée, {other} doit la confirmer",
+    "receive": "Outil reçu, prêt en cours",
+    "give-back": "Retour déclaré, {other} doit le confirmer",
+    "take-back": "Outil reçu, prêt complété",
+    "not-received": "Réponse envoyée : pas reçu",
+    "cancel": "Prêt annulé",
+}
 # The buttons of "Mes prêts", in the order they are shown; cancelling opens its own page.
 BUTTONS = (
     Button("refuse", "Refuser", "error"),
@@ -126,6 +139,64 @@ def inject_loan_actions():
         select(func.count()).select_from(Loan).where(or_(as_owner, as_borrower))
     )
     return {"loan_actions": count}
+
+
+class DashboardGroup(NamedTuple):
+    title: str
+    other_label: str
+    rows: list[LoanRow]
+    more: bool
+
+
+def dashboard(user_id):
+    """The home page's loans: requests to answer, then the user's borrowings, then their loans"""
+    today = catalog.site_today()
+    my_tools = select(Tool.id).where(Tool.owner_id == user_id)
+    ongoing = or_(catalog.upcoming_acceptance(), Loan.status.in_(catalog.OUT))
+    received = db.session.scalars(
+        select(Loan)
+        .options(joinedload(Loan.tool), joinedload(Loan.borrower))
+        .where(Loan.tool_id.in_(my_tools), catalog.pending_request())
+        .order_by(Loan.start_date, Loan.id)
+        .limit(DASHBOARD_ROWS + 1)
+    ).all()
+    borrowed = db.session.scalars(
+        select(Loan)
+        .options(joinedload(Loan.tool).joinedload(Tool.owner))
+        .where(Loan.borrower_id == user_id, or_(ongoing, catalog.pending_request()))
+    ).all()
+    lent = db.session.scalars(
+        select(Loan)
+        .options(joinedload(Loan.tool), joinedload(Loan.borrower))
+        .where(Loan.tool_id.in_(my_tools), ongoing)
+    ).all()
+    groups = [
+        ("Demandes reçues", "Emprunteur", [_row(loan, True, today) for loan in received]),
+        ("Mes emprunts", "Propriétaire", _ranked(borrowed, False, today)),
+        ("Mes prêts", "Emprunteur", _ranked(lent, True, today)),
+    ]
+    return [
+        DashboardGroup(title, other_label, rows[:DASHBOARD_ROWS], len(rows) > DASHBOARD_ROWS)
+        for title, other_label, rows in groups
+        if rows
+    ]
+
+
+def _ranked(loans, by_owner, today):
+    """Overdue first, then what the issue lists for each side, each by nearest last day"""
+    waiting = LoanStatus.ACCEPTED if by_owner else LoanStatus.HANDOVER_CLAIMED
+    rows = [_row(loan, by_owner, today) for loan in loans]
+
+    def rank(row):
+        if row.overdue:
+            return 0
+        if row.loan.status == waiting:
+            return 1
+        if row.loan.status == LoanStatus.RETURN_CLAIMED:
+            return 2
+        return 3
+
+    return sorted(rows, key=lambda row: (rank(row), row.loan.end_date, row.loan.id))
 
 
 @bp.route("/new/<int:tool_id>", methods=["GET"])
@@ -215,10 +286,11 @@ def confirm_cancel(loan_id):
 def act(loan_id, action):
     if action not in ACTIONS:
         abort(404)
+    back = redirect(back_url(request.form))
     loan, transition = _loan_for(loan_id, action)
     if transition is None:
         flash(NO_LONGER_PENDING if action in REQUEST_ACTIONS else STATUS_CHANGED)
-        return redirect(url_for("loans.mine"))
+        return back
     target = transition.target
     if action == "not-received" and target == LoanStatus.ACCEPTED and not _still_lendable(loan):
         # The cascade spared the claimed handover; once disputed, it would have cancelled it.
@@ -232,7 +304,15 @@ def act(loan_id, action):
         # Only an acceptance changes which days are taken: another committed loan has one of them.
         db.session.rollback()
         flash(DATES_TAKEN)
-    return redirect(url_for("loans.mine"))
+        return back
+    other = loan.borrower if transition.by_owner else loan.lender
+    flash(SUCCESS[action].format(other=f"{other.first_name} {other.last_name}"), "success")
+    return back
+
+
+def back_url(params):
+    """Where an action on a loan or a request returns: home, or the full page by default"""
+    return url_for("index") if params.get("origin") == "home" else url_for("loans.mine")
 
 
 def _still_lendable(loan):
@@ -288,15 +368,24 @@ def _read_dates(values):
 
 def _origin(params):
     """The list a request was started from, as a fixed set of values, never a URL"""
+    sort = catalog.read_sort(params)
+    origin = params.get("origin")
     return {
-        "origin": "contact" if params.get("origin") == "contact" else "find",
+        "origin": origin if origin in ("contact", "home") else "find",
         "q": params.get("q", "").strip(),
         "available": "1" if params.get("available") == "1" else "",
+        "sort": sort if sort != catalog.RELEVANCE else "",
     }
 
 
 def _origin_url(origin, tool):
-    filters = {"q": origin["q"] or None, "available": origin["available"] or None}
+    filters = {
+        "q": origin["q"] or None,
+        "available": origin["available"] or None,
+        "sort": origin["sort"] or None,
+    }
+    if origin["origin"] == "home":
+        return url_for("index")
     if origin["origin"] == "contact" and catalog.is_contact(current_user.id, tool.owner_id):
         return url_for("contacts.show", user_id=tool.owner_id, **filters)
     return url_for("tools.find", **filters)
