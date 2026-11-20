@@ -39,12 +39,12 @@ La page de résultats MUST exiger une session ouverte : un visiteur est redirig�
 - **THEN** il est redirigé vers `/login`
 
 ### Requirement: Correspondance des utilisateurs
-La recherche d'utilisateurs SHALL lister les autres comptes dont le nom d'utilisateur, ou le
-prénom suivi du nom, contient le texte ou, dès 4 caractères, lui ressemble malgré une faute
+La recherche d'utilisateurs SHALL lister les autres comptes dont le prénom suivi du nom
+contient le texte ou, dès 4 caractères, lui ressemble malgré une faute
 légère, sans égard à la casse, aux accents ni aux espaces autour ; un tiret vaut une espace,
 plusieurs espaces une seule ; `%`, `_` et `\` sont cherchés tels quels. Tri : ceux qui
-contiennent le texte, puis ressemblance décroissante, puis nom d'utilisateur sans égard à la
-casse. Jamais son propre compte.
+contiennent le texte, puis ressemblance décroissante, puis prénom, puis nom, sans égard à la
+casse ni aux accents, puis du plus ancien compte au plus récent. Jamais son propre compte.
 
 #### Scenario: Par le nom
 - **WHEN** Bob Gagnon a un compte et Alice cherche « GAGN »
@@ -91,32 +91,36 @@ casse. Jamais son propre compte.
 - **THEN** son propre compte ne figure pas dans les résultats
 
 #### Scenario: Caractère joker cherché tel quel
-- **WHEN** aucun nom d'utilisateur, prénom ni nom ne contient « 50% » et Alice cherche « 50% »
+- **WHEN** aucun prénom ni nom ne contient « 50% » et Alice cherche « 50% »
 - **THEN** aucun compte ne figure dans les résultats
 
 #### Scenario: Joker pleine chasse cherché tel quel
-- **WHEN** aucun nom d'utilisateur, prénom ni nom ne contient « %%% » et Alice cherche « ％％％ »
+- **WHEN** aucun prénom ni nom ne contient « %%% » et Alice cherche « ％％％ »
 - **THEN** aucun compte ne figure dans les résultats
 
 #### Scenario: Joker présent dans un nom
-- **WHEN** le nom d'utilisateur de Bob est « bob%%% », aucun autre compte ne contient « %%% », et Alice cherche « %%% »
+- **WHEN** le nom de Bob est « Gagnon%%% », aucun autre compte ne contient « %%% », et Alice cherche « %%% »
 - **THEN** seul le compte de Bob figure dans les résultats
 
 #### Scenario: Ordre des résultats
-- **WHEN** les comptes « carole », « Bob » et « albert » ont le nom « Leclerc » et Alice cherche « leclerc »
-- **THEN** ils sont listés dans l'ordre « albert », « Bob », « carole »
+- **WHEN** Carole, bob, Élise et Albert ont le nom « Leclerc » et Alice cherche « leclerc »
+- **THEN** ils sont listés dans l'ordre Albert, bob, Carole, Élise
+
+#### Scenario: Homonymes
+- **WHEN** deux comptes s'appellent Bob Gagnon et Alice cherche « gagnon »
+- **THEN** le plus ancien des deux comptes est listé en premier
 
 #### Scenario: Contenu avant ressemblance
-- **WHEN** « albert » s'appelle Albert Gagnon, « zoe » s'appelle Zoé Gagné et Alice cherche « gagne »
-- **THEN** « zoe » est listée avant « albert »
+- **WHEN** Albert Gagnon et Zoé Gagné ont un compte et Alice cherche « gagne »
+- **THEN** Zoé Gagné est listée avant Albert Gagnon
 
 ### Requirement: Informations affichées
-Chaque résultat SHALL afficher le nom d'utilisateur, le prénom et le nom du compte, et MUST NOT
+Chaque résultat SHALL afficher le prénom et le nom du compte, et MUST NOT
 afficher son courriel, son adresse ni son téléphone.
 
 #### Scenario: Coordonnées cachées
 - **WHEN** Bob a un courriel, une adresse et un téléphone et Alice le trouve par une recherche
-- **THEN** la page de résultats affiche « bob », « Bob » et « Gagnon »
+- **THEN** la page de résultats affiche « Bob Gagnon »
 - **AND** elle n'affiche ni son courriel, ni son adresse, ni son téléphone
 
 ### Requirement: Recherche trop courte ou sans résultat
@@ -203,3 +207,23 @@ de 3 caractères de la barre de recherche s'applique.
 #### Scenario: Texte trop court
 - **WHEN** Alice choisit « Outil » et cherche « pe »
 - **THEN** la page affiche « Saisissez au moins 3 caractères »
+
+### Requirement: Nombre de comptes listés
+La recherche d'utilisateurs SHALL lister au plus 25 comptes : les 25 premiers dans l'ordre de
+« Correspondance des utilisateurs ». Quand plus de 25 comptes correspondent, la page SHALL afficher
+au-dessus des résultats « Plus de 25 utilisateurs correspondent à « texte » ; précisez votre
+recherche », avec le texte cherché tel que saisi, sans nombre total. Avec 25 comptes ou moins,
+aucun message n'est affiché.
+
+#### Scenario: Plus de 25 comptes
+- **WHEN** 26 autres comptes s'appellent Gagnon et Alice cherche « gagnon »
+- **THEN** la page liste 25 comptes, les 25 premiers dans l'ordre de tri
+- **AND** elle affiche « Plus de 25 utilisateurs correspondent à « gagnon » ; précisez votre recherche »
+
+#### Scenario: Exactement 25 comptes
+- **WHEN** 25 autres comptes s'appellent Gagnon et Alice cherche « gagnon »
+- **THEN** la page liste les 25 comptes, sans message
+
+#### Scenario: Correspondances exactes gardées
+- **WHEN** 25 comptes ressemblent à « gagnon » sans le contenir, un compte contient « gagnon » et Alice cherche « gagnon »
+- **THEN** le compte qui contient « gagnon » figure parmi les 25 comptes listés

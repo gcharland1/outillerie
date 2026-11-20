@@ -10,8 +10,8 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="row">
                 <div class="col-6">
-                    <label for="username">Nom d'utilisateur:</label>
-                    <input type="text" name="username" required />
+                    <label for="email">Courriel:</label>
+                    <input type="email" name="email" id="email" value="{{ email }}" autocomplete="username" required />
                 </div>
                 <div class="col-6">
                     <label for="password">Mot de passe:</label>
@@ -19,7 +19,7 @@
                 </div>
             </div>
             <div class="actions">
-                <button type="submit">Se connecter</button>
+                <button type="submit" class="button primary">Se connecter</button>
             </div>
         </form>
     </div>

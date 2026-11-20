@@ -54,7 +54,7 @@ erDiagram
 
   user {
     INTEGER id PK
-    VARCHAR(250) username UK
+    VARCHAR(250) username UK "nullable"
     VARCHAR(250) password
     VARCHAR(250) email
     VARCHAR(250) first_name

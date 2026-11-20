@@ -7,7 +7,7 @@ import pytest
 from app import catalog, photos
 from app.extensions import db
 from models import LoanStatus, Tool, ToolCondition, User
-from tests.conftest import USER_PASSWORD, add_loan
+from tests.conftest import add_loan, login
 from tests.factories import make_contact_relation, make_contact_request, make_tool, user_id
 
 TODAY = catalog.site_today()
@@ -17,11 +17,6 @@ def page_text(response):
     return unescape(response.get_data(as_text=True))
 
 
-def login(client, username):
-    client.post("/login", data={"username": username, "password": USER_PASSWORD})
-    return client
-
-
 def card_names(text):
     return re.findall(r'<article class="card tool-card">.*?<h4>(.*?)</h4>', text, re.DOTALL)
 
@@ -29,7 +24,7 @@ def card_names(text):
 @pytest.fixture
 def ids(mock_app, user, bob, carole):
     with mock_app.app_context():
-        return {name: user_id(name) for name in (user, bob, carole)}
+        return {email.partition("@")[0]: user_id(email) for email in (user, bob, carole)}
 
 
 @pytest.fixture
@@ -42,7 +37,7 @@ def contacts(mock_app, ids):
 
 @pytest.fixture
 def as_alice(mock_app, ids):
-    return login(mock_app.test_client(), "alice")
+    return login(mock_app.test_client(), "alice@example.com")
 
 
 def add_tool(mock_app, owner_id, name="Perceuse", **fields):
@@ -240,7 +235,7 @@ def test_contact_page(mock_app, contacts, as_alice):
 
     text = page_text(as_alice.get(f"/contacts/{contacts['bob']}"))
 
-    assert "<h2>Bob Gagnon (@bob)</h2>" in text
+    assert "<h2>Bob Gagnon</h2>" in text
     assert "<h3>Outils de Bob Gagnon</h3>" in text
     assert card_names(text) == ["Perceuse"]
     for private in ("bob@example.com", "12 rue des Érables", "418-555-0199"):
@@ -313,7 +308,7 @@ def test_a_former_contact_no_longer_sees_the_photo(mock_app, contacts, bobs_dril
 
 
 def test_a_non_contact_does_not_see_the_photo(mock_app, bobs_drill, contacts):
-    as_carole = login(mock_app.test_client(), "carole")
+    as_carole = login(mock_app.test_client(), "carole@example.com")
 
     assert as_carole.get(f"/tools/{bobs_drill}/photo").status_code == 404
 
@@ -348,11 +343,12 @@ def test_sort_on_a_contact_page(mock_app, contacts, as_alice):
 
 
 def test_unknown_sort_is_relevance(mock_app, contacts, as_alice):
-    add_tool(mock_app, contacts["bob"], name="Scie")
+    for name in ("carotteuse", "Bêche", "agrafeuse"):
+        add_tool(mock_app, contacts["bob"], name=name)
 
     response = as_alice.get("/tools/find?sort=au-hasard")
 
     assert response.status_code == 200
-    assert '<option value="relevance" selected>Pertinence</option>' in sort_menu(
-        page_text(response)
-    )
+    text = page_text(response)
+    assert card_names(text) == ["agrafeuse", "Bêche", "carotteuse"]
+    assert '<option value="relevance" selected>Pertinence</option>' in sort_menu(text)

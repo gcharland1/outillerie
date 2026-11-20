@@ -15,9 +15,10 @@ paths:
 
 Les styles vivent dans `app/static/site.css`, chargé après Chota ; pas d'attribut `style=` dans les gabarits.
 
-- Un bouton a un contour et un fond (`class="button"`, et `primary`, `error`…) ; jamais `button outline` ni un texte sur fond transparent.
+- Un bouton a un contour et un fond (`class="button"`, ou `button primary`) ; jamais `button outline` ni un texte sur fond transparent.
+- Couleurs (ADR 0019) : action positive en bleu (`button primary`, au plus une par groupe d'actions), action négative, navigation et outils de page en neutre (`button`) ; sur une page de confirmation, le bouton qui confirme est positif. Jamais `error` ni `success` sur un bouton : ces couleurs signalent un état. Un lien, menu du compte compris, a le bleu des boutons positifs (`--color-primary`).
 - Dans un menu ou un contexte d'action, une action est un bouton, même quand elle mène à une page (`<a class="button">`). Un lien nu ne sert qu'au fil d'un texte, et dans le menu du compte (ci-dessous), dont chaque entrée est un simple texte.
-- Une action dangereuse (retrait, suppression, effacement) est rouge : `class="button error"`.
+- Une action dangereuse (retrait, suppression, effacement) passe par une page de confirmation.
 - Deux éléments ne se touchent jamais : boutons groupés dans `<div class="actions">`, espacement `var(--gap)` ; une page commence sous la barre de navigation avec un écart.
 - La barre de navigation reste délimitée (`.site-header`).
-- Les pages de l'utilisateur connecté (« Gérer mes outils », « Mes contacts », « Mes prêts », « Trouver un outil », plus tard « Mon profil », « Préférences ») vont dans le menu du compte, ouvert en cliquant sur le nom d'utilisateur (`<details class="account-menu">`, sans JavaScript, ADR 0001). Ses entrées sont de simples liens texte, pas des boutons ; « Me déconnecter » reste visible à côté, en bouton.
+- Les pages de l'utilisateur connecté (« Gérer mes outils », « Mes contacts », « Mes prêts », « Trouver un outil », plus tard « Mon profil », « Préférences ») vont dans le menu du compte, ouvert en cliquant sur le nom d'utilisateur (`<details class="account-menu">`, sans JavaScript, ADR 0001). Ses entrées sont de simples liens texte bleus, pas des boutons ; « Me déconnecter » reste visible à côté, en bouton.

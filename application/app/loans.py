@@ -105,11 +105,11 @@ SUCCESS = {
 }
 # The buttons of "Mes prêts", in the order they are shown; cancelling opens its own page.
 BUTTONS = (
-    Button("refuse", "Refuser", "error"),
-    Button("accept", "Accepter", "success"),
-    Button("withdraw", "Retirer ma demande", "error"),
-    Button("cancel", "Annuler le prêt", "error"),
-    Button("not-received", "Pas reçu", "error"),
+    Button("refuse", "Refuser", ""),
+    Button("accept", "Accepter", "primary"),
+    Button("withdraw", "Retirer ma demande", ""),
+    Button("cancel", "Annuler le prêt", ""),
+    Button("not-received", "Pas reçu", ""),
     Button("hand-over", "J'ai remis l'outil", "primary"),
     Button("receive", RECEIVED, "primary"),
     Button("give-back", "J'ai rendu l'outil", "primary"),

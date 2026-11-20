@@ -39,10 +39,10 @@ L'ADR 0011 garde `index` dans la fabrique. La vue redirige un visiteur vers `aut
 pas par `@login_required`, pour éviter le `?next=/` et le message flash de Flask-Login. Elle appelle
 trois fonctions de requête, chacune dans le module de sa fonctionnalité :
 
-- `loans.dashboard_rows(user_id, today, limit=10)` ;
+- `loans.dashboard(user_id)`, au plus 5 lignes par groupe (`DASHBOARD_ROWS`) ;
 - `contacts.received_requests(user_id)`, extraite de `contacts.mine`, et
   `contacts.recent_contacts(user_id, since)` ;
-- `catalog.recent_tools(user_id, since, limit=7)`, qui renvoie des cartes.
+- `catalog.recent_tools(user_id, since)`, qui renvoie des cartes (6, plus une pour « Voir plus »).
 
 Pas de Blueprint `home`, donc pas d'ADR. Les endpoints `url_for("index")` existants ne changent pas.
 

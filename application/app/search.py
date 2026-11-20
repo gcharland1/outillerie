@@ -1,9 +1,9 @@
 from flask import Blueprint, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
-from sqlalchemy import case, func, or_, select
+from sqlalchemy import case, or_, select
 
 from app import text_search
-from app.contacts import relation_states
+from app.contacts import by_name, relation_states
 from app.extensions import db
 from models.user import User
 
@@ -11,6 +11,7 @@ SEARCH_MIN_LENGTH = 3
 # Names are short: at 3 characters, two shared initials would be enough to match (ADR 0018).
 USER_FUZZY_MIN_LENGTH = 4
 USER_FUZZY_THRESHOLD = 0.5
+USER_RESULTS_MAX = 25
 
 bp = Blueprint("search", __name__, url_prefix="/search")
 
@@ -31,31 +32,32 @@ def results():
         return redirect(url_for("tools.find", q=search_text))
     else:
         users = _matching_users(search_text, fuzzy=len(normalized_text) >= USER_FUZZY_MIN_LENGTH)
-        states = relation_states([user.id for user in users])
-        page["results"] = [(user, states[user.id]) for user in users]
+        shown = users[:USER_RESULTS_MAX]
+        states = relation_states([user.id for user in shown])
+        page["results"] = [(user, states[user.id]) for user in shown]
         if not users:
             page["message"] = f"Aucun utilisateur ne correspond à « {search_text} »"
+        elif len(users) > USER_RESULTS_MAX:
+            page["message"] = (
+                f"Plus de {USER_RESULTS_MAX} utilisateurs correspondent à « {search_text} » ; "
+                "précisez votre recherche"
+            )
 
     return render_template("search/results.html", **page)
 
 
 def _matching_users(search_text, fuzzy):
-    """Other users whose username or full name contains the text or, if fuzzy, resembles it"""
+    """Other users whose full name contains the text or, if fuzzy, resembles it; one past the cap"""
     full_name = User.first_name + " " + User.last_name
-    contained = or_(
-        text_search.contains(User.username, search_text),
-        text_search.contains(full_name, search_text),
-    )
+    contained = text_search.contains(full_name, search_text)
     condition, ordering = contained, []
     if fuzzy:
-        score = func.greatest(
-            text_search.similarity(User.username, search_text),
-            text_search.similarity(full_name, search_text),
-        )
+        score = text_search.similarity(full_name, search_text)
         condition = or_(contained, score >= USER_FUZZY_THRESHOLD)
         ordering = [case((contained, 0), else_=1), score.desc()]
     return db.session.scalars(
         select(User)
         .where(User.id != current_user.id, condition)
-        .order_by(*ordering, func.lower(User.username), User.id)
+        .order_by(*ordering, *by_name())
+        .limit(USER_RESULTS_MAX + 1)
     ).all()

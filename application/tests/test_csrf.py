@@ -27,7 +27,7 @@ def test_logout_button_carries_a_token(logged_in_client):
 
 
 def test_login_without_token_is_refused(csrf_client, user):
-    response = csrf_client.post("/login", data={"username": user, "password": USER_PASSWORD})
+    response = csrf_client.post("/login", data={"email": user, "password": USER_PASSWORD})
 
     assert response.status_code == 400
     assert REFUSAL_MESSAGE in page_text(response)
@@ -38,7 +38,6 @@ def test_register_without_token_creates_no_account(mock_app, csrf_client):
     response = csrf_client.post(
         "/register",
         data={
-            "username": "bob",
             "password": "motdepasse",
             "first_name": "Bob",
             "last_name": "Gagnon",
@@ -73,7 +72,7 @@ def test_login_page_open_twenty_minutes_is_accepted(clock, csrf_client, user):
     clock.advance(20 * MINUTE)
 
     response = csrf_client.post(
-        "/login", data={"username": user, "password": USER_PASSWORD, "csrf_token": token}
+        "/login", data={"email": user, "password": USER_PASSWORD, "csrf_token": token}
     )
 
     assert response.status_code == 302
@@ -86,7 +85,7 @@ def test_login_page_open_too_long_is_refused(clock, csrf_client, user):
     clock.advance(31 * MINUTE)
 
     response = csrf_client.post(
-        "/login", data={"username": user, "password": USER_PASSWORD, "csrf_token": token}
+        "/login", data={"email": user, "password": USER_PASSWORD, "csrf_token": token}
     )
 
     assert response.status_code == 400
@@ -121,7 +120,7 @@ def test_login_relayed_over_https_with_same_origin_referrer(csrf_client, user):
 
     response = csrf_client.post(
         "/login",
-        data={"username": user, "password": USER_PASSWORD, "csrf_token": token},
+        data={"email": user, "password": USER_PASSWORD, "csrf_token": token},
         headers={**HTTPS_PROXY, "Referer": "https://localhost/login"},
     )
 
@@ -134,7 +133,7 @@ def test_login_relayed_over_https_without_referrer_is_refused(csrf_client, user)
 
     response = csrf_client.post(
         "/login",
-        data={"username": user, "password": USER_PASSWORD, "csrf_token": token},
+        data={"email": user, "password": USER_PASSWORD, "csrf_token": token},
         headers=HTTPS_PROXY,
     )
 

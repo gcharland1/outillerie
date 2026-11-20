@@ -8,12 +8,11 @@
 {% if results %}
     <table>
         <thead>
-            <tr><th>Nom d'utilisateur</th><th>Nom</th><th></th></tr>
+            <tr><th>Nom</th><th></th></tr>
         </thead>
         <tbody>
         {% for user, state in results %}
             <tr>
-                <td>{{ user.username }}</td>
                 <td>{{ user.first_name }} {{ user.last_name }}</td>
                 <td>
                     <div class="actions">

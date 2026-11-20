@@ -8,7 +8,7 @@ from sqlalchemy import event
 from app import catalog
 from app.extensions import db
 from models import ContactRelation, Loan, LoanStatus, ToolCondition
-from tests.conftest import USER_PASSWORD, add_loan, add_tool, log_in_with_page_token
+from tests.conftest import USER_PASSWORD, add_loan, add_tool, log_in_with_page_token, login
 from tests.factories import make_contact_relation, make_contact_request, user_id
 
 TODAY = catalog.site_today()
@@ -19,11 +19,6 @@ def page_text(response):
     return unescape(response.get_data(as_text=True))
 
 
-def login(client, username):
-    client.post("/login", data={"username": username, "password": USER_PASSWORD})
-    return client
-
-
 def days(offset):
     return TODAY + timedelta(days=offset)
 
@@ -31,12 +26,12 @@ def days(offset):
 @pytest.fixture
 def ids(mock_app, user, bob, carole):
     with mock_app.app_context():
-        return {name: user_id(name) for name in (user, bob, carole)}
+        return {email.partition("@")[0]: user_id(email) for email in (user, bob, carole)}
 
 
 @pytest.fixture
 def as_alice(mock_app, ids):
-    return login(mock_app.test_client(), "alice")
+    return login(mock_app.test_client(), "alice@example.com")
 
 
 def section(text, title):
@@ -169,6 +164,14 @@ def test_home_buttons_bring_back_home(mock_app, ids, as_alice):
     assert '<input type="hidden" name="origin" value="home">' in html
 
 
+def test_cancel_from_home_opens_the_confirmation(mock_app, ids, as_alice):
+    loan_id = loan(mock_app, ids["bob"], ids["alice"], "Perceuse", S.ACCEPTED, start=1, end=2)
+
+    html = loans_section(as_alice)
+
+    assert f'<a class="button" href="/loans/{loan_id}/cancel">Annuler le prêt</a>' in html
+
+
 def test_confirmed_return_leaves_home(mock_app, ids, as_alice):
     loan_id = loan(mock_app, ids["alice"], ids["bob"], "Perceuse", S.RETURN_CLAIMED)
 
@@ -232,7 +235,7 @@ def test_received_contact_request(mock_app, ids, as_alice):
 
 def test_new_contact_on_both_sides(mock_app, ids, as_alice):
     relate(mock_app, ids["alice"], ids["bob"], days_ago=3)
-    as_bob = login(mock_app.test_client(), "bob")
+    as_bob = login(mock_app.test_client(), "bob@example.com")
 
     assert "Vous êtes maintenant en contact avec Bob Gagnon" in contacts_section(as_alice)
     assert "Vous êtes maintenant en contact avec Alice Tremblay" in contacts_section(as_bob)
@@ -247,9 +250,12 @@ def test_old_contact_is_not_new(mock_app, ids, as_alice):
 def test_refusal_and_removed_contact_show_nothing(mock_app, ids, as_alice):
     with mock_app.app_context():
         request_id = make_contact_request(ids["alice"], ids["bob"]).id
-    as_bob = login(mock_app.test_client(), "bob")
+    as_bob = login(mock_app.test_client(), "bob@example.com")
+    assert "Alice Tremblay" in contacts_section(as_bob)
+
     as_bob.post(f"/contacts/requests/{request_id}/refuse")
 
+    assert "Alice" not in contacts_section(as_bob)
     assert "Bob" not in contacts_section(as_alice)
 
     relate(mock_app, ids["alice"], ids["carole"])
@@ -339,6 +345,16 @@ def test_only_the_date_added_counts(mock_app, ids, as_alice):
     assert card_names(tools_section(as_alice)) == []
 
 
+def test_restored_old_tool_is_not_new(mock_app, contacts, as_alice):
+    tool_id = added(mock_app, contacts["bob"], "Scie", 90)
+    as_bob = login(mock_app.test_client(), "bob@example.com")
+    as_bob.post(f"/tools/{tool_id}/retire")
+
+    as_bob.post(f"/tools/{tool_id}/restore")
+
+    assert card_names(tools_section(as_alice)) == []
+
+
 @pytest.mark.parametrize(("count", "more"), [(6, False), (7, True)])
 def test_six_tools_then_see_more(mock_app, contacts, as_alice, count, more):
     for number in range(count):
@@ -406,9 +422,17 @@ def test_home_query_count_does_not_grow(mock_app, contacts, as_alice):
     assert queries_of_home(mock_app, as_alice) == few
 
 
+def test_home_has_no_script(mock_app, contacts, as_alice):
+    fill(mock_app, contacts, 1, "a")
+    with mock_app.app_context():
+        make_contact_request(contacts["carole"], contacts["alice"])
+
+    assert "<script" not in page_text(as_alice.get("/")).lower()
+
+
 def test_home_action_without_token(mock_app, ids, csrf_client):
     loan_id = loan(mock_app, ids["bob"], ids["alice"], "Perceuse", S.LENT)
-    log_in_with_page_token(csrf_client, "alice", USER_PASSWORD)
+    log_in_with_page_token(csrf_client, "alice@example.com", USER_PASSWORD)
 
     response = csrf_client.post(f"/loans/{loan_id}/give-back", data={"origin": "home"})
 

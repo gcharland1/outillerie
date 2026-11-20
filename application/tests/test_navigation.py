@@ -32,11 +32,11 @@ def test_navigation_for_a_logged_in_user(logged_in_client, user):
     assert ">Inscription<" not in text
 
 
-def test_username_opens_the_account_menu(logged_in_client, user):
+def test_full_name_opens_the_account_menu(logged_in_client, user):
     text = page_text(logged_in_client.get("/"))
 
     menu = account_menu(text)
-    assert f"<summary>{user}</summary>" in menu
+    assert '<summary><span class="account-name">Alice Tremblay</span></summary>' in menu
     assert '<a href="/tools/mine">Gérer mes outils</a>' in menu
     assert "button" not in menu
 

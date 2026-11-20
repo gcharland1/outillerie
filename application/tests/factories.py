@@ -16,10 +16,10 @@ def make_tool(owner_id, name="Perceuse", description="Perceuse sans fil", **fiel
     return tool
 
 
-def make_user(username, email, **fields):
+def make_user(email, **fields):
     """An unsaved account whose password value is not a real hash"""
     fields = {"first_name": "Prénom", "last_name": "Nom", **fields}
-    return User(username=username, password="hash", email=email, **fields)
+    return User(password="hash", email=email, **fields)
 
 
 def make_contact_request(requester_id, recipient_id):
@@ -36,8 +36,8 @@ def make_contact_relation(first_id, second_id):
     return relation
 
 
-def user_id(username):
-    return User.query.filter_by(username=username).one().id
+def user_id(email):
+    return User.query.filter_by(email=email).one().id
 
 
 def make_loan(tool_id, borrower_id, first_day, last_day, status=None, message=None, **fields):

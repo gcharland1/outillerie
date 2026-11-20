@@ -120,7 +120,7 @@ def test_transparent_areas_become_white(transparent_png):
 @pytest.fixture
 def owner(mock_app):
     with mock_app.app_context():
-        user = make_user("alice", "alice@example.com")
+        user = make_user("alice@example.com")
         db.session.add(user)
         db.session.commit()
         return user.id
@@ -171,7 +171,7 @@ def test_tool_ids_with_photo_reads_no_photo_content(mock_app, owner):
 
 def test_only_the_owner_can_view_a_photo(mock_app, owner):
     with mock_app.app_context():
-        neighbour = make_user("bob", "bob@example.com")
+        neighbour = make_user("bob@example.com")
         db.session.add(neighbour)
         db.session.commit()
         tool = make_tool(owner)
@@ -557,7 +557,7 @@ def test_photo_on_a_neighbours_tool_gets_404(mock_app, logged_in_client, bob_id,
 def test_multipart_form_is_accepted_with_its_csrf_token(
     mock_app, csrf_client, alice_id, jpeg_photo
 ):
-    log_in_with_page_token(csrf_client, "alice", USER_PASSWORD)
+    log_in_with_page_token(csrf_client, "alice@example.com", USER_PASSWORD)
     tool_id = add_tool(mock_app, alice_id)
     token = token_in(csrf_client.get(edit_url(tool_id)))
 
@@ -570,7 +570,7 @@ def test_multipart_form_is_accepted_with_its_csrf_token(
 
 
 def test_multipart_form_without_token_is_refused(mock_app, csrf_client, alice_id, jpeg_photo):
-    log_in_with_page_token(csrf_client, "alice", USER_PASSWORD)
+    log_in_with_page_token(csrf_client, "alice@example.com", USER_PASSWORD)
     tool_id = add_tool(mock_app, alice_id)
 
     response = post_form(csrf_client, edit_url(tool_id), with_file(jpeg_photo))

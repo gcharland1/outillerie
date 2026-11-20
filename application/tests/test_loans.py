@@ -7,7 +7,14 @@ import pytest
 from app import catalog
 from app.extensions import db
 from models import Loan, LoanStatus, ToolCondition
-from tests.conftest import USER_PASSWORD, add_loan, add_tool, log_in_with_page_token, token_in
+from tests.conftest import (
+    USER_PASSWORD,
+    add_loan,
+    add_tool,
+    log_in_with_page_token,
+    login,
+    token_in,
+)
 from tests.factories import make_contact_relation, make_contact_request, user_id
 
 TODAY = catalog.site_today()
@@ -15,11 +22,6 @@ TODAY = catalog.site_today()
 
 def page_text(response):
     return unescape(response.get_data(as_text=True))
-
-
-def login(client, username):
-    client.post("/login", data={"username": username, "password": USER_PASSWORD})
-    return client
 
 
 def days(offset):
@@ -38,7 +40,7 @@ def loan_form(start=0, end=2, message="", **fields):
 @pytest.fixture
 def ids(mock_app, user, bob, carole):
     with mock_app.app_context():
-        return {name: user_id(name) for name in (user, bob, carole)}
+        return {email.partition("@")[0]: user_id(email) for email in (user, bob, carole)}
 
 
 @pytest.fixture
@@ -52,17 +54,17 @@ def contacts(mock_app, ids):
 
 @pytest.fixture
 def as_alice(mock_app, ids):
-    return login(mock_app.test_client(), "alice")
+    return login(mock_app.test_client(), "alice@example.com")
 
 
 @pytest.fixture
 def as_bob(mock_app, ids):
-    return login(mock_app.test_client(), "bob")
+    return login(mock_app.test_client(), "bob@example.com")
 
 
 @pytest.fixture
 def as_carole(mock_app, ids):
-    return login(mock_app.test_client(), "carole")
+    return login(mock_app.test_client(), "carole@example.com")
 
 
 @pytest.fixture
@@ -260,7 +262,7 @@ def test_borrow_link_carries_the_list_it_came_from(mock_app, contacts, drill, as
 
 
 def test_request_needs_the_csrf_token(mock_app, drill, csrf_client):
-    log_in_with_page_token(csrf_client, "alice", USER_PASSWORD)
+    log_in_with_page_token(csrf_client, "alice@example.com", USER_PASSWORD)
 
     response = csrf_client.post(f"/loans/new/{drill}", data=loan_form())
 
@@ -269,7 +271,7 @@ def test_request_needs_the_csrf_token(mock_app, drill, csrf_client):
 
 
 def test_request_with_the_csrf_token(mock_app, drill, csrf_client):
-    log_in_with_page_token(csrf_client, "alice", USER_PASSWORD)
+    log_in_with_page_token(csrf_client, "alice@example.com", USER_PASSWORD)
     token = token_in(csrf_client.get(f"/loans/new/{drill}"))
 
     response = csrf_client.post(f"/loans/new/{drill}", data=loan_form(csrf_token=token))
@@ -413,11 +415,11 @@ def test_my_requests_to_act_on_come_first_newest_first(mock_app, contacts, drill
     ]
 
 
-def test_answer_buttons_are_green_and_red(mock_app, request_id, as_bob):
+def test_answer_buttons_are_blue_and_neutral(mock_app, request_id, as_bob):
     text = page_text(as_bob.get("/loans"))
 
-    assert '<button type="submit" class="button success">Accepter</button>' in text
-    assert '<button type="submit" class="button error">Refuser</button>' in text
+    assert '<button type="submit" class="button primary">Accepter</button>' in text
+    assert '<button type="submit" class="button">Refuser</button>' in text
 
 
 def test_my_loans_sends_a_visitor_to_login(client):
@@ -533,7 +535,7 @@ def test_expired_request_is_not_counted(mock_app, contacts, drill, as_bob):
     assert badges(page_text(as_bob.get("/"))) == []
 
 
-def test_username_badge_adds_contact_and_loan_requests(mock_app, ids, as_bob):
+def test_account_badge_adds_contact_and_loan_requests(mock_app, ids, as_bob):
     with mock_app.app_context():
         make_contact_relation(ids["alice"], ids["bob"])
         make_contact_request(ids["carole"], ids["bob"])
@@ -570,7 +572,7 @@ def test_badge_counts_loans_waiting_for_the_user(
         assert (int(mine[1]) if mine else 0) == count
 
 
-def test_username_badge_adds_a_return_to_confirm(mock_app, ids, as_bob):
+def test_account_badge_adds_a_return_to_confirm(mock_app, ids, as_bob):
     with mock_app.app_context():
         make_contact_relation(ids["alice"], ids["bob"])
         make_contact_request(ids["carole"], ids["bob"])
@@ -861,7 +863,7 @@ def test_cancel_page_changes_nothing(mock_app, contacts, drill, as_bob):
     text = page_text(as_bob.get(f"/loans/{loan_id}/cancel"))
 
     assert "Perceuse" in text and "Alice Tremblay" in text
-    assert '<button type="submit" class="button error">Annuler le prêt</button>' in text
+    assert '<button type="submit" class="button primary">Annuler le prêt</button>' in text
     assert status_of(mock_app, loan_id) is LoanStatus.ACCEPTED
 
 
@@ -957,7 +959,7 @@ def test_a_loan_stays_closable(mock_app, contacts, drill, as_alice, as_bob, reti
 
 def test_loan_action_needs_the_csrf_token(mock_app, contacts, drill, csrf_client):
     loan_id = loan_in(mock_app, contacts, drill, LoanStatus.LENT)
-    log_in_with_page_token(csrf_client, "alice", USER_PASSWORD)
+    log_in_with_page_token(csrf_client, "alice@example.com", USER_PASSWORD)
 
     response = csrf_client.post(f"/loans/{loan_id}/give-back")
 
@@ -1030,7 +1032,7 @@ def test_handover_and_return_dates_are_shown(mock_app, contacts, drill, as_alice
 
 
 def buttons_of(text, tool_name):
-    return re.findall(r'class="button ([a-z]+)"[^>]*>([^<]+)<', row_of(text, tool_name))
+    return re.findall(r'class="button ?([a-z]*)"[^>]*>([^<]+)<', row_of(text, tool_name))
 
 
 @pytest.mark.parametrize(
@@ -1038,18 +1040,18 @@ def buttons_of(text, tool_name):
     [
         (
             LoanStatus.ACCEPTED,
-            [("error", "Annuler le prêt"), ("primary", "J'ai remis l'outil")],
-            [("error", "Annuler le prêt"), ("primary", "J'ai reçu l'outil")],
+            [("", "Annuler le prêt"), ("primary", "J'ai remis l'outil")],
+            [("", "Annuler le prêt"), ("primary", "J'ai reçu l'outil")],
         ),
         (
             LoanStatus.HANDOVER_CLAIMED,
             [],
-            [("error", "Pas reçu"), ("primary", "Confirmer la réception")],
+            [("", "Pas reçu"), ("primary", "Confirmer la réception")],
         ),
         (LoanStatus.LENT, [("primary", "J'ai reçu l'outil")], [("primary", "J'ai rendu l'outil")]),
         (
             LoanStatus.RETURN_CLAIMED,
-            [("error", "Pas reçu"), ("primary", "Confirmer la réception")],
+            [("", "Pas reçu"), ("primary", "Confirmer la réception")],
             [],
         ),
     ],
@@ -1169,6 +1171,12 @@ def test_request_answer_from_home_goes_back_home(mock_app, request_id, as_alice,
     response = acting.post(f"/loans/{request_id}/{action}", data={"origin": "home"})
 
     assert response.location == "/"
+
+
+def test_accepting_from_home_says_so(mock_app, request_id, as_bob):
+    as_bob.post(f"/loans/{request_id}/accept", data={"origin": "home"})
+
+    assert flash_success(page_text(as_bob.get("/"))) == ["Demande de Alice Tremblay acceptée"]
 
 
 def test_expired_request_from_home_goes_back_home(mock_app, contacts, drill, as_bob, monkeypatch):
