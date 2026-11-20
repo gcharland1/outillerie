@@ -300,6 +300,80 @@ def test_without_text_tools_are_sorted_by_name(mock_app, contacts):
         assert visible_names(contacts["alice"]) == ["agrafeuse", "Bêche", "carotteuse"]
 
 
+def added_on(day):
+    return datetime(2026, 11, day, 12, tzinfo=UTC)
+
+
+@pytest.fixture
+def added_tools(mock_app, contacts):
+    """Bob's saw, drill and sander, added on November 1, 10 and 5"""
+    with mock_app.app_context():
+        for name, day in (("Scie", 1), ("Perceuse", 10), ("Ponceuse", 5)):
+            make_tool(contacts["bob"], name=name, created_at=added_on(day))
+    return contacts
+
+
+@pytest.mark.parametrize(
+    ("sort", "names"),
+    [
+        ("added-desc", ["Perceuse", "Ponceuse", "Scie"]),
+        ("added-asc", ["Scie", "Ponceuse", "Perceuse"]),
+    ],
+)
+def test_sort_by_date_added(mock_app, added_tools, sort, names):
+    with mock_app.app_context():
+        assert visible_names(added_tools["alice"], sort=sort) == names
+
+
+@pytest.mark.parametrize(
+    ("sort", "names"),
+    [
+        ("borrowed-desc", ["Perceuse", "Scie", "Ponceuse"]),
+        ("borrowed-asc", ["Ponceuse", "Scie", "Perceuse"]),
+    ],
+)
+def test_sort_by_last_loan(mock_app, added_tools, sort, names):
+    with mock_app.app_context():
+        tools = {tool.name: tool.id for tool in catalog.visible_tools(added_tools["alice"])}
+        carole = added_tools["carole"]
+        make_loan(tools["Scie"], carole, date(2026, 11, 3), date(2026, 11, 4), LoanStatus.RETURNED)
+        make_loan(
+            tools["Perceuse"], carole, date(2026, 11, 10), date(2026, 11, 11), LoanStatus.LENT
+        )
+        for status in (LoanStatus.REFUSED, LoanStatus.CANCELED, LoanStatus.ACCEPTED):
+            make_loan(tools["Ponceuse"], carole, date(2026, 11, 20), date(2026, 11, 20), status)
+        assert visible_names(added_tools["alice"], sort=sort) == names
+
+
+def test_a_sort_by_date_replaces_relevance(mock_app, contacts):
+    with mock_app.app_context():
+        make_tool(contacts["bob"], name="Rabot électrique", created_at=added_on(1))
+        make_tool(
+            contacts["bob"],
+            name="Établi",
+            description="Idéal sous le rabot",
+            created_at=added_on(10),
+        )
+        assert visible_names(contacts["alice"], text="rabot") == ["Rabot électrique", "Établi"]
+        names = visible_names(contacts["alice"], text="rabot", sort="added-desc")
+        assert names == ["Établi", "Rabot électrique"]
+
+
+def test_equal_dates_keep_one_order(mock_app, contacts):
+    with mock_app.app_context():
+        for name in ("Scie", "Perceuse", "Ponceuse"):
+            make_tool(contacts["bob"], name=name, created_at=added_on(1))
+        first = visible_names(contacts["alice"], sort="added-desc")
+        assert visible_names(contacts["alice"], sort="added-desc") == first
+        assert first == ["Ponceuse", "Perceuse", "Scie"]
+
+
+@pytest.mark.parametrize("value", [None, "au-hasard", "relevance"])
+def test_unknown_or_missing_sort_is_relevance(value):
+    params = {} if value is None else {"sort": value}
+    assert catalog.read_sort(params) == catalog.RELEVANCE
+
+
 @pytest.mark.parametrize(
     ("length", "shown"),
     [(125, "x" * 125), (200, "x" * 125 + "…")],

@@ -4,32 +4,20 @@
         <input type="checkbox" name="available" value="1"{% if filters.available_only %} checked{% endif %}>
         Disponible uniquement
     </label>
+    <label class="tool-sort">
+        Trier par
+        <select name="sort">
+            {% for value, label in sort_labels.items() %}
+            <option value="{{ value }}"{% if value == sort %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </label>
     <button type="submit" class="button">Filtrer</button>
 </form>
 {% if cards %}
 <div class="tool-cards">
     {% for card in cards %}
-    <article class="card tool-card">
-        {% if card.has_photo %}
-        <img class="tool-card-photo" src="{{ url_for('tools.photo', tool_id=card.tool.id) }}" alt="{{ card.tool.name }}">
-        {% else %}
-        <div class="tool-card-photo tool-card-no-photo" aria-hidden="true"></div>
-        {% endif %}
-        <h4>{{ card.tool.name }}</h4>
-        <p><a href="{{ url_for('contacts.show', user_id=card.tool.owner.id) }}">{{ card.tool.owner.first_name }} {{ card.tool.owner.last_name }}</a></p>
-        <p>{{ card.description }}</p>
-        <p>{{ card.condition }}</p>
-        <p class="{{ 'status-available' if card.available else 'status-unavailable' }}">{{ card.status }}</p>
-        <div class="actions">
-            {% if card.requested_by_viewer %}
-            <button type="button" class="button" disabled>Demande envoyée</button>
-            {% elif card.available %}
-            <a class="button primary" href="{{ card.borrow_url }}">Emprunter</a>
-            {% else %}
-            <button type="button" class="button" disabled>Emprunter</button>
-            {% endif %}
-        </div>
-    </article>
+    {% include "tools/_card.html" %}
     {% endfor %}
 </div>
 {% else %}

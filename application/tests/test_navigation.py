@@ -10,7 +10,7 @@ def page_text(response):
 
 
 def test_navigation_for_a_visitor(client):
-    text = page_text(client.get("/"))
+    text = page_text(client.get("/login"))
 
     assert "Connexion" in text
     assert "Inscription" in text
@@ -58,7 +58,7 @@ def assert_styled_by_the_site_stylesheet(client, pages):
 
 
 def test_visitor_pages_use_the_site_stylesheet(client):
-    assert_styled_by_the_site_stylesheet(client, ["/", "/login", "/register", "/logged-out"])
+    assert_styled_by_the_site_stylesheet(client, ["/login", "/register", "/logged-out"])
     assert client.get("/static/site.css").status_code == 200
 
 
@@ -75,7 +75,7 @@ def test_logged_in_page_refreshes_to_expiry_page_after_lifetime(mock_app, logged
 
 
 def test_visitor_page_has_no_expiry_refresh(client):
-    assert REFRESH_TAG not in page_text(client.get("/"))
+    assert REFRESH_TAG not in page_text(client.get("/login"))
 
 
 def test_logged_in_pages_are_not_cached(logged_in_client):
@@ -83,7 +83,8 @@ def test_logged_in_pages_are_not_cached(logged_in_client):
 
 
 def test_visitor_pages_are_cacheable(client):
-    assert "no-store" not in client.get("/").headers.get("Cache-Control", "")
+    for path in ["/login", "/register"]:
+        assert "no-store" not in client.get(path).headers.get("Cache-Control", ""), path
 
 
 def test_account_menu_offers_my_contacts(logged_in_client):
@@ -93,7 +94,7 @@ def test_account_menu_offers_my_contacts(logged_in_client):
 
 
 def test_visitor_has_neither_my_contacts_nor_search(client):
-    text = page_text(client.get("/"))
+    text = page_text(client.get("/login"))
 
     assert "Mes contacts" not in text
     assert 'type="search"' not in text
@@ -119,7 +120,7 @@ def test_search_bar_is_type_then_text_then_button_in_one_form(logged_in_client):
 
 
 def test_no_page_says_voisin(client, logged_in_client):
-    visitor_pages = ["/", "/login", "/register"]
+    visitor_pages = ["/login", "/register"]
     user_pages = [
         "/",
         "/tools/mine",

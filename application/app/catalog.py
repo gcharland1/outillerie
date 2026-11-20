@@ -1,6 +1,6 @@
 """The tools a user sees among their contacts' tools, and how each one stands for a loan."""
 
-from datetime import datetime
+from datetime import datetime, time, timedelta
 from typing import NamedTuple
 from zoneinfo import ZoneInfo
 
@@ -20,6 +20,9 @@ CONDITION_LABELS = {
     ToolCondition.OUT_OF_ORDER: "Hors d'usage",
 }
 DESCRIPTION_MAX_LENGTH = 125
+# How far back a tool or a contact is new on the home page.
+RECENT_DAYS = 30
+NEW_TOOLS = 6
 # A word_similarity score from 0 to 1; tuned by the search scenarios of the spec (ADR 0018).
 FUZZY_THRESHOLD = 0.5
 # Below this normalized length, trigrams match too loosely: only substrings count.
@@ -45,12 +48,23 @@ MONTHS = (
 HANDED_OVER = (LoanStatus.HANDOVER_CLAIMED, LoanStatus.LENT)
 # The tool may be with the borrower: it stays out until its return is confirmed.
 OUT = (*HANDED_OVER, LoanStatus.RETURN_CLAIMED)
+BORROWED = (*OUT, LoanStatus.RETURNED)
+
+RELEVANCE = "relevance"
+SORT_LABELS = {
+    RELEVANCE: "Pertinence",
+    "added-desc": "Ajout : plus récents",
+    "added-asc": "Ajout : plus anciens",
+    "borrowed-desc": "Dernier emprunt : plus récents",
+    "borrowed-asc": "Dernier emprunt : plus anciens",
+}
 
 AVAILABLE = "Disponible"
 PENDING = "En attente de prêt"
 NO_CONTACT = "Vous n'avez encore aucun contact"
 NO_TOOL = "Vos contacts n'ont encore aucun outil à prêter"
 NO_MATCH = "Aucun outil ne correspond à ces filtres"
+NO_NEW_TOOL = f"Aucun nouvel outil depuis {RECENT_DAYS} jours"
 
 
 class ToolCard(NamedTuple):
@@ -62,6 +76,7 @@ class ToolCard(NamedTuple):
     available: bool
     requested_by_viewer: bool
     borrow_url: str | None
+    last_borrowed: str | None
 
 
 def tool_list(user_id, args, owner=None):
@@ -70,23 +85,33 @@ def tool_list(user_id, args, owner=None):
         "text": args.get("q", "").strip(),
         "available_only": args.get("available") == "1",
     }
+    sort = read_sort(args)
     owner_id = owner.id if owner is not None else None
     origin = {
         "origin": "contact" if owner is not None else "find",
         "q": filters["text"] or None,
         "available": "1" if filters["available_only"] else None,
+        "sort": sort if sort != RELEVANCE else None,
     }
-    tools = visible_tools(user_id, owner_id=owner_id, **filters)
+    tools = visible_tools(user_id, owner_id=owner_id, sort=sort, **filters)
     cards = tool_cards(tools, viewer_id=user_id, origin=origin)
     empty_message = None
     if not cards:
         empty_message = _empty_message(user_id, owner, filtered=any(filters.values()))
     return {
         "filters": filters,
+        "sort": sort,
+        "sort_labels": SORT_LABELS,
         "cards": cards,
         "empty_message": empty_message,
         "suggest_search": empty_message == NO_CONTACT,
     }
+
+
+def read_sort(params):
+    """The tool order asked for, among SORT_LABELS; relevance for anything else"""
+    sort = params.get("sort", RELEVANCE)
+    return sort if sort in SORT_LABELS else RELEVANCE
 
 
 def is_contact(user_id, other_id):
@@ -172,7 +197,7 @@ def has_contacts(user_id):
     return db.session.scalar(select(exists().where(_relations_of(user_id))))
 
 
-def visible_tools(user_id, owner_id=None, text="", available_only=False):
+def visible_tools(user_id, owner_id=None, text="", available_only=False, sort=RELEVANCE):
     """The contacts' tools the user may see, filtered and ordered as the spec says"""
     query = select(Tool).options(joinedload(Tool.owner)).where(_visible(user_id))
     if owner_id is not None:
@@ -181,8 +206,33 @@ def visible_tools(user_id, owner_id=None, text="", available_only=False):
         query = query.where(~exists().where(Loan.tool_id == Tool.id, blocking_loan()))
     if text:
         condition, ordering = _text_search(text)
-        query = query.where(condition).order_by(*ordering)
-    return db.session.scalars(query.order_by(func.lower(Tool.name), Tool.id)).all()
+        query = query.where(condition)
+        if sort == RELEVANCE:
+            query = query.order_by(*ordering)
+    if sort == RELEVANCE:
+        return db.session.scalars(query.order_by(func.lower(Tool.name), Tool.id)).all()
+    if sort.startswith("borrowed"):
+        last = _last_borrowed().subquery()
+        query = query.outerjoin(last, last.c.tool_id == Tool.id)
+        day = last.c.last_borrowed
+        ordering = day.desc().nulls_last() if sort == "borrowed-desc" else day.asc().nulls_first()
+    else:
+        ordering = Tool.created_at.desc() if sort == "added-desc" else Tool.created_at.asc()
+    tie = Tool.id.desc() if sort.endswith("desc") else Tool.id.asc()
+    return db.session.scalars(query.order_by(ordering, tie)).all()
+
+
+def recent_tools(user_id, since):
+    """The home page's new tools: cards of the latest added since then, and whether more are"""
+    tools = db.session.scalars(
+        select(Tool)
+        .options(joinedload(Tool.owner))
+        .where(_visible(user_id), Tool.created_at >= since)
+        .order_by(Tool.created_at.desc(), Tool.id.desc())
+        .limit(NEW_TOOLS + 1)
+    ).all()
+    cards = tool_cards(tools[:NEW_TOOLS], viewer_id=user_id, origin={"origin": "home"})
+    return cards, len(tools) > NEW_TOOLS
 
 
 def tool_cards(tools, viewer_id=None, origin=None):
@@ -190,6 +240,11 @@ def tool_cards(tools, viewer_id=None, origin=None):
     tool_ids = [tool.id for tool in tools]
     statuses, requested_by_viewer = _loan_states(tool_ids, viewer_id)
     photo_ids = photos.tool_ids_with_photo(tool_ids)
+    last_borrowed = (
+        dict(db.session.execute(_last_borrowed().where(Loan.tool_id.in_(tool_ids))).all())
+        if tool_ids
+        else {}
+    )
     return [
         ToolCard(
             tool=tool,
@@ -200,6 +255,7 @@ def tool_cards(tools, viewer_id=None, origin=None):
             available=statuses[tool.id] == AVAILABLE,
             requested_by_viewer=tool.id in requested_by_viewer,
             borrow_url=url_for("loans.new", tool_id=tool.id, **origin) if origin else None,
+            last_borrowed=french_date(last_borrowed[tool.id]) if tool.id in last_borrowed else None,
         )
         for tool in tools
     ]
@@ -212,6 +268,12 @@ def loan_statuses(tool_ids):
 
 def site_today():
     return datetime.now(SITE_TIMEZONE).date()
+
+
+def recent_since():
+    """Midnight, site time, of the first day still counted as recent"""
+    first_day = site_today() - timedelta(days=RECENT_DAYS)
+    return datetime.combine(first_day, time.min, tzinfo=SITE_TIMEZONE)
 
 
 def short_description(description):
@@ -282,6 +344,15 @@ def _visible(user_id):
         Tool.is_active,
         Tool.condition != ToolCondition.OUT_OF_ORDER,
         Tool.owner_id.in_(_contact_ids(user_id)),
+    )
+
+
+def _last_borrowed():
+    """Each borrowed tool's first day of its latest loan handed over"""
+    return (
+        select(Loan.tool_id, func.max(Loan.start_date).label("last_borrowed"))
+        .where(Loan.status.in_(BORROWED))
+        .group_by(Loan.tool_id)
     )
 
 

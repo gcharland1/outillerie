@@ -14,7 +14,7 @@ def page_text(response):
 
 
 def is_logged_in(client):
-    return "Rebonjour" in page_text(client.get("/"))
+    return 'class="account-menu"' in page_text(client.get("/"))
 
 
 @pytest.mark.parametrize("path", ["/login", "/register"])

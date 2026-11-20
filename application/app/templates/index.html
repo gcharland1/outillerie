@@ -1,11 +1,96 @@
 {% extends "base.html" %}
+{% from "loans/_buttons.html" import loan_buttons %}
 
 {% block content %}
-    <h2>Bienvenue sur l'outillerie</h2>
-{% if username %}
-    <h4>Rebonjour {{ username }}</h4>
+    <section class="dashboard-section">
+        <h3>Gestion des prêts</h3>
+{% for group in loan_groups %}
+        <h4>{{ group.title }}</h4>
+        <table>
+            <thead>
+                <tr><th>Outil</th><th>{{ group.other_label }}</th><th>Dates</th><th>Statut</th><th></th></tr>
+            </thead>
+            <tbody>
+            {% for row in group.rows %}
+                <tr{% if row.overdue %} class="loan-overdue"{% endif %}>
+                    <td>{{ row.loan.tool.name }}</td>
+                    <td>{{ row.other.first_name }} {{ row.other.last_name }}</td>
+                    <td>{{ row.dates }}</td>
+                    <td>{{ row.status }}</td>
+                    <td>{{ loan_buttons(row, "home") }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% if group.more %}
+        <div class="actions">
+            <a class="button" href="{{ url_for('loans.mine') }}">Voir tous mes prêts</a>
+        </div>
+    {% endif %}
 {% else %}
-    <h4>Veuillez vous connecter</h4>
+        <p>Aucun prêt en cours</p>
+{% endfor %}
+    </section>
+    <section class="dashboard-section">
+        <h3>Gestion des contacts</h3>
+{% if contact_requests or new_contacts %}
+    {% if contact_requests %}
+        <table>
+            <thead>
+                <tr><th>Nom d'utilisateur</th><th>Nom</th><th></th></tr>
+            </thead>
+            <tbody>
+            {% for contact_request in contact_requests %}
+                <tr>
+                    <td>{{ contact_request.requester.username }}</td>
+                    <td>{{ contact_request.requester.first_name }} {{ contact_request.requester.last_name }}</td>
+                    <td>
+                        <div class="actions">
+                            <form action="{{ url_for('contacts.refuse', request_id=contact_request.id) }}" method="post">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="origin" value="home">
+                                <button type="submit" class="button">Refuser</button>
+                            </form>
+                            <form action="{{ url_for('contacts.accept', request_id=contact_request.id) }}" method="post">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="origin" value="home">
+                                <button type="submit" class="button primary">Accepter</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+    {% for contact in new_contacts %}
+        <p>Vous êtes maintenant en contact avec {{ contact.first_name }} {{ contact.last_name }}</p>
+    {% endfor %}
+{% else %}
+        <p>Aucune demande de contact</p>
 {% endif %}
-    <p>Ceci n'est qu'une preuve de concept</p>
+        <div class="actions">
+            <a class="button" href="{{ url_for('contacts.mine') }}">Mes contacts</a>
+        </div>
+    </section>
+    <section class="dashboard-section">
+        <h3>Nouveaux outils</h3>
+{% if new_tools %}
+        <div class="tool-cards">
+    {% for card in new_tools %}
+        {% include "tools/_card.html" %}
+    {% endfor %}
+        </div>
+    {% if more_tools %}
+        <div class="actions">
+            <a class="button" href="{{ url_for('tools.find', sort='added-desc') }}">Voir plus</a>
+        </div>
+    {% endif %}
+{% elif has_contacts %}
+        <p>{{ no_new_tool }}</p>
+{% else %}
+        <p>{{ no_contact }}</p>
+        <p>Cherchez un utilisateur avec la barre de recherche, ou <a href="{{ url_for('search.results', type='user') }}">ouvrez la recherche d'utilisateurs</a>.</p>
+{% endif %}
+    </section>
 {% endblock %}

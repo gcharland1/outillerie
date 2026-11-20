@@ -1,5 +1,6 @@
 import pytest
 from flask import request, url_for
+from sqlalchemy import event
 
 from app import EXAMPLE_SECRET_KEY, create_app
 from app.extensions import db
@@ -104,3 +105,14 @@ def test_development_accepts_the_example_secret_key(environment_without_test_con
     environment_without_test_config("development", EXAMPLE_SECRET_KEY)
 
     assert create_app().config["SECRET_KEY"] == EXAMPLE_SECRET_KEY
+
+
+def test_healthcheck_page_answers_without_a_session_nor_a_query(mock_app, client):
+    queries = []
+    with mock_app.app_context():
+        event.listen(db.engine, "before_cursor_execute", lambda *args: queries.append(args[2]))
+
+    response = client.get("/login")
+
+    assert response.status_code == 200
+    assert queries == []

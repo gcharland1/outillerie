@@ -1,6 +1,6 @@
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 
@@ -11,6 +11,7 @@ from models.user import User
 
 NO_LONGER_PENDING = "Cette demande n'est plus en attente"
 NOT_A_CONTACT = "Cette personne ne fait pas partie de vos contacts"
+REFUSED = "Demande refusée"
 
 bp = Blueprint("contacts", __name__, url_prefix="/contacts")
 
@@ -30,13 +31,38 @@ def inject_pending_contact_requests():
 @bp.route("")
 @login_required
 def mine():
-    received = db.session.scalars(
+    return render_template(
+        "contacts/mine.html",
+        received=received_requests(current_user.id),
+        contacts=_my_contacts(),
+    )
+
+
+def received_requests(user_id):
+    """The requests waiting for the user's answer, oldest first"""
+    return db.session.scalars(
         select(ContactRequest)
         .options(joinedload(ContactRequest.requester))
-        .where(ContactRequest.recipient_id == current_user.id)
+        .where(ContactRequest.recipient_id == user_id)
         .order_by(ContactRequest.created_at, ContactRequest.id)
     ).all()
-    return render_template("contacts/mine.html", received=received, contacts=_my_contacts())
+
+
+def recent_contacts(user_id, since):
+    """The users who became the user's contacts since then, newest first"""
+    other = case(
+        (ContactRelation.user_a_id == user_id, ContactRelation.user_b_id),
+        else_=ContactRelation.user_a_id,
+    )
+    return db.session.scalars(
+        select(User)
+        .join(ContactRelation, User.id == other)
+        .where(
+            or_(ContactRelation.user_a_id == user_id, ContactRelation.user_b_id == user_id),
+            ContactRelation.created_at >= since,
+        )
+        .order_by(ContactRelation.created_at.desc(), User.id)
+    ).all()
 
 
 @bp.route("/<int:user_id>")
@@ -79,10 +105,15 @@ def accept(request_id):
     contact_request = _received_request(request_id)
     if contact_request is None:
         return _back_from_answered_request()
+    requester = contact_request.requester
     db.session.add(ContactRelation.between(contact_request.requester_id, current_user.id))
     db.session.delete(contact_request)
     db.session.commit()
-    return redirect(url_for("contacts.mine"))
+    flash(
+        f"Vous êtes maintenant en contact avec {requester.first_name} {requester.last_name}",
+        "success",
+    )
+    return redirect(_back_url())
 
 
 @bp.route("/requests/<int:request_id>/refuse", methods=["POST"])
@@ -93,7 +124,8 @@ def refuse(request_id):
         return _back_from_answered_request()
     db.session.delete(contact_request)
     db.session.commit()
-    return redirect(url_for("contacts.mine"))
+    flash(REFUSED, "success")
+    return redirect(_back_url())
 
 
 @bp.route("/<int:user_id>/remove", methods=["GET"])
@@ -194,7 +226,12 @@ def _contact_relation(user_id):
 def _back_from_answered_request():
     """Where Back or a second submit lands once a request is answered and gone"""
     flash(NO_LONGER_PENDING)
-    return redirect(url_for("contacts.mine"))
+    return redirect(_back_url())
+
+
+def _back_url():
+    """Home when the answer was sent from there, "Mes contacts" otherwise"""
+    return url_for("index") if request.form.get("origin") == "home" else url_for("contacts.mine")
 
 
 def _back_from_not_a_contact():

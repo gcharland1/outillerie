@@ -1,0 +1,19 @@
+{% macro loan_buttons(row, origin=None) %}
+{% if row.buttons %}
+<div class="actions">
+{% for button in row.buttons %}
+    {% if button.action == "cancel" %}
+    <a class="button {{ button.style }}" href="{{ url_for('loans.confirm_cancel', loan_id=row.loan.id) }}">{{ button.label }}</a>
+    {% else %}
+    <form action="{{ url_for('loans.act', loan_id=row.loan.id, action=button.action) }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% if origin %}
+        <input type="hidden" name="origin" value="{{ origin }}">
+        {% endif %}
+        <button type="submit" class="button {{ button.style }}">{{ button.label }}</button>
+    </form>
+    {% endif %}
+{% endfor %}
+</div>
+{% endif %}
+{% endmacro %}

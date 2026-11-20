@@ -2,7 +2,7 @@ import os
 from datetime import timedelta
 
 from dotenv import load_dotenv
-from flask import Flask, render_template, request
+from flask import Flask, redirect, render_template, request, url_for
 from flask_login import current_user
 from flask_wtf.csrf import CSRFError
 from werkzeug.exceptions import RequestEntityTooLarge
@@ -25,7 +25,7 @@ def create_app(test_config=None):
     login_manager.init_app(app)
     csrf.init_app(app)
 
-    from app import auth, contacts, loans, search, tools
+    from app import auth, catalog, contacts, loans, search, tools
     from models.user import User
 
     app.register_blueprint(auth.bp)
@@ -36,10 +36,22 @@ def create_app(test_config=None):
 
     @app.route("/")
     def index():
-        username = None
-        if current_user.is_authenticated:
-            username = current_user.username
-        return render_template("index.html", username=username)
+        # Not login_required: arriving on the site is no reason for its "please log in" message.
+        if not current_user.is_authenticated:
+            return redirect(url_for("auth.login"))
+        since = catalog.recent_since()
+        new_tools, more_tools = catalog.recent_tools(current_user.id, since)
+        return render_template(
+            "index.html",
+            loan_groups=loans.dashboard(current_user.id),
+            contact_requests=contacts.received_requests(current_user.id),
+            new_contacts=contacts.recent_contacts(current_user.id, since),
+            new_tools=new_tools,
+            more_tools=more_tools,
+            has_contacts=catalog.has_contacts(current_user.id),
+            no_new_tool=catalog.NO_NEW_TOOL,
+            no_contact=catalog.NO_CONTACT,
+        )
 
     @app.after_request
     def prevent_caching_for_logged_in_user(response):
