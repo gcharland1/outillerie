@@ -5,10 +5,10 @@ from typing import NamedTuple
 from zoneinfo import ZoneInfo
 
 from flask import url_for
-from sqlalchemy import String, and_, case, exists, func, or_, select, update
+from sqlalchemy import and_, case, exists, func, or_, select, update
 from sqlalchemy.orm import joinedload
 
-from app import photos
+from app import photos, text_search
 from app.extensions import db
 from models.contact import ContactRelation
 from models.loan import Loan, LoanStatus
@@ -20,9 +20,9 @@ CONDITION_LABELS = {
     ToolCondition.OUT_OF_ORDER: "Hors d'usage",
 }
 DESCRIPTION_MAX_LENGTH = 125
-# A word_similarity score from 0 to 1; tuned by the search scenarios of the spec (ADR 0016).
+# A word_similarity score from 0 to 1; tuned by the search scenarios of the spec (ADR 0018).
 FUZZY_THRESHOLD = 0.5
-# Below this length, trigrams match too loosely: only substrings count.
+# Below this normalized length, trigrams match too loosely: only substrings count.
 FUZZY_MIN_LENGTH = 3
 # The server runs in UTC; a loan's last day ends at midnight where its users live.
 SITE_TIMEZONE = ZoneInfo("America/Toronto")
@@ -311,17 +311,13 @@ def _loan_states(tool_ids, viewer_id):
 
 def _text_search(text):
     """The condition a tool's name or description must meet, and the order of the matches"""
-    name = func.unaccent(Tool.name, type_=String)
-    description = func.unaccent(Tool.description, type_=String)
-    pattern = func.unaccent("%" + _escape_like(text) + "%", type_=String)
-    name_contains = name.ilike(pattern, escape="\\")
-    description_contains = description.ilike(pattern, escape="\\")
-    if len(text) < FUZZY_MIN_LENGTH:
+    name_contains = text_search.contains(Tool.name, text)
+    description_contains = text_search.contains(Tool.description, text)
+    if len(text_search.normalize(text)) < FUZZY_MIN_LENGTH:
         return or_(name_contains, description_contains), [name_contains.desc()]
 
-    searched = func.unaccent(text, type_=String)
-    name_score = func.word_similarity(searched, name)
-    description_score = func.word_similarity(searched, description)
+    name_score = text_search.similarity(Tool.name, text)
+    description_score = text_search.similarity(Tool.description, text)
     condition = or_(
         name_contains,
         description_contains,
@@ -329,7 +325,3 @@ def _text_search(text):
         description_score >= FUZZY_THRESHOLD,
     )
     return condition, [name_contains.desc(), name_score.desc(), description_score.desc()]
-
-
-def _escape_like(text):
-    return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")

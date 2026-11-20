@@ -239,6 +239,9 @@ def test_overdue_and_expired_loans(mock_app, contacts):
         ("Coffret", "Embouts de vissage", "vissage"),
         ("Perceuse", "Sans fil", "PERCEUSE"),
         ("Perceuse", "Sans fil", "ce"),
+        ("Scie a metaux", "Lame neuve", "SCIE À MÉTAUX"),
+        ("Tire-bouchon", "Pour le vin", "tire bouchon"),
+        ("Scie sauteuse", "Lames fournies", "scie    sauteuse"),
     ],
 )
 def test_text_finds(mock_app, contacts, name, description, searched):
@@ -247,11 +250,20 @@ def test_text_finds(mock_app, contacts, name, description, searched):
         assert visible_names(contacts["alice"], text=searched) == [name]
 
 
-@pytest.mark.parametrize("searched", ["tondeuse", "50%", "%", "_", "a_b", "zz"])
+@pytest.mark.parametrize(
+    "searched", ["tondeuse", "50%", "%", "_", "a_b", "zz", "％％％", "＿＿＿", "%%%"]
+)
 def test_text_leaves_out(mock_app, contacts, searched):
     with mock_app.app_context():
         make_tool(contacts["bob"], name="Perceuse", description="Sans fil, avec batterie")
         assert visible_names(contacts["alice"], text=searched) == []
+
+
+def test_wildcards_in_a_description_are_found(mock_app, contacts):
+    with mock_app.app_context():
+        make_tool(contacts["bob"], name="Niveau", description="Précis à 100%%%")
+        make_tool(contacts["bob"], name="Scie", description="")
+        assert visible_names(contacts["alice"], text="%%%") == ["Niveau"]
 
 
 def test_private_notes_are_not_searched(mock_app, contacts):
@@ -265,6 +277,13 @@ def test_exact_name_match_comes_first(mock_app, contacts):
         make_tool(contacts["bob"], name="Robot culinaire", description="Mélangeur")
         make_tool(contacts["bob"], name="Rabot électrique", description="Pour le bois")
         assert visible_names(contacts["alice"], text="rabot")[0] == "Rabot électrique"
+
+
+def test_normalized_name_match_comes_first(mock_app, contacts):
+    with mock_app.app_context():
+        make_tool(contacts["bob"], name="Tire-clou", description="Arrache les clous")
+        make_tool(contacts["bob"], name="Tire-bouchon", description="Pour le vin")
+        assert visible_names(contacts["alice"], text="tire bouchon")[0] == "Tire-bouchon"
 
 
 def test_name_match_comes_before_description_match(mock_app, contacts):
