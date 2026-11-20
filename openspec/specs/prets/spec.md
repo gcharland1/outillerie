@@ -34,8 +34,8 @@ jours entiers, et les deux bornes font partie du prêt : un prêt peut commencer
 
 ### Requirement: Statut du prêt
 Le système SHALL enregistrer le statut d'un prêt parmi `requested`, `accepted`, `refused`, `canceled`,
-`lent` et `returned`, et MUST refuser toute autre valeur. Un prêt enregistré sans statut a le
-statut `requested`.
+`handover_claimed`, `lent`, `return_claimed` et `returned`, et MUST refuser toute autre valeur. Un prêt
+enregistré sans statut a le statut `requested`.
 
 #### Scenario: Statut par défaut
 - **WHEN** un prêt est enregistré sans statut
@@ -45,10 +45,15 @@ statut `requested`.
 - **WHEN** un prêt est enregistré avec le statut `in_progress`
 - **THEN** l'enregistrement est refusé
 
+#### Scenario: Statuts à confirmer
+- **WHEN** un prêt est enregistré avec le statut `handover_claimed` ou `return_claimed`
+- **THEN** le prêt est conservé
+
 ### Requirement: Aucun chevauchement des prêts engagés
-Le système MUST refuser que deux prêts d'un même outil aux statuts `accepted` ou `lent` partagent un
-jour, même quand deux enregistrements arrivent en même temps. Les demandes peuvent se chevaucher
-entre elles et avec un prêt engagé ; les prêts refusés, annulés ou rendus ne bloquent aucune date.
+Le système MUST refuser que deux prêts d'un même outil aux statuts `accepted`, `handover_claimed`,
+`lent` ou `return_claimed` partagent un jour, même quand deux enregistrements arrivent en même temps.
+Les demandes peuvent se chevaucher entre elles et avec un prêt engagé ; les prêts refusés, annulés ou
+rendus ne bloquent aucune date.
 
 #### Scenario: Prêts engagés qui se chevauchent
 - **WHEN** un outil a un prêt `accepted` du 3 au 5 novembre
@@ -69,6 +74,11 @@ entre elles et avec un prêt engagé ; les prêts refusés, annulés ou rendus n
 - **WHEN** un outil a un prêt `accepted` du 3 au 5 novembre et un prêt `requested` du 4 au 6 novembre
 - **AND** ce prêt passe au statut `accepted`
 - **THEN** le changement de statut est refusé
+
+#### Scenario: Prêt à confirmer engagé
+- **WHEN** un outil a un prêt `return_claimed` du 3 au 5 novembre
+- **AND** un prêt `accepted` du 4 au 6 novembre est enregistré pour cet outil
+- **THEN** l'enregistrement est refusé
 
 #### Scenario: Prêt rendu libère ses dates
 - **WHEN** un outil a un prêt `returned` du 3 au 5 novembre

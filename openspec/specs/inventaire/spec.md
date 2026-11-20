@@ -114,7 +114,8 @@ saisies et le message de l'erreur, sans rien enregistrer ni modifier.
 Le système SHALL permettre au propriétaire de modifier le nom, la description, l'état et les
 notes privées d'un outil en circulation, depuis un formulaire prérempli avec les valeurs
 actuelles, puis le ramener à « Mes outils ». Vider les notes privées les supprime. Passer l'outil
-à l'état « Hors d'usage » annule ses demandes d'emprunt en attente.
+à l'état « Hors d'usage » annule ses demandes d'emprunt en attente et ses prêts acceptés non
+expirés, sans remise déclarée ; une remise à confirmer et un prêt en cours restent intacts.
 
 #### Scenario: Formulaire prérempli
 - **WHEN** Alice ouvre « Modifier » pour sa perceuse
@@ -130,6 +131,16 @@ actuelles, puis le ramener à « Mes outils ». Vider les notes privées les sup
 - **AND** Alice passe sa perceuse à l'état « Hors d'usage »
 - **THEN** la demande de Bob est annulée
 
+#### Scenario: Prêt accepté annulé par le passage hors d'usage
+- **WHEN** Alice a accepté de prêter sa perceuse à Bob, sans remise déclarée
+- **AND** Alice passe sa perceuse à l'état « Hors d'usage »
+- **THEN** le prêt est « Annulée »
+
+#### Scenario: Prêt en cours gardé
+- **WHEN** Bob a la perceuse d'Alice, ou Alice a déclaré la lui avoir remise
+- **AND** Alice passe sa perceuse à l'état « Hors d'usage »
+- **THEN** le prêt garde son statut et reste clôturable depuis « Mes prêts »
+
 #### Scenario: Outil retiré non modifiable
 - **WHEN** Alice demande la modification d'un de ses outils retirés
 - **THEN** le système répond 404
@@ -137,9 +148,9 @@ actuelles, puis le ramener à « Mes outils ». Vider les notes privées les sup
 ### Requirement: Retrait avec confirmation
 « Retirer » SHALL mener à une page de confirmation qui nomme l'outil, indique qu'il restera
 enregistré et pourra être remis en circulation, annonce le nombre de demandes d'emprunt en attente
-qui seront annulées s'il y en a, et offre « Confirmer le retrait » et un lien d'annulation vers
-« Mes outils ». Seule la confirmation, par un envoi de formulaire, retire l'outil de la
-circulation et annule ces demandes ; il reste enregistré.
+et de prêts acceptés non expirés, sans remise déclarée, qui seront annulés s'il y en a, et offre « Confirmer le
+retrait » et un lien d'annulation vers « Mes outils ». Seule la confirmation, par un envoi de
+formulaire, retire l'outil et annule ces demandes et prêts ; il reste enregistré.
 
 #### Scenario: Page de confirmation
 - **WHEN** Alice clique « Retirer » pour sa perceuse
@@ -157,6 +168,16 @@ circulation et annule ces demandes ; il reste enregistré.
 - **AND** Alice ouvre la confirmation du retrait de la perceuse
 - **THEN** la page annonce « 1 demande d'emprunt en attente sera annulée »
 - **AND** une fois le retrait confirmé, la demande de Bob est annulée
+
+#### Scenario: Prêt accepté annulé par le retrait
+- **WHEN** Alice a accepté de prêter sa perceuse à Bob, sans remise déclarée
+- **AND** Alice ouvre la confirmation du retrait de la perceuse
+- **THEN** la page annonce « 1 prêt accepté sera annulé »
+- **AND** une fois le retrait confirmé, le prêt est « Annulée »
+
+#### Scenario: Prêt en cours gardé au retrait
+- **WHEN** Bob a la perceuse d'Alice et Alice confirme son retrait
+- **THEN** le prêt reste « Prêté » dans « Mes prêts » d'Alice et « Mes emprunts » de Bob
 
 #### Scenario: Pas de retrait par un lien
 - **WHEN** le retrait d'un outil est demandé sans envoi de formulaire (`GET`)
