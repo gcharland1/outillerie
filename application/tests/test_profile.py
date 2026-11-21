@@ -814,6 +814,10 @@ def test_copied_cookie_is_a_visitors(mock_app, ids, as_alice):
     assert 'class="account-menu"' not in page_text(replay.get("/login"))
 
 
+def without_csrf_token(response):
+    return re.sub(r'name="csrf_token" value="[^"]*"', 'name="csrf_token"', page_text(response))
+
+
 def test_deleted_account_cannot_log_in(mock_app, ids, as_alice):
     delete_account(as_alice)
     client = mock_app.test_client()
@@ -823,7 +827,9 @@ def test_deleted_account_cannot_log_in(mock_app, ids, as_alice):
 
     assert deleted.status_code == unknown.status_code == 200
     assert "Le courriel ou le mot de passe est invalide" in page_text(deleted)
-    assert page_text(deleted).replace("alice@example.com", "eve@example.com") == page_text(unknown)
+    assert without_csrf_token(deleted).replace("alice@example.com", "eve@example.com") == (
+        without_csrf_token(unknown)
+    )
 
 
 # Courriel d'un compte supprimé
