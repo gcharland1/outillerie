@@ -388,15 +388,16 @@ def test_every_post_form_of_the_tool_pages_carries_a_token(mock_app, logged_in_c
             assert 'name="csrf_token"' in form, page
 
 
-def test_tool_actions_are_buttons_and_confirming_is_blue(mock_app, logged_in_client, alice_id):
+def test_retiring_a_tool_is_red(mock_app, logged_in_client, alice_id):
     tool_id = add_tool(mock_app, alice_id)
 
     mine = logged_in_client.get("/tools/mine").get_data(as_text=True)
     confirm = logged_in_client.get(f"/tools/{tool_id}/retire").get_data(as_text=True)
 
-    assert f'<a class="button" href="/tools/{tool_id}/edit">Modifier</a>' in mine
-    assert f'<a class="button" href="/tools/{tool_id}/retire">Retirer</a>' in mine
-    assert '<button type="submit" class="button primary">Confirmer le retrait</button>' in confirm
+    assert f'<a class="button primary" href="/tools/{tool_id}/edit">Modifier</a>' in mine
+    assert f'<a class="button error" href="/tools/{tool_id}/retire">Retirer</a>' in mine
+    assert '<button type="submit" class="button error">Confirmer le retrait</button>' in confirm
+    assert '<a class="button" href="/tools/mine">Annuler</a>' in confirm
 
 
 def test_no_tool_page_uses_transparent_buttons(mock_app, logged_in_client, alice_id):

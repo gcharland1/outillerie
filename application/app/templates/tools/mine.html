@@ -23,8 +23,8 @@
                 <td>{{ condition_labels[tool.condition] }}</td>
                 <td>
                     <div class="actions">
-                        <a class="button" href="{{ url_for('tools.edit', tool_id=tool.id) }}">Modifier</a>
-                        <a class="button" href="{{ url_for('tools.confirm_retire', tool_id=tool.id) }}">Retirer</a>
+                        <a class="button primary" href="{{ url_for('tools.edit', tool_id=tool.id) }}">Modifier</a>
+                        <a class="button error" href="{{ url_for('tools.confirm_retire', tool_id=tool.id) }}">Retirer</a>
                     </div>
                 </td>
             </tr>

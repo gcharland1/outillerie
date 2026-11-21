@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "loans/_buttons.html" import loan_buttons %}
-{% from "contacts/_requests.html" import received_requests %}
+{% from "contacts/_requests.html" import received_requests with context %}
+{% from "_user_name.html" import user_name with context %}
 
 {% block content %}
     <section class="dashboard-section">
@@ -15,7 +16,7 @@
             {% for row in group.rows %}
                 <tr{% if row.overdue %} class="loan-overdue"{% endif %}>
                     <td>{{ row.loan.tool.name }}</td>
-                    <td>{{ row.other.first_name }} {{ row.other.last_name }}</td>
+                    <td>{{ user_name(row.other) }}</td>
                     <td>{{ row.dates }}</td>
                     <td>{{ row.status }}</td>
                     <td>{{ loan_buttons(row, "home") }}</td>
@@ -25,7 +26,7 @@
         </table>
     {% if group.more %}
         <div class="actions">
-            <a class="button" href="{{ url_for('loans.mine') }}">Voir tous mes prêts</a>
+            <a class="button primary" href="{{ url_for('loans.mine') }}">Voir tous mes prêts</a>
         </div>
     {% endif %}
 {% else %}
@@ -39,13 +40,13 @@
         {{ received_requests(contact_requests, origin="home") }}
     {% endif %}
     {% for contact in new_contacts %}
-        <p>Vous êtes maintenant en contact avec {{ contact.first_name }} {{ contact.last_name }}</p>
+        <p>Vous êtes maintenant en contact avec {{ user_name(contact) }}</p>
     {% endfor %}
 {% else %}
         <p>Aucune demande de contact</p>
 {% endif %}
         <div class="actions">
-            <a class="button" href="{{ url_for('contacts.mine') }}">Mes contacts</a>
+            <a class="button primary" href="{{ url_for('contacts.mine') }}">Mes contacts</a>
         </div>
     </section>
     <section class="dashboard-section">
@@ -58,7 +59,7 @@
         </div>
     {% if more_tools %}
         <div class="actions">
-            <a class="button" href="{{ url_for('tools.find', sort='added-desc') }}">Voir plus</a>
+            <a class="button primary" href="{{ url_for('tools.find', sort='added-desc') }}">Voir plus</a>
         </div>
     {% endif %}
 {% elif has_contacts %}

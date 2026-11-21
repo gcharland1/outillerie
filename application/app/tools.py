@@ -1,11 +1,12 @@
 from hashlib import sha256
 
 from flask import Blueprint, Response, abort, flash, redirect, render_template, request, url_for
-from flask_login import current_user, login_required
+from flask_login import current_user, login_required, logout_user
 from sqlalchemy import func, select
 
 from app import catalog, photos
 from app.catalog import CONDITION_LABELS
+from app.contacts import lock_live_accounts
 from app.extensions import db
 from models.tool import Tool, ToolCondition
 
@@ -46,6 +47,7 @@ def find():
 def new():
     values = {}
     if request.method == "POST":
+        _lock_my_live_account()
         values, error = _read_tool_form(request.form)
         photo_file = _submitted_photo()
         jpeg, error = _read_photo(error, photo_file)
@@ -69,6 +71,8 @@ def new():
 @bp.route("/<int:tool_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit(tool_id):
+    if request.method == "POST":
+        _lock_my_live_account()
     tool = _owned_tool(tool_id)
     if not tool.is_active:
         abort(404)
@@ -137,6 +141,7 @@ def confirm_retire(tool_id):
 @bp.route("/<int:tool_id>/retire", methods=["POST"])
 @login_required
 def retire(tool_id):
+    _lock_my_live_account()
     tool = _owned_tool(tool_id)
     if not tool.is_active:
         return _back_from_already_retired()
@@ -151,6 +156,7 @@ def retire(tool_id):
 @bp.route("/<int:tool_id>/restore", methods=["POST"])
 @login_required
 def restore(tool_id):
+    _lock_my_live_account()
     tool = _owned_tool(tool_id)
     if tool.is_active:
         abort(404)
@@ -174,6 +180,14 @@ def photo(tool_id):
     response.cache_control.no_cache = True
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response.make_conditional(request)
+
+
+def _lock_my_live_account():
+    """Locks the account before its tools, as its deletion does; a deleted one is logged out"""
+    if not lock_live_accounts(current_user.id):
+        db.session.rollback()
+        logout_user()
+        abort(redirect(url_for("auth.login")))
 
 
 def _owned_tool(tool_id):

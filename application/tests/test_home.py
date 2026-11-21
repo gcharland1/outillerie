@@ -169,7 +169,20 @@ def test_cancel_from_home_opens_the_confirmation(mock_app, ids, as_alice):
 
     html = loans_section(as_alice)
 
-    assert f'<a class="button" href="/loans/{loan_id}/cancel">Annuler le prêt</a>' in html
+    assert f'<a class="button error" href="/loans/{loan_id}/cancel">Annuler le prêt</a>' in html
+
+
+def test_withdraw_from_home_opens_the_confirmation(mock_app, ids, as_alice):
+    loan_id = loan(mock_app, ids["bob"], ids["alice"], "Perceuse", S.REQUESTED, start=1, end=2)
+
+    html = loans_section(as_alice)
+
+    link = f'href="/loans/{loan_id}/withdraw?origin=home">Retirer ma demande</a>'
+    assert f'<a class="button error" {link}' in html
+    page = page_text(as_alice.get(f"/loans/{loan_id}/withdraw?origin=home"))
+    assert '<input type="hidden" name="origin" value="home">' in page
+    assert '<a class="button" href="/">Retour</a>' in page
+    assert as_alice.post(f"/loans/{loan_id}/withdraw", data={"origin": "home"}).location == "/"
 
 
 def test_confirmed_return_leaves_home(mock_app, ids, as_alice):
@@ -227,7 +240,7 @@ def test_received_contact_request(mock_app, ids, as_alice):
 
     html = contacts_section(as_alice)
 
-    assert "Carole Roy" in html
+    assert "<td>Carole Roy</td>" in html
     assert "Accepter" in html
     assert "Refuser" in html
     assert html.count('<input type="hidden" name="origin" value="home">') == 2
@@ -237,8 +250,10 @@ def test_new_contact_on_both_sides(mock_app, ids, as_alice):
     relate(mock_app, ids["alice"], ids["bob"], days_ago=3)
     as_bob = login(mock_app.test_client(), "bob@example.com")
 
-    assert "Vous êtes maintenant en contact avec Bob Gagnon" in contacts_section(as_alice)
-    assert "Vous êtes maintenant en contact avec Alice Tremblay" in contacts_section(as_bob)
+    bob_link = f'<a href="/contacts/{ids["bob"]}">Bob Gagnon</a>'
+    alice_link = f'<a href="/contacts/{ids["alice"]}">Alice Tremblay</a>'
+    assert f"Vous êtes maintenant en contact avec {bob_link}" in contacts_section(as_alice)
+    assert f"Vous êtes maintenant en contact avec {alice_link}" in contacts_section(as_bob)
 
 
 def test_old_contact_is_not_new(mock_app, ids, as_alice):
@@ -271,7 +286,7 @@ def test_refusal_and_removed_contact_show_nothing(mock_app, ids, as_alice):
 def test_contacts_section_leads_to_my_contacts(mock_app, ids, as_alice):
     html = contacts_section(as_alice)
 
-    assert '<a class="button" href="/contacts">Mes contacts</a>' in html
+    assert '<a class="button primary" href="/contacts">Mes contacts</a>' in html
     assert "Aucune demande de contact" in html
 
 
@@ -364,6 +379,19 @@ def test_six_tools_then_see_more(mock_app, contacts, as_alice, count, more):
 
     assert card_names(html) == [f"Outil {number}" for number in range(6)]
     assert ('href="/tools/find?sort=added-desc">Voir plus</a>' in html) == more
+
+
+def test_buttons_to_see_more_are_blue(mock_app, contacts, as_alice):
+    for number in range(7):
+        added(mock_app, contacts["bob"], f"Outil {number}", number + 1)
+    for number in range(6):
+        loan(mock_app, contacts["bob"], contacts["alice"], f"Emprunt {number}", S.LENT)
+
+    text = page_text(as_alice.get("/"))
+
+    assert '<a class="button primary" href="/tools/find?sort=added-desc">Voir plus</a>' in text
+    assert '<a class="button primary" href="/loans">Voir tous mes prêts</a>' in text
+    assert '<a class="button primary" href="/contacts">Mes contacts</a>' in text
 
 
 # Sections vides

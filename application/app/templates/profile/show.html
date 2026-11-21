@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% from "_user_name.html" import user_name with context %}
+
+{% block content %}
+<h2>Mon profil</h2>
+<section class="card">
+    <header>
+        <h3>{{ user_name(current_user) }}</h3>
+    </header>
+    <p>Courriel : {{ current_user.email }}</p>
+    <form action="{{ url_for('profile.save') }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label for="address">Adresse:</label>
+        <input type="text" id="address" name="address" value="{{ values.address }}" autocomplete="street-address" />
+
+        <label for="phone">Téléphone:</label>
+        <input type="tel" id="phone" name="phone" value="{{ values.phone }}" autocomplete="tel" />
+
+        <div class="actions">
+            <button type="submit" class="button primary">Enregistrer</button>
+        </div>
+    </form>
+</section>
+<section class="card">
+    <header>
+        <h3>Supprimer mon compte</h3>
+    </header>
+    <p>La suppression de votre compte est irréversible.</p>
+    {% if loans_in_progress %}
+    <p>Tous vos prêts en cours doivent être complétés avant de supprimer votre compte</p>
+    <table>
+        <thead>
+            <tr><th>Outil</th><th>Autre personne</th><th>Statut</th></tr>
+        </thead>
+        <tbody>
+        {% for row in loans_in_progress %}
+            <tr>
+                <td>{{ row.tool.name }}</td>
+                <td>{{ user_name(row.other) }}</td>
+                <td>{{ row.status }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <div class="actions">
+        <a class="button primary" href="{{ url_for('loans.mine') }}">Mes prêts</a>
+        <button type="button" class="button" disabled>Supprimer mon compte</button>
+    </div>
+    {% else %}
+    <div class="actions">
+        <a class="button error" href="{{ url_for('profile.confirm_delete') }}">Supprimer mon compte</a>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

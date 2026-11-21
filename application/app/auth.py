@@ -86,6 +86,10 @@ def logout():
 def logged_out():
     if current_user.is_authenticated:
         return redirect(url_for("index"))
-    expired = request.args.get("reason") == "inactivity"
     minutes = int(current_app.permanent_session_lifetime.total_seconds() // 60)
-    return render_template("logged_out.html", expired=expired, minutes=minutes)
+    reasons = {
+        "inactivity": f"Votre session a expiré après {minutes} minutes d'inactivité",
+        "account-deleted": "Votre compte a été supprimé",
+    }
+    message = reasons.get(request.args.get("reason"), "Vous êtes déconnecté")
+    return render_template("logged_out.html", message=message)

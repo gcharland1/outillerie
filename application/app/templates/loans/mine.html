@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "loans/_buttons.html" import loan_buttons %}
+{% from "_user_name.html" import user_name with context %}
 
 {% macro loan_table(rows, other_label) %}
     <table>
@@ -11,7 +12,7 @@
             {% set loan = row.loan %}
             <tr{% if row.overdue %} class="loan-overdue"{% endif %}>
                 <td>{{ loan.tool.name }}</td>
-                <td>{{ row.other.first_name }} {{ row.other.last_name }}</td>
+                <td>{{ user_name(row.other) }}</td>
                 <td>{{ row.dates }}</td>
                 <td class="loan-text">{{ loan.message or "" }}</td>
                 <td>{{ row.status }}{% for line in row.history %}<br>{{ line }}{% endfor %}</td>

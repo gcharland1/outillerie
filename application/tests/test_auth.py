@@ -37,7 +37,7 @@ def test_register_creates_account_and_redirects_to_login(mock_app, client):
     assert response.headers["Location"] == "/login"
     with mock_app.app_context():
         user = User.query.filter_by(email="bob@example.com").one()
-    assert (user.first_name, user.last_name, user.username) == ("Bob", "Gagnon", None)
+    assert (user.first_name, user.last_name) == ("Bob", "Gagnon")
 
 
 def test_register_form_asks_no_username(client):

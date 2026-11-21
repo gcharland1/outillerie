@@ -2,7 +2,7 @@
 
 :root {
     --gap: 1rem;
-    /* ADR 0019: positive buttons and links share this blue; Chota's default is green. */
+    /* ADR 0022: buttons that move forward and links share this blue; Chota's default is green. */
     --color-primary: #1a5fb4;
 }
 
@@ -15,8 +15,8 @@ button,
     border-color: rgba(0, 0, 0, 0.25);
 }
 
-/* Chota fills every submit button with the primary color; only a positive one keeps it (ADR 0019). */
-[type="submit"]:not(.primary) {
+/* Chota fills every submit button with the primary color; only a blue or red one keeps its color (ADR 0022). */
+[type="submit"]:not(.primary):not(.error) {
     background-color: var(--color-lightGrey);
     color: var(--color-darkGrey);
 }
@@ -378,6 +378,11 @@ form:has(#photo-replace:checked):has(#photo-remove:checked) [type="submit"] {
 .loan-overdue td {
     color: var(--color-error);
     font-weight: bold;
+}
+
+/* A deleted account's name, kept in the loans' history (ADR 0023). */
+.user-deleted {
+    color: var(--color-grey);
 }
 
 .dashboard-section {

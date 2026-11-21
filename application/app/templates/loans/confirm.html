@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_user_name.html" import user_name with context %}
 
 {% block content %}
 <div class="row is-center">
@@ -9,7 +10,7 @@
         {% if has_photo %}
         <img class="tool-photo" src="{{ url_for('tools.photo', tool_id=tool.id) }}" alt="{{ tool.name }}">
         {% endif %}
-        <p>Propriétaire : {{ tool.owner.first_name }} {{ tool.owner.last_name }}</p>
+        <p>Propriétaire : {{ user_name(tool.owner) }}</p>
         <p>État : {{ condition }}</p>
         <p class="loan-text">{{ tool.description }}</p>
         <form action="{{ url_for('loans.create', tool_id=tool.id) }}" method="post">

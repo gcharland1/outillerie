@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 
 from app import catalog, photos
+from app.contacts import lock_live_accounts
 from app.extensions import db
 from models.loan import Loan, LoanStatus
 from models.tool import Tool
@@ -28,6 +29,8 @@ NOT_AVAILABLE = "Cet outil n'est plus disponible"
 NO_LONGER_PENDING = "Cette demande n'est plus en attente"
 DATES_TAKEN = "Ces dates ne sont plus libres"
 STATUS_CHANGED = "Ce prêt a déjà changé de statut"
+REASON_TOO_LONG = "La raison ne doit pas dépasser {room} caractères"
+WITHDRAW_REASON = "Raison du retrait : "
 
 STATUS_LABELS = {
     LoanStatus.REQUESTED: "En attente",
@@ -103,12 +106,13 @@ SUCCESS = {
     "not-received": "Réponse envoyée : pas reçu",
     "cancel": "Prêt annulé",
 }
-# The buttons of "Mes prêts", in the order they are shown; cancelling opens its own page.
+# The buttons of "Mes prêts", in the order they are shown; cancelling and withdrawing open
+# their own page.
 BUTTONS = (
     Button("refuse", "Refuser", ""),
     Button("accept", "Accepter", "primary"),
-    Button("withdraw", "Retirer ma demande", ""),
-    Button("cancel", "Annuler le prêt", ""),
+    Button("withdraw", "Retirer ma demande", "error"),
+    Button("cancel", "Annuler le prêt", "error"),
     Button("not-received", "Pas reçu", ""),
     Button("hand-over", "J'ai remis l'outil", "primary"),
     Button("receive", RECEIVED, "primary"),
@@ -213,6 +217,9 @@ def new(tool_id):
 @bp.route("/new/<int:tool_id>", methods=["POST"])
 @login_required
 def create(tool_id):
+    owner_id = db.session.scalar(select(Tool.owner_id).where(Tool.id == tool_id))
+    if owner_id is None or not lock_live_accounts(current_user.id, owner_id):
+        abort(404)
     # Serializes concurrent requests for the tool until commit.
     db.session.execute(select(Tool.id).where(Tool.id == tool_id).with_for_update())
     tool = _requestable_tool(tool_id)
@@ -281,6 +288,16 @@ def confirm_cancel(loan_id):
     return render_template("loans/confirm_cancel.html", loan=loan, other=other, dates=_dates(loan))
 
 
+@bp.route("/<int:loan_id>/withdraw", methods=["GET"])
+@login_required
+def confirm_withdraw(loan_id):
+    loan, transition = _loan_for(loan_id, "withdraw", lock=False)
+    if transition is None:
+        flash(NO_LONGER_PENDING)
+        return redirect(back_url(request.args))
+    return _render_confirm_withdraw(loan, request.args.get("origin"), "")
+
+
 @bp.route("/<int:loan_id>/<action>", methods=["POST"])
 @login_required
 def act(loan_id, action):
@@ -295,6 +312,15 @@ def act(loan_id, action):
     if action == "not-received" and target == LoanStatus.ACCEPTED and not _still_lendable(loan):
         # The cascade spared the claimed handover; once disputed, it would have cancelled it.
         target = LoanStatus.CANCELED
+    if action == "withdraw":
+        reason = request.form.get("reason", "").replace("\r\n", "\n").strip()
+        room = _reason_room(loan)
+        if len(reason) > room:
+            db.session.rollback()
+            flash(REASON_TOO_LONG.format(room=room))
+            return _render_confirm_withdraw(loan, request.form.get("origin"), reason)
+        if reason:
+            loan.message = _with_reason(loan.message, reason)
     loan.status = target
     if transition.stamp is not None:
         setattr(loan, transition.stamp, func.now())
@@ -313,6 +339,27 @@ def act(loan_id, action):
 def back_url(params):
     """Where an action on a loan or a request returns: home, or the full page by default"""
     return url_for("index") if params.get("origin") == "home" else url_for("loans.mine")
+
+
+def _with_reason(message, reason):
+    return f"{message} — {WITHDRAW_REASON}{reason}" if message else f"{WITHDRAW_REASON}{reason}"
+
+
+def _reason_room(loan):
+    """How many characters a withdrawal reason may have so that the message still fits"""
+    return max(MESSAGE_MAX_LENGTH - len(_with_reason(loan.message, "")), 0)
+
+
+def _render_confirm_withdraw(loan, origin, reason):
+    return render_template(
+        "loans/confirm_withdraw.html",
+        loan=loan,
+        dates=_dates(loan),
+        origin="home" if origin == "home" else None,
+        back_url=back_url({"origin": origin}),
+        reason=reason,
+        reason_max_length=_reason_room(loan),
+    )
 
 
 def _still_lendable(loan):

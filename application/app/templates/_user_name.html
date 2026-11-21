@@ -1,0 +1,9 @@
+{% macro user_name(user) -%}
+{% if user.deleted_at -%}
+<span class="user-deleted">{{ user.first_name }} {{ user.last_name }} (supprimé)</span>
+{%- elif user.id in contact_ids -%}
+<a href="{{ url_for('contacts.show', user_id=user.id) }}">{{ user.first_name }} {{ user.last_name }}</a>
+{%- else -%}
+{{ user.first_name }} {{ user.last_name }}
+{%- endif %}
+{%- endmacro %}

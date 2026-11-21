@@ -54,13 +54,13 @@ erDiagram
 
   user {
     INTEGER id PK
-    VARCHAR(250) username UK "nullable"
     VARCHAR(250) password
-    VARCHAR(250) email
     VARCHAR(250) first_name
     VARCHAR(250) last_name
+    VARCHAR(250) email "nullable"
     VARCHAR(250) address "nullable"
     VARCHAR(20) phone "nullable"
+    DATETIME deleted_at "nullable"
   }
 
   user ||--o| contact_relation : user_a_id

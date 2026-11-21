@@ -1,3 +1,4 @@
+{% from "_user_name.html" import user_name with context %}
 <article class="card tool-card">
     {% if card.has_photo %}
     <img class="tool-card-photo" src="{{ url_for('tools.photo', tool_id=card.tool.id) }}" alt="{{ card.tool.name }}">
@@ -5,7 +6,7 @@
     <div class="tool-card-photo tool-card-no-photo" aria-hidden="true"></div>
     {% endif %}
     <h4>{{ card.tool.name }}</h4>
-    <p><a href="{{ url_for('contacts.show', user_id=card.tool.owner.id) }}">{{ card.tool.owner.first_name }} {{ card.tool.owner.last_name }}</a></p>
+    <p>{{ user_name(card.tool.owner) }}</p>
     <p>{{ card.description }}</p>
     <p>{{ card.condition }}</p>
     {% if card.last_borrowed %}

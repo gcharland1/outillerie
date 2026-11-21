@@ -1,3 +1,4 @@
+{% from "_user_name.html" import user_name with context %}
 {% macro received_requests(requests, origin=None) %}
 <table>
     <thead>
@@ -6,7 +7,7 @@
     <tbody>
     {% for contact_request in requests %}
         <tr>
-            <td>{{ contact_request.requester.first_name }} {{ contact_request.requester.last_name }}</td>
+            <td>{{ user_name(contact_request.requester) }}</td>
             <td>
                 <div class="actions">
                     <form action="{{ url_for('contacts.refuse', request_id=contact_request.id) }}" method="post">
