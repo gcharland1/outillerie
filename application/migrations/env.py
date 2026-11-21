@@ -49,14 +49,6 @@ def get_metadata():
     return target_db.metadata
 
 
-def include_object(object, name, type_, reflected, compare_to):
-    # user.username leaves in two PRs (ADR 0007, 0020): this one unmaps it, the next drops it once
-    # this image is deployed. Remove this filter with the revision that drops it (issue #51).
-    if type_ == "column" and name == "username" and object.table.name == "user":
-        return False
-    return not (type_ == "unique_constraint" and name == "uq_user_username")
-
-
 def run_migrations_offline():
     """Run migrations in 'offline' mode.
 
@@ -70,9 +62,7 @@ def run_migrations_offline():
 
     """
     url = config.get_main_option("sqlalchemy.url")
-    context.configure(
-        url=url, target_metadata=get_metadata(), literal_binds=True, include_object=include_object
-    )
+    context.configure(url=url, target_metadata=get_metadata(), literal_binds=True)
 
     with context.begin_transaction():
         context.run_migrations()
@@ -99,7 +89,6 @@ def run_migrations_online():
     conf_args = current_app.extensions["migrate"].configure_args
     if conf_args.get("process_revision_directives") is None:
         conf_args["process_revision_directives"] = process_revision_directives
-    conf_args.setdefault("include_object", include_object)
 
     connectable = get_engine()
 
