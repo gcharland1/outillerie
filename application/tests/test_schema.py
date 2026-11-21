@@ -117,7 +117,7 @@ def test_username_column_round_trip(migrated_app):
 
         flask_migrate.upgrade()
         assert "username" not in user_columns()
-        assert "uq_user_username" not in constraint_names("user")
+        assert constraint_names("user") == EXPECTED_CONSTRAINT_NAMES["user"]
 
 
 def test_account_deletion_columns_round_trip(migrated_app):
