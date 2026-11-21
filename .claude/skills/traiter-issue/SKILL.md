@@ -2,7 +2,7 @@
 name: traiter-issue
 description: Prend une ou plusieurs issues GitHub jusqu'au merge dans main — des agents en parallèle répondent à tout ce que le dépôt sait, l'utilisateur ne tranche que le reste et valide la spec, puis la livraison implémente, vérifie, relit, archive, ouvre la PR et merge, chaque étape gardée par une gate. Utiliser sur "/traiter-issue <n>" ou "prendre l'issue <n>".
 argument-hint: <numéro d'issue> [<numéro>…] [consignes, ex. « dans un worktree », « sans livrer »] | livrer <changement> [<changement>…]
-allowed-tools: Read, Write, Edit, Grep, Glob, Agent, Skill, EnterWorktree, Bash(gh issue view:*), Bash(openspec:*), Bash(git log:*), Bash(git branch:*), Bash(git worktree list:*), Bash(git ls-tree:*), Bash(uv run:*), Bash(uv sync:*), Bash(git status:*), Bash(git diff:*), Bash(git ls-files:*), Bash(git grep:*), Bash(git add:*), Bash(git commit:*), Bash(git fetch:*), Bash(git rebase:*), Bash(git push:*), Bash(git switch:*), Bash(git pull:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(gh pr view:*), Bash(gh pr merge:*), Bash(gh run view:*), Bash(gh run list:*), Bash(git merge-base:*), Bash(docker compose exec:*), Bash(grep:*), Bash(ls:*)
+allowed-tools: Read, Write, Edit, Grep, Glob, Agent, Skill, EnterWorktree, Bash(gh issue view:*), Bash(openspec:*), Bash(git log:*), Bash(git branch:*), Bash(git worktree list:*), Bash(git ls-tree:*), Bash(uv run:*), Bash(uv sync:*), Bash(git status:*), Bash(git diff:*), Bash(git ls-files:*), Bash(git grep:*), Bash(git add:*), Bash(git commit:*), Bash(git fetch:*), Bash(git rebase:*), Bash(git push:*), Bash(git switch:*), Bash(git pull:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(gh pr view:*), Bash(gh pr edit:*), Bash(gh pr merge:*), Bash(gh run view:*), Bash(gh run list:*), Bash(git merge-base:*), Bash(docker compose exec:*), Bash(grep:*), Bash(ls:*)
 ---
 
 # Traiter une issue
@@ -14,8 +14,8 @@ une seule branche, étapes 1 à 7 menées pour chacune, une seule question à la
 
 ## 1. Cadrer
 
-1. Arguments : `$ARGUMENTS`. Les nombres sont les numéros d'issue ; le reste, ce sont des consignes
-   à suivre pendant tout le skill. Sans numéro : le demander. Consigne `livrer <changement>…` : voir § Reprise.
+1. Arguments : `$ARGUMENTS`. Premier mot `livrer` : aller au § Reprise. Sinon, les nombres sont les numéros
+   d'issue ; le reste, ce sont des consignes à suivre pendant tout le skill. Sans numéro : le demander.
 2. `gh issue view <n> --json number,title,state,body,labels,comments` (sans `--json`, la sortie peut être
    vide). Issue fermée ou introuvable : s'arrêter et le dire.
 3. Choisir un nom de changement en kebab-case français.
@@ -29,8 +29,9 @@ une seule branche, étapes 1 à 7 menées pour chacune, une seule question à la
    et des autres worktrees, commités ou non. Le prochain numéro d'ADR est le plus grand vu partout + 1.
 6. Lire `openspec/specs/` (`openspec list --specs`), `docs/decisions/README.md` et `.claude/rules/*.md`.
 7. `openspec new change "<nom>"`.
-8. Créer `openspec/changes/<nom>/questions.md` avec chaque inconnue qui bloque l'écriture d'une spec :
-   acteurs, comportement attendu, périmètre, données et schéma, interface, erreurs, sécurité.
+8. Créer `openspec/changes/<nom>/questions.md`, qui nomme d'abord les issues traitées, avec chaque
+   inconnue qui bloque l'écriture d'une spec : acteurs, comportement attendu, périmètre, données et schéma,
+   interface, erreurs, sécurité.
 
 ## 2. Déployer les agents
 
@@ -183,7 +184,8 @@ nommait (ADR 0024). Commiter.
 3. Corps de PR écrit avec l'outil Write dans le dossier temporaire de la session (jamais dans le dépôt), dans un
    appel séparé de `gh`, sur le modèle des PR précédentes : `Closes #n` pour chaque issue que la spec validée
    résout entièrement, `Refs #n` sinon, exactement selon la liste du récapitulatif accepté ; « Ce qui change » ; « Vérifications » avec ce qui a réellement tourné ;
-   « Pas fait » sans rien omettre ; « Suivis ».
+   « Pas fait » sans rien omettre ; « Suivis ». Si la PR existe déjà (gate 16, reprise), réécrire ce corps et
+   l'appliquer par `gh pr edit <n> --body-file <fichier>` après les garde-fous du point 5.
 4. Titre au format `Thème - Description` des commits.
 5. Garde-fous de `CLAUDE.local.md`, juste avant de créer la PR : termes interdits absents des fichiers
    suivis, des messages de commit, du titre et du corps de PR. Une seule occurrence : arrêt, sans citer le terme.
@@ -192,7 +194,7 @@ nommait (ADR 0024). Commiter.
 ## 16. Gate CI
 
 `gh pr checks <n> --watch`. Un échec : lire le journal (`gh run view <id> --log-failed`), corriger dans la
-branche, commiter, repasser les gates 11 et 13 (sans réimplémenter ni réarchiver), pousser. Deux échecs de suite :
+branche, commiter, repasser les gates 11 et 13 (sans réimplémenter ni réarchiver), pousser, mettre le corps de PR à jour (§ 15.3). Deux échecs de suite :
 arrêt.
 
 ## 17. Merger
@@ -224,17 +226,24 @@ Hors de ce skill, toujours après accord explicite : ouvrir une issue, fermer un
 ## Reprise
 
 `/traiter-issue livrer <changement>…` reprend une livraison mise en attente (« sans livrer ») ou arrêtée par
-une gate. Seulement pour un changement mené par ce skill jusqu'à l'étape 8 : son `questions.md` existe, dans
-`openspec/changes/` ou son archive. Sinon arrêt.
+une gate.
 
-1. Se placer sur la branche de ces changements, ou dans leur worktree s'ils en ont un (`git worktree list`,
-   `EnterWorktree` avec `path`).
-2. Rebâtir le récapitulatif de l'étape 8 depuis `proposal.md` et `questions.md`, en indiquant ce qui est déjà
-   fait (commits, archivage, PR), le présenter et attendre l'accord explicite comme à l'étape 8 : la consigne
-   demande la livraison, elle ne vaut pas accord.
-3. Puis l'étape 9, et reprendre à la première étape non faite. Changement déjà archivé : ni `openspec
-   validate <nom>` (étape 9) ni archivage (étape 14). PR déjà ouverte : pas de `gh pr create`, son numéro par
-   `gh pr view`. Les gates 11 et 13 sont repassées dans tous les cas.
+1. Repérer la branche ou le worktree qui porte ces changements (`git worktree list`, `git branch`, puis
+   `openspec/changes/<nom>/` ou son archive dans chacun ; avant l'accord, ces fichiers ne sont pas commités)
+   et s'y placer (`git switch`, ou `EnterWorktree` avec `path`). Le changement doit avoir été mené par ce
+   skill jusqu'à l'étape 8 : son `questions.md` existe. Sinon arrêt.
+2. PR de la branche, s'il y en a une : `gh pr view --json number,state`. `MERGED` : seulement la fin de
+   l'étape 17 et § Fin. `CLOSED` : arrêt.
+3. Revérifier les numéros des ADR `proposed` de la branche contre `origin/main` (étape 1.5) ; une collision
+   se corrige avant l'accord. Rebâtir le récapitulatif de l'étape 8 depuis `proposal.md` et `questions.md`,
+   en indiquant ce qui est déjà fait (commits, archivage, PR), le présenter et attendre l'accord explicite :
+   la consigne demande la livraison, elle ne vaut pas accord. Une remarque ou une question : changement non
+   archivé, reprendre à l'étape 4 ou 6, puis refaire l'étape 10 pour les tâches touchées ; changement
+   archivé, arrêt, car sa spec est fusionnée et ses ADR sont `accepted` : un nouveau changement s'impose.
+4. Puis l'étape 9, et reprendre à la première étape non faite. Changement déjà archivé : pas de
+   `openspec validate <nom>` (étape 9) ni d'`openspec archive` (étape 14), mais le reste de l'étape 14 s'il
+   manque. PR ouverte : pas de `gh pr create` ; son corps est réécrit (§ 15.3). Les gates 11 et 13 sont
+   repassées dans tous les cas.
 
 ## Fin
 
