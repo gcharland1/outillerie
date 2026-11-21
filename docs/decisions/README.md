@@ -44,4 +44,5 @@ structure de l'app, outil de dev, convention transverse. Un détail d'implément
 | 0021 | [Livrer jusqu'à `main` derrière des gates, après l'accord sur la spec](0021-livrer-jusqu-a-main-derriere-des-gates.md) | superseded by 0024 |
 | 0022 | [Couleurs des boutons : action en bleu, action dangereuse en rouge, le reste neutre](0022-couleurs-des-boutons-action-en-bleu-danger-en-rouge.md) | accepted |
 | 0023 | [Supprimer un compte par anonymisation](0023-supprimer-un-compte-par-anonymisation.md) | accepted |
-| 0024 | [Un seul skill, de l'issue jusqu'à `main`, derrière des gates](0024-un-seul-skill-de-l-issue-jusqu-a-main.md) | accepted |
+| 0024 | [Un seul skill, de l'issue jusqu'à `main`, derrière des gates](0024-un-seul-skill-de-l-issue-jusqu-a-main.md) | superseded by 0025 |
+| 0025 | [Trier les issues par étiquettes et livrer les lots approuvés](0025-trier-les-issues-par-etiquettes-et-livrer-les-lots-approuves.md) | accepted |
