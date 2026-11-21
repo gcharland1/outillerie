@@ -10,8 +10,8 @@ Motivation : [proposal.md](proposal.md) ; comportement : les specs du changement
   sans état serveur (ADR 0006).
 - `catalog.OUT`, `cancel_unstarted_loans` et `cancel_notice` portent déjà la règle du retrait d'un
   contact ou d'un outil : un prêt `OUT` reste, les demandes et acceptations à venir sont annulées.
-- Ordre d'implémentation dans la même branche : `retrait-du-nom-d-utilisateur` (#38, suppression de
-  `user.username`), puis `couleurs-des-boutons-et-liens` (#49, ADR 0022, macro `user_name` de
+- Ordre d'implémentation dans la même branche : `retrait-du-nom-d-utilisateur` (#38, `user.username`
+  retiré du modèle, colonne gardée en base jusqu'à une PR suivante), puis `couleurs-des-boutons-et-liens` (#49, ADR 0022, macro `user_name` de
   `templates/_user_name.html`), puis ce changement.
 
 ## Goals / Non-Goals
@@ -72,8 +72,8 @@ suppression » `<button type="submit" class="button error">`. Le jeton CSRF suit
 ### Schéma et révision Alembic
 
 Modèle : `deleted_at = db.Column(db.DateTime(timezone=True), nullable=True)`, `email` passe à
-`nullable=True`. Une révision (nom de fichier ASCII), chaînée après celle de
-`retrait-du-nom-d-utilisateur` :
+`nullable=True`. Une révision (nom de fichier ASCII), chaînée après `43880597035b` (le changement
+`retrait-du-nom-d-utilisateur` n'a pas de révision) :
 
 - `upgrade` : `add_column("user", deleted_at)`, `alter_column("user", "email", nullable=True)` ;
 - `downgrade` : `UPDATE "user" SET email = 'supprime-' || id || '@invalid' WHERE email IS NULL`,
@@ -81,13 +81,11 @@ Modèle : `deleted_at = db.Column(db.DateTime(timezone=True), nullable=True)`, `
 
 Une seule révision et une seule PR suffisent : ADR 0007 n'impose *expand/contract* qu'à un
 changement incompatible, et les deux opérations sont des relâchements (colonne nullable ajoutée,
-`NOT NULL` retiré), sans passe *contract* à suivre. Cette livraison groupée ne permet pourtant pas de
-revenir à l'image précédente sans `downgrade` (ADR 0017) : #38 supprime `user.username`, que cette
-image mappe encore, et elle ne chargerait plus les comptes (risque de retour arrière de
-`retrait-du-nom-d-utilisateur/design.md`, restauration par le `pg_dump` pris avant le déploiement).
-Et l'image précédente, même ramenée à son schéma par `downgrade`, ignore `deleted_at` : son
-`load_user` rendrait de nouveau valides les sessions encore ouvertes d'un compte supprimé, et les
-comptes supprimés réapparaîtraient dans la recherche et les demandes de contact.
+`NOT NULL` retiré), sans passe *contract* à suivre. L'image précédente tourne donc sur le nouveau
+schéma, et #38 ne supprime pas `user.username` dans cette livraison : un retour arrière sans
+`downgrade` (ADR 0017) charge les comptes. Mais cette image ignore `deleted_at` : jusqu'au
+redéploiement, son `load_user` rendrait de nouveau valides les sessions encore ouvertes d'un compte
+supprimé, et les comptes supprimés réapparaîtraient dans la recherche et les demandes de contact.
 `uq_user_email_lower` reste : un index unique admet plusieurs NULL (comportement par défaut de
 Postgres, `NULLS DISTINCT` ; vérifié par le scénario « Deux suppressions »). `flask db check` vide,
 `docs/schema.md` régénéré (ADR 0009).
@@ -97,7 +95,9 @@ Postgres, `NULLS DISTINCT` ; vérifié par le scénario « Deux suppressions »)
 Dans `POST /profile/delete`, une seule transaction, dans cet ordre :
 
 1. Vérifier nom et mot de passe ; en cas d'échec, réafficher sans rien verrouiller.
-2. `SELECT … FROM "user" WHERE id = :me FOR UPDATE` : premier verrou, avant tout autre.
+2. `SELECT deleted_at FROM "user" WHERE id = :me FOR UPDATE` : premier verrou, avant tout autre.
+   Déjà posé (envoi en double, parti avant que la première suppression ne valide) : `rollback`, puis
+   l'étape 10 sans réanonymiser.
 3. Verrouiller ses outils, puis ses prêts (emprunteur ou prêteur), `FOR UPDATE … ORDER BY id`.
 4. Revérifier l'absence de prêt `OUT` sur les lignes verrouillées ; sinon `rollback` et redirection
    vers `/profile` avec le message de blocage.
@@ -132,6 +132,10 @@ Les écritures qui lient un compte à un autre verrouillent d'abord les lignes `
   la réponse est celle du requirement « Demande qui n'existe plus » (« Cette demande n'est plus en
   attente »), pas un 404 ;
 - `loans.create` : emprunteur et propriétaire, avant le verrou de l'outil ; 404 si l'un a `deleted_at`.
+- `tools.new`, `tools.edit` (POST), `tools.retire`, `tools.restore` : le compte, avant de lire l'outil.
+  Supprimé : `logout_user()` et redirection vers `/login`, comme `POST /profile`. Sans ce verrou, un
+  envoi parti d'un autre onglet pendant la suppression réécrirait la description, les notes ou la
+  photo effacées, ou remettrait en circulation un outil retiré.
 
 Une demande d'emprunt envoyée après la suppression, depuis une page restée ouverte, vers un outil du
 compte supprimé reçoit déjà 404 sans ce verrou : la suppression a retiré l'outil et défait la relation
@@ -171,9 +175,9 @@ Première branche de `user_name(user)` dans `_user_name.html` : si `user.deleted
   l'une, sans rien supprimer pour elle.
 - [Données dans les sauvegardes `pg_dump`, 10 gardées (ADR 0017)] → accepté jusqu'à leur rotation,
   non annoncé à l'utilisateur (`questions.md` #17), consigné dans l'ADR 0023.
-- [Retour à l'image précédente] → impossible sans `downgrade` dans cette livraison groupée, à cause
-  de #38 (section du schéma) ; après un `downgrade`, l'ancienne image, dont `load_user` ignore
-  `deleted_at`, rendrait de nouveau valides les sessions d'un compte supprimé.
+- [Retour à l'image précédente] → elle tourne sur le nouveau schéma (relâchements seulement, section
+  du schéma) mais ignore `deleted_at` : jusqu'au redéploiement, les sessions d'un compte supprimé
+  redeviendraient valides et les comptes supprimés réapparaîtraient dans la recherche. Accepté.
 - [`downgrade` : courriel `supprime-<id>@invalid` déjà pris] → aucune validation de format à
   l'inscription ne l'interdit ; l'`UPDATE` échouerait sur `uq_user_email_lower`, à corriger à la main.
   Improbable, accepté.
@@ -183,8 +187,6 @@ Première branche de `user_name(user)` dans `_user_name.html` : si `user.deleted
 ## Migration Plan
 
 Déploiement ordinaire (ADR 0017) : `flask db upgrade` applique la révision, sans migration de
-données. Retour arrière : celui de `retrait-du-nom-d-utilisateur` (risque de retour arrière de son
-design), livré dans la même image : l'image précédente mappe encore `username` et ne tourne pas sur le
-nouveau schéma ; restauration par le `pg_dump` pris avant le déploiement. Après un `downgrade`,
-l'ancienne image, dont `load_user` ignore `deleted_at`, rendrait de nouveau valides les sessions d'un
-compte supprimé.
+données. Retour arrière : l'image précédente tourne sur le nouveau schéma sans `downgrade`, avec la
+limite de `deleted_at` (Risks) : jusqu'au redéploiement, les sessions d'un compte supprimé
+redeviendraient valides et les comptes supprimés réapparaîtraient dans la recherche.

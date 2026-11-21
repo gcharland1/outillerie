@@ -1,7 +1,7 @@
 """Utilisateurs : suppression du compte
 
 Revision ID: 916cc286d588
-Revises: 99a7a6825085
+Revises: 43880597035b
 Create Date: 2026-11-20 17:38:07.966349
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "916cc286d588"
-down_revision = "99a7a6825085"
+down_revision = "43880597035b"
 branch_labels = None
 depends_on = None
 

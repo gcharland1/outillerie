@@ -2,7 +2,7 @@
 
 ## 1. Schéma
 
-- [x] 1.1 `deleted_at` (`timestamptz` nullable) et `email` nullable dans `models/user.py` ; révision Alembic chaînée après celle de `retrait-du-nom-d-utilisateur`, nom de fichier ASCII, `downgrade` qui remplit `supprime-<id>@invalid` avant de remettre `NOT NULL` ; vérifier `flask db upgrade`, `flask db downgrade -1` (avec un compte au courriel NULL) puis `upgrade` sur la base de test ; `flask db check` vide ; `docs/schema.md` régénéré ; `test_schema.py` adapté s'il le faut
+- [x] 1.1 `deleted_at` (`timestamptz` nullable) et `email` nullable dans `models/user.py` ; révision Alembic chaînée après `43880597035b` (`retrait-du-nom-d-utilisateur` n'a pas de révision), nom de fichier ASCII, `downgrade` qui remplit `supprime-<id>@invalid` avant de remettre `NOT NULL` ; vérifier `flask db upgrade`, `flask db downgrade -1` (avec un compte au courriel NULL) puis `upgrade` sur la base de test ; `flask db check` vide ; `docs/schema.md` régénéré ; `test_schema.py` adapté s'il le faut
 
 ## 2. Page « Mon profil »
 
@@ -31,6 +31,7 @@
 - [x] 5.4 Contacts : 404 pour la page et la demande vers un compte supprimé ; verrous `FOR SHARE` des comptes, triés par id, dans `send_request` et `accept` ; `accept` relit la demande après les verrous des comptes et, si elle n'existe plus, répond comme « Demande qui n'existe plus » (pas de 404) ; tests des scénarios « Demande à un compte supprimé » et « Ancien contact supprimé », et d'une acceptation dont le demandeur a été supprimé entre-temps (redirection avec « Cette demande n'est plus en attente », aucune relation créée)
 - [x] 5.5 `loans.create` : verrous `FOR SHARE` de l'emprunteur et du propriétaire avant celui de l'outil ; test d'une demande d'emprunt envoyée, depuis une page restée ouverte, vers un outil d'un compte supprimé (404, aucune demande enregistrée) ; suite `test_loans.py` toujours verte
 - [x] 5.6 Macro `user_name` : branche « compte supprimé » en tête (texte grisé par une classe de `site.css`, « (supprimé) », sans lien, échappé) ; test du scénario « Compte supprimé » de « Nom d'un utilisateur » dans « Mes prêts »
+- [x] 5.7 Envoi en double de `POST /profile/delete` : `deleted_at` lu sous le verrou du compte, déjà posé → déconnexion sans réanonymiser ; écritures d'outils (`tools.new`, `tools.edit`, `tools.retire`, `tools.restore`) derrière `lock_live_accounts` du compte, supprimé → déconnexion et `/login` ; tests à deux connexions, vérifiés en échec sans ces gardes
 
 ## 6. Fin
 

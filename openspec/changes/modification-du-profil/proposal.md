@@ -51,7 +51,7 @@ limitation des essais de mot de passe, modification du nom, du courriel ou du mo
 
 ## Impact
 
-`models/user.py`, une révision Alembic chaînée après celle de `retrait-du-nom-d-utilisateur`,
+`models/user.py`, une révision Alembic chaînée après `43880597035b`,
 `docs/schema.md` (ADR 0009) ; nouveau module `app/profile.py` (Blueprint `profile`, ADR 0011) et
 gabarits `profile/*` ; `app/__init__.py` (`load_user`), `app/auth.py` (page de déconnexion),
 `app/search.py`, `app/contacts.py`, `app/loans.py` (verrous), `app/photos.py` ; `base.html` (menu),

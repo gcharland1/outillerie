@@ -12,7 +12,14 @@ from app import catalog, photos, profile
 from app.contacts import lock_live_accounts
 from app.extensions import db
 from models import ContactRelation, ContactRequest, Loan, LoanStatus, Tool, ToolCondition, User
-from tests.conftest import USER_PASSWORD, add_loan, add_tool, log_in_with_page_token, login
+from tests.conftest import (
+    USER_PASSWORD,
+    add_loan,
+    add_tool,
+    log_in_with_page_token,
+    login,
+    tool_form,
+)
 from tests.factories import make_contact_relation, make_contact_request, user_id
 
 SAVED = "Votre profil a été enregistré"
@@ -283,7 +290,7 @@ def test_borrowing_in_progress_blocks_the_deletion(mock_app, ids, as_alice):
     assert section_rows(page_text(as_alice.get("/profile"))) == [
         ["Perceuse", "Bob Gagnon", "Prêté"]
     ]
-    assert '<a class="button" href="/loans">Mes prêts</a>' in section
+    assert '<a class="button primary" href="/loans">Mes prêts</a>' in section
 
 
 def test_overdue_loan_blocks_the_deletion(mock_app, ids, as_alice):
@@ -674,15 +681,7 @@ def test_deletion_waits_for_a_handover_then_is_refused(mock_app, ids, as_alice):
 def test_profile_sent_during_a_deletion_writes_nothing(mock_app, ids, monkeypatch):
     first_tab = login(mock_app.test_client(), "alice@example.com")
     second_tab = login(mock_app.test_client(), "alice@example.com")
-    locked, resume = threading.Event(), threading.Event()
-    cancel_unstarted_loans = catalog.cancel_unstarted_loans
-
-    def pausing(*conditions):
-        locked.set()
-        resume.wait(10)
-        return cancel_unstarted_loans(*conditions)
-
-    monkeypatch.setattr(catalog, "cancel_unstarted_loans", pausing)
+    locked, resume = pause_deletion(monkeypatch)
     deletion, deleted = in_thread(lambda: delete_account(first_tab))
     sending, sent = None, []
     try:
@@ -703,6 +702,92 @@ def test_profile_sent_during_a_deletion_writes_nothing(mock_app, ids, monkeypatc
     assert deleted[0].headers["Location"] == "/logged-out?reason=account-deleted"
     assert sent[0].headers["Location"].startswith("/login")
     assert second_tab.get("/profile").headers["Location"].startswith("/login")
+
+
+def pause_deletion(monkeypatch):
+    """Events: set once a deletion holds its locks, then set by the test to let it finish"""
+    locked, resume = threading.Event(), threading.Event()
+    cancel_unstarted_loans = catalog.cancel_unstarted_loans
+
+    def pausing(*conditions):
+        locked.set()
+        resume.wait(10)
+        return cancel_unstarted_loans(*conditions)
+
+    monkeypatch.setattr(catalog, "cancel_unstarted_loans", pausing)
+    return locked, resume
+
+
+def test_deletion_sent_twice_anonymizes_once(mock_app, ids, monkeypatch):
+    first_tab = login(mock_app.test_client(), "alice@example.com")
+    second_tab = login(mock_app.test_client(), "alice@example.com")
+    locked, resume = pause_deletion(monkeypatch)
+    hashes = []
+    generate = profile.generate_password_hash
+
+    def counting(password):
+        hashes.append(password)
+        return generate(password)
+
+    monkeypatch.setattr(profile, "generate_password_hash", counting)
+    first, first_result = in_thread(lambda: delete_account(first_tab))
+    second, second_result = None, []
+    try:
+        assert locked.wait(10)
+        second, second_result = in_thread(lambda: delete_account(second_tab))
+        assert waits_for_a_lock(mock_app, second)
+    finally:
+        resume.set()
+        first.join(10)
+        if second is not None:
+            second.join(10)
+
+    assert len(hashes) == 1
+    for result in (first_result, second_result):
+        assert result[0].headers["Location"] == "/logged-out?reason=account-deleted"
+    assert second_tab.get("/profile").headers["Location"].startswith("/login")
+
+
+@pytest.mark.parametrize(
+    ("send", "is_active"),
+    [
+        (lambda client, tool: client.post("/tools/new", data=tool_form()), True),
+        (lambda client, tool: client.post(f"/tools/{tool}/edit", data=tool_form()), True),
+        (lambda client, tool: client.post(f"/tools/{tool}/retire"), True),
+        (lambda client, tool: client.post(f"/tools/{tool}/restore"), False),
+    ],
+    ids=["new", "edit", "retire", "restore"],
+)
+def test_tool_written_during_a_deletion_writes_nothing(mock_app, ids, monkeypatch, send, is_active):
+    saw = add_tool(
+        mock_app,
+        ids["alice"],
+        "Scie",
+        description="Scie ronde",
+        private_notes="Cave",
+        is_active=is_active,
+    )
+    first_tab = login(mock_app.test_client(), "alice@example.com")
+    second_tab = login(mock_app.test_client(), "alice@example.com")
+    locked, resume = pause_deletion(monkeypatch)
+    deletion, _ = in_thread(lambda: delete_account(first_tab))
+    sending, sent = None, []
+    try:
+        assert locked.wait(10)
+        sending, sent = in_thread(lambda: send(second_tab, saw))
+        assert waits_for_a_lock(mock_app, sending)
+    finally:
+        resume.set()
+        deletion.join(10)
+        if sending is not None:
+            sending.join(10)
+
+    assert sent[0].headers["Location"].startswith("/login")
+    with mock_app.app_context():
+        tools = db.session.scalars(select(Tool).where(Tool.owner_id == ids["alice"])).all()
+        assert [(t.name, t.description, t.private_notes, t.is_active) for t in tools] == [
+            ("Scie", "", None, False)
+        ]
 
 
 # Sessions d'un compte supprimé

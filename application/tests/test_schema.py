@@ -5,10 +5,11 @@ from sqlalchemy.exc import IntegrityError
 
 from app import create_app
 from app.extensions import db
+from models.user import User
 from tests.conftest import app_config
 
 EXPECTED_CONSTRAINT_NAMES = {
-    "user": {"pk_user", "uq_user_email_lower"},
+    "user": {"pk_user", "uq_user_email_lower", "uq_user_username"},
     "tool": {"pk_tool", "fk_tool_owner_id_user", "ix_tool_owner_id", "ck_tool_tool_condition"},
     "tool_photo": {"pk_tool_photo", "fk_tool_photo_tool_id_tool"},
     "loan": {
@@ -91,26 +92,17 @@ def user_columns():
     return {row[0] for row in rows}
 
 
-def test_username_removal_round_trips(migrated_app):
+def test_username_column_stays_in_the_database_but_unmapped(migrated_app):
     with migrated_app.app_context():
-        db.session.execute(
-            text(
-                'INSERT INTO "user" (password, email, first_name, last_name) '
-                "VALUES ('hash', 'alice@example.com', 'Alice', 'Tremblay')"
+        assert "username" in user_columns()
+        assert "username" not in User.__table__.c
+        db.session.add(
+            User(
+                password="hash", email="alice@example.com", first_name="Alice", last_name="Tremblay"
             )
         )
         db.session.commit()
-        user_id = db.session.scalar(text('SELECT id FROM "user"'))
-        db.session.remove()
-
-        flask_migrate.downgrade(revision="43880597035b")
-        assert db.session.scalar(text('SELECT username FROM "user"')) == f"user{user_id}"
-        assert "uq_user_username" in constraint_names("user")
-        db.session.remove()
-
-        flask_migrate.upgrade()
-        assert "username" not in user_columns()
-        assert "uq_user_username" not in constraint_names("user")
+        assert db.session.scalar(text('SELECT username FROM "user"')) is None
 
 
 def test_account_deletion_columns_round_trip(migrated_app):
@@ -126,7 +118,7 @@ def test_account_deletion_columns_round_trip(migrated_app):
         user_ids = db.session.scalars(text('SELECT id FROM "user" ORDER BY id')).all()
         db.session.remove()
 
-        flask_migrate.downgrade(revision="99a7a6825085")
+        flask_migrate.downgrade(revision="43880597035b")
         emails = db.session.scalars(text('SELECT email FROM "user" ORDER BY id')).all()
         assert emails == [f"supprime-{user_id}@invalid" for user_id in user_ids]
         assert "deleted_at" not in user_columns()

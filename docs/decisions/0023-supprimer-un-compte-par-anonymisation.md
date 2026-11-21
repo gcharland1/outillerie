@@ -60,11 +60,10 @@ Règles :
 * Bon, parce que les sessions du compte sont coupées sans table de sessions ni changement de cookie.
 * Bon, parce que la révision est un relâchement (colonne nullable ajoutée, `NOT NULL` retiré), sans
   passe *contract* à suivre.
-* Mauvais, parce que le retour à l'image précédente sans `downgrade` (ADR 0017) n'est pas possible :
-  livrée avec la suppression de `user.username`, que cette image mappe encore, la révision partage
-  son risque de retour arrière (design du changement OpenSpec `retrait-du-nom-d-utilisateur`). Et
-  après un `downgrade`, l'ancienne image, dont `load_user` ignore `deleted_at`, rendrait de nouveau
-  valides les sessions d'un compte supprimé.
+* Mauvais, parce qu'après un retour à l'image précédente sans `downgrade` (ADR 0017), qui tourne sur
+  le nouveau schéma, cette image ignore `deleted_at` : jusqu'au redéploiement, son `load_user`
+  rendrait de nouveau valides les sessions d'un compte supprimé, et les comptes supprimés
+  réapparaîtraient dans la recherche.
 * Mauvais, parce que chaque requête sur des comptes doit penser à exclure `deleted_at` ; un oubli
   rend un compte supprimé visible ou joignable.
 * Mauvais, parce que les données effacées restent dans les sauvegardes `pg_dump` prises avant chaque

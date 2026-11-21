@@ -81,6 +81,15 @@ def test_received_request_is_listed_with_its_actions(mock_app, ids, as_bob):
     assert ">Accepter<" in text and ">Refuser<" in text
 
 
+def test_accept_is_blue_and_refuse_grey(mock_app, ids, as_bob):
+    add_request(mock_app, ids["alice"], ids["bob"])
+
+    text = page_text(as_bob.get("/contacts"))
+
+    assert '<button type="submit" class="button primary">Accepter</button>' in text
+    assert '<button type="submit" class="button">Refuser</button>' in text
+
+
 def test_received_requests_are_listed_oldest_first(mock_app, ids, as_bob):
     add_request(mock_app, ids["carole"], ids["bob"])
     add_request(mock_app, ids["alice"], ids["bob"])

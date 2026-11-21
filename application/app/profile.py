@@ -93,7 +93,11 @@ def delete_account():
 
     me = current_user.id
     # The account first, as every write linking two accounts does, then its tools and loans.
-    db.session.execute(select(User.id).where(User.id == me).with_for_update())
+    deleted_at = db.session.scalar(select(User.deleted_at).where(User.id == me).with_for_update())
+    if deleted_at is not None:
+        # Sent twice: the first deletion is done, the account is not anonymized again.
+        db.session.rollback()
+        return _logged_out_after_deletion()
     db.session.execute(
         select(Tool.id).where(Tool.owner_id == me).order_by(Tool.id).with_for_update()
     )
@@ -130,10 +134,13 @@ def delete_account():
     account.address = None
     account.phone = None
     # A hash in the expected format of a secret thrown away: no password ever matches it.
-    account.password = generate_password_hash(secrets.token_urlsafe(32), method="pbkdf2:sha256")
+    account.password = generate_password_hash(secrets.token_urlsafe(32))
     account.deleted_at = func.now()
     db.session.commit()
+    return _logged_out_after_deletion()
 
+
+def _logged_out_after_deletion():
     logout_user()
     session.clear()
     return redirect(url_for("auth.logged_out", reason="account-deleted"))
