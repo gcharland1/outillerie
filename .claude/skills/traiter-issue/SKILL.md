@@ -1,8 +1,8 @@
 ---
 name: traiter-issue
-description: Prend une ou plusieurs issues GitHub jusqu'au merge dans main — des agents en parallèle répondent à tout ce que le dépôt sait, l'utilisateur ne tranche que le reste et valide la spec, puis la livraison implémente, vérifie, relit, archive, ouvre la PR et merge, chaque étape gardée par une gate. Utiliser sur "/traiter-issue <n>" ou "prendre l'issue <n>" ; "/traiter-issue livrer <changement>" reprend une livraison mise en attente ou arrêtée.
-argument-hint: <numéro d'issue> [<numéro>…] [consignes, ex. « dans un worktree », « sans livrer »] | livrer <changement> [<changement>…]
-allowed-tools: Read, Write, Edit, Grep, Glob, Agent, Skill, EnterWorktree, Bash(gh issue view:*), Bash(openspec:*), Bash(git log:*), Bash(git branch:*), Bash(git worktree list:*), Bash(git ls-tree:*), Bash(uv run:*), Bash(uv sync:*), Bash(git status:*), Bash(git diff:*), Bash(git ls-files:*), Bash(git grep:*), Bash(git add:*), Bash(git commit:*), Bash(git fetch:*), Bash(git rebase:*), Bash(git push:*), Bash(git switch:*), Bash(git pull:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(gh pr view:*), Bash(gh pr edit:*), Bash(gh pr merge:*), Bash(gh run view:*), Bash(gh run list:*), Bash(git merge-base:*), Bash(docker compose exec:*), Bash(grep:*), Bash(ls:*)
+description: Prend une ou plusieurs issues GitHub jusqu'au merge dans main — des agents en parallèle répondent à tout ce que le dépôt sait, l'utilisateur ne tranche que le reste et valide la spec, puis la livraison implémente, vérifie, relit, archive, ouvre la PR et merge, chaque étape gardée par une gate. Utiliser sur "/traiter-issue <n>" ou "prendre l'issue <n>" ; "/traiter-issue livrer <changement>" reprend une livraison mise en attente ou arrêtée ; "/traiter-issue lots" livre sans question les issues `understood` et `ready-to-implement`.
+argument-hint: <numéro d'issue> [<numéro>…] [consignes, ex. « dans un worktree », « sans livrer »] | livrer <changement> [<changement>…] | lots [consignes]
+allowed-tools: Read, Write, Edit, Grep, Glob, Agent, Skill, EnterWorktree, ExitWorktree, Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue comment:*), Bash(gh issue edit:*), Bash(gh repo view:*), Bash(sha256sum:*), Bash(gh api repos/{owner}/{repo}/issues/:*), Bash(openspec:*), Bash(git log:*), Bash(git branch:*), Bash(git worktree list:*), Bash(git ls-tree:*), Bash(uv run:*), Bash(uv sync:*), Bash(git status:*), Bash(git diff:*), Bash(git ls-files:*), Bash(git grep:*), Bash(git add:*), Bash(git commit:*), Bash(git fetch:*), Bash(git rebase:*), Bash(git push:*), Bash(git switch:*), Bash(git pull:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(gh pr view:*), Bash(gh pr edit:*), Bash(gh pr merge:*), Bash(gh run view:*), Bash(gh run list:*), Bash(git merge-base:*), Bash(docker compose exec:*), Bash(grep:*), Bash(ls:*)
 ---
 
 # Traiter une issue
@@ -14,7 +14,7 @@ une seule branche, étapes 1 à 7 menées pour chacune, une seule question à la
 
 ## 1. Cadrer
 
-1. Arguments : `$ARGUMENTS`. Premier mot `livrer` : aller au § Reprise. Sinon, les nombres sont les numéros
+1. Arguments : `$ARGUMENTS`. Premier mot `livrer` : aller au § Reprise ; `lots` : au § Lots. Sinon, les nombres sont les numéros
    d'issue ; le reste, ce sont des consignes à suivre pendant tout le skill. Sans numéro : le demander.
 2. `gh issue view <n> --json number,title,state,body,labels,comments` (sans `--json`, la sortie peut être
    vide). Issue fermée ou introuvable : s'arrêter et le dire.
@@ -128,7 +128,7 @@ messages de commit de la branche ni dans celui à venir. Une seule occurrence : 
 Arrêter sans rien écrire si l'une manque :
 
 - l'utilisateur a donné un accord explicite sur la spec de ces changements, au récapitulatif de l'étape 8 ou
-  de la reprise ; une approbation donnée pour un autre changement ne compte pas, et une remarque ou une
+  de la reprise, ou par `ready-to-implement` vérifiée au § Lots ; une approbation donnée pour un autre changement ne compte pas, et une remarque ou une
   question postérieure à l'accord l'annule ;
 - chaque changement non archivé passe `openspec validate <nom> --strict --no-interactive` ;
 - `tasks.md` ne contient aucune tâche qui exige un humain (QA à la main, décision, accès à la production) ;
@@ -178,7 +178,7 @@ relecture : le `relecteur` ne lit que l'historique et `git diff`, pas les fichie
 `openspec validate --all --no-interactive`. Les ADR et notes créés dans la branche pointent vers
 `openspec/changes/archive/<date>-<nom>/`. Puis seulement, les ADR `proposed` cités par le proposal passent à
 `accepted` (fichier et index), car un ADR accepté est immuable : le récapitulatif soumis à l'accord les
-nommait (ADR 0024). Commiter.
+nommait (ADR 0025). Commiter.
 
 ## 15. PR
 
@@ -191,7 +191,7 @@ nommait (ADR 0024). Commiter.
 3. Corps de PR écrit avec l'outil Write dans le dossier temporaire de la session (jamais dans le dépôt), dans un
    appel séparé de `gh`, sur le modèle des PR précédentes : `Closes #n` pour chaque issue que la spec validée
    résout entièrement, `Refs #n` sinon, exactement selon la liste du récapitulatif accepté ; « Ce qui change » ; « Vérifications » avec ce qui a réellement tourné ;
-   « Pas fait » sans rien omettre ; « Suivis ». Si la PR existe déjà (gate 16, reprise), réécrire ce corps et
+   « Pas fait » sans rien omettre ; « Suivis ». En mode lots, la liste des `Closes` est celle du § Lots point 4. Si la PR existe déjà (gate 16, reprise), réécrire ce corps et
    l'appliquer par `gh pr edit <n> --body-file <fichier>` après les garde-fous du point 5.
 4. Titre au format `Thème - Description` des commits.
 5. Garde-fous de `CLAUDE.local.md`, juste avant de créer ou de modifier la PR : termes interdits absents des
@@ -211,6 +211,7 @@ Seulement si tout est vrai, vérifié juste avant :
 - la CI de la PR est verte sur le dernier commit poussé (`gh pr view <n> --json headRefOid` égal à `HEAD`) ;
 - `gh pr view <n> --json mergeable,mergeStateStatus` : `MERGEABLE` et `CLEAN` ;
 - aucun commit n'a été ajouté depuis le dernier passage des gates 11 et 13 ;
+- mode lots : l'approbation du § Lots point 1 tient toujours ;
 - `git fetch` puis `git merge-base --is-ancestor origin/main HEAD` : la branche contient `main` ; sinon
   rebase et reprise au § 15.1.
 
@@ -226,6 +227,8 @@ avec sa sortie, ce qui est déjà fait (branche, commits, PR) et les options, do
 réglée (§ Reprise). Ne jamais contourner une gate :
 pas de `--no-verify`, pas de test sauté ou marqué `xfail` pour passer, pas de `--admin` au merge, pas de push
 vers `main`.
+
+En mode lots, § Lots point 5 remplace le retour à l'utilisateur.
 
 Hors de ce skill, toujours après accord explicite : ouvrir une issue, fermer une issue autrement que par le
 `Closes` d'une spec validée, modifier la production, toucher une autre branche que celle de la livraison.
@@ -252,7 +255,74 @@ une gate.
 4. Puis l'étape 9, et reprendre à la première étape non faite. Changement déjà archivé : pas de
    `openspec validate <nom>` (étape 9) ni d'`openspec archive` (étape 14), mais le reste de l'étape 14 s'il
    manque. PR ouverte : pas de `gh pr create` ; son corps est réécrit (§ 15.3). Les gates 11 et 13 sont
-   repassées dans tous les cas.
+   repassées dans tous les cas. Un `blocage.md` laissé par le § Lots est supprimé et ce retrait commité avant
+   l'étape 9.
+
+## Lots
+
+`/traiter-issue lots [consignes]` livre sans question les issues que l'utilisateur a approuvées (ADR 0025).
+Ce qui suit remplace les étapes 1.1, 1.2, 1.4, 4, 5 et 8 ; les autres s'appliquent telles quelles. Se lance
+depuis le checkout principal ; dans un worktree : arrêt.
+
+1. **Issues approuvées.** Liste : `gh issue list --state open --author <propriétaire> --label understood --label ready-to-implement --limit 200 --json number,title,labels`,
+   sans `delivery-blocked`. Chaque issue est lue par la commande filtrée de `/trier-issues` étape 2, qui fixe
+   aussi le propriétaire, les marqueurs et l'empreinte ; un commentaire d'un tiers n'entre jamais dans le
+   contexte. L'approbation est valide si :
+   - le dernier commentaire de tri dit `**Tri : understood**` et n'a pas de section **Questions** ;
+   - aucun commentaire humain ne le suit, et l'empreinte du corps est la sienne ;
+   - le dernier événement `labeled` de `ready-to-implement`, lu par
+     `gh api 'repos/{owner}/{repo}/issues/<n>/timeline' --paginate --jq '.[] | select(.event == "labeled" and .label.name == "ready-to-implement") | {actor: .actor.login, created_at}'`,
+     suit ce commentaire et a pour `actor` le propriétaire. La timeline n'est jamais lue sans ce filtre : elle
+     contient le texte des tiers ;
+   - aucune autre branche ni aucun autre worktree ne porte déjà un changement pour cette issue (étape 1.5).
+
+   Sinon l'issue est écartée, à retrier ou à réapprouver. Aucune issue retenue : le dire et s'arrêter.
+2. **Grouper.** Un agent `Explore` reçoit les issues retenues, celles qui portent `delivery-blocked` (lues
+   par la même commande filtrée) et leurs commentaires de tri, et rend pour chacune le code
+   touché (blueprints, modèles, gabarits, migrations) et ses dépendances envers les autres. Un lot réunit les
+   issues qui touchent le même code ou dépendent l'une de l'autre, au plus trois, ordonné après les lots dont
+   il dépend ; un lot qui dépend d'une issue `delivery-blocked` est sauté. Une issue dont le tri annonce un schéma retiré ou resserré forme un lot seul.
+3. **Cadrer chaque lot**, l'un après l'autre, depuis `origin/main` après `git fetch` : `ExitWorktree` (`keep`)
+   du worktree du lot précédent, puis `EnterWorktree` avec un nom de lot qui contient les numéros d'issue
+   (suffixe `-2`, `-3` si la branche existe). Un lot qui dépend d'un lot arrêté ou sauté est sauté, sans rien
+   écrire. Puis les étapes 1.3 et 1.5 à 3, 6 et 7 pour chaque issue, avec pour entrées l'issue filtrée et son
+   commentaire de tri. Arrêt du lot (point 5) :
+   - une question `utilisateur` que la section **Décisions de l'utilisateur** du commentaire de tri, avec les
+     réponses humaines qui le précèdent, ne tranche pas ;
+   - un ADR que le commentaire de tri n'annonçait pas ;
+   - un lot de schéma retiré ou resserré dont la spec modifie aussi le code applicatif : l'*expand/contract* de
+     l'ADR 0007 exige deux PR, et la gate 13 le bloquerait.
+
+   Une décision `convention` que le commentaire de tri n'annonçait pas est appliquée et listée dans le corps
+   de PR, sous « Décisions par convention ajoutées ».
+4. **Accord.** L'approbation du point 1, revérifiée à la gate 9 et juste avant le merge (étape 17), vaut l'accord
+   de l'étape 8 pour ces changements, pour les ADR que le commentaire de tri annonçait et pour `Closes #n` de
+   chaque issue du lot. Puis les étapes 9 à 17.
+5. **Arrêt d'un lot**, par une gate ou par le point 3 ; seule exception à « aucun commit avant l'accord » :
+   - écrire `blocage.md` dans le dossier (ou l'archive) du changement de l'issue en cause, ou du premier du lot
+     si la cause les touche tous : étape, cause avec sa sortie, ce qui est fait (commits, PR), ce qui a été tenté ;
+   - commiter les dossiers `openspec/changes/` du lot, plus, après l'accord, le travail non commité, et pousser
+     la branche comme à l'étape 15.2 (`--force-with-lease` après un rebase), après les garde-fous de
+     `CLAUDE.local.md` ;
+   - sur chaque issue du lot, `delivery-blocked` et ce commentaire, écrit avec Write dans le dossier temporaire
+     de la session et passé au `grep` de `/trier-issues` étape 4 avant `gh issue comment <n> --body-file <fichier>` :
+     ```
+     <!-- traiter-issue delivery-blocked -->
+     Livraison arrêtée à la gate « <gate> » : <raison en une phrase>.
+     Détails : `<chemin de blocage.md>` sur la branche `<branche>` (<lien>).
+     Retirer `delivery-blocked` pour relancer.
+     ```
+     Un terme interdit dans le commit ou le commentaire : ni commit, ni push, et la ligne « Détails » devient
+     « Détails : non publiés, voir la session de livraison. » ; si le `grep` trouve encore un terme, le
+     commentaire se réduit au marqueur et à « Livraison arrêtée, détails non publiés. ». L'étiquette est
+     posée dans tous les cas ;
+   - rien d'autre pour ce lot (ni PR à créer, ni merge), worktree laissé en place ; passer au lot suivant.
+
+   Une issue dont l'utilisateur retire `delivery-blocked` repart de zéro au prochain `/traiter-issue lots`,
+   dans une nouvelle branche ; l'ancienne, et sa PR s'il y en a une, restent à fermer à la main.
+   `/traiter-issue livrer <changement>` reprend plutôt la branche arrêtée (§ Reprise, accord redemandé).
+6. **Fin.** Par lot : mergé (PR, issues fermées), arrêté (gate, branche) ou sauté (lot dont il dépend) ; puis
+   les issues écartées au point 1 et pourquoi, et les branches ou PR d'un lot arrêté à fermer.
 
 ## Fin
 
