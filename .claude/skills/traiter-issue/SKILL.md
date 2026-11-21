@@ -1,7 +1,7 @@
 ---
 name: traiter-issue
 description: Prend une ou plusieurs issues GitHub jusqu'au merge dans main — des agents en parallèle répondent à tout ce que le dépôt sait, l'utilisateur ne tranche que le reste et valide la spec, puis la livraison implémente, vérifie, relit, archive, ouvre la PR et merge, chaque étape gardée par une gate. Utiliser sur "/traiter-issue <n>" ou "prendre l'issue <n>".
-argument-hint: <numéro d'issue> [<numéro>…] [consignes, ex. « dans un worktree », « sans livrer »]
+argument-hint: <numéro d'issue> [<numéro>…] [consignes, ex. « dans un worktree », « sans livrer »] | livrer <changement> [<changement>…]
 allowed-tools: Read, Write, Edit, Grep, Glob, Agent, Skill, EnterWorktree, Bash(gh issue view:*), Bash(openspec:*), Bash(git log:*), Bash(git branch:*), Bash(git worktree list:*), Bash(git ls-tree:*), Bash(uv run:*), Bash(uv sync:*), Bash(git status:*), Bash(git diff:*), Bash(git ls-files:*), Bash(git grep:*), Bash(git add:*), Bash(git commit:*), Bash(git fetch:*), Bash(git rebase:*), Bash(git push:*), Bash(git switch:*), Bash(git pull:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(gh pr view:*), Bash(gh pr merge:*), Bash(gh run view:*), Bash(gh run list:*), Bash(git merge-base:*), Bash(docker compose exec:*), Bash(grep:*), Bash(ls:*)
 ---
 
@@ -15,7 +15,9 @@ une seule branche, étapes 1 à 7 menées pour chacune, une seule question à la
 ## 1. Cadrer
 
 1. Arguments : `$ARGUMENTS`. Les nombres sont les numéros d'issue ; le reste, ce sont des consignes
-   à suivre pendant tout le skill. Sans numéro : le demander.
+   à suivre pendant tout le skill. Sans numéro : le demander. `livrer <changement>…` reprend une livraison
+   mise en attente (« sans livrer ») ou arrêtée par une gate : aller directement à l'étape 9, depuis la branche
+   de ces changements.
 2. `gh issue view <n> --json number,title,state,body,labels,comments` (sans `--json`, la sortie peut être
    vide). Issue fermée ou introuvable : s'arrêter et le dire.
 3. Choisir un nom de changement en kebab-case français.
@@ -109,7 +111,7 @@ Récapitulatif court :
 
 Terminer par : « Valider la spec pour lancer la livraison jusqu'à `main`. » Puis attendre. Seul un accord
 explicite sur ces changements ouvre l'étape 9 ; une remarque ou une question reprend à l'étape 4 ou 6.
-Consigne « sans livrer » : s'arrêter ici.
+Consigne « sans livrer » : s'arrêter ici ; `/traiter-issue livrer <changement>…` reprendra à l'étape 9.
 
 # Livraison
 
@@ -121,7 +123,8 @@ ci-dessous la font respecter. Chacune est un arrêt dur, pas un avertissement, e
 
 Arrêter sans rien écrire si l'une manque :
 
-- l'utilisateur a donné un accord explicite sur la spec de ces changements à l'étape 8 ; une approbation
+- l'utilisateur a donné un accord explicite sur la spec de ces changements à l'étape 8 et, pour une reprise, demandé
+  la livraison ; une approbation
   donnée pour un autre changement ne compte pas, et une remarque ou une question postérieure à l'accord
   l'annule ;
 - chaque changement passe `openspec validate <nom> --strict --no-interactive` ;
