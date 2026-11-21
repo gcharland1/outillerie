@@ -118,6 +118,10 @@ Mène tous les changements validés jusqu'au merge dans `main`. **Merger `main`,
 déploie chaque commit vert de `main` (ADR 0017). GitHub n'exige pas la CI pour merger : seules les gates
 ci-dessous la font respecter. Chacune est un arrêt dur, pas un avertissement, et remplace toute question.
 
+Avant chaque commit et chaque push, garde-fous de `CLAUDE.local.md` : `git grep -iEf .claude/forbidden-terms.local`
+vide, et aucun terme interdit dans les messages de commit de la branche ni dans celui à venir. Une seule
+occurrence : arrêt, sans citer le terme.
+
 ## 9. Préconditions (gate d'entrée)
 
 Arrêter sans rien écrire si l'une manque :
@@ -178,7 +182,9 @@ nommait (ADR 0024). Commiter.
 ## 15. PR
 
 1. `git fetch` ; si `origin/main` a avancé, `git rebase origin/main`, puis repasser les gates 11 et 13. Un
-   conflit qui touche le comportement : arrêt.
+   conflit qui touche le comportement : arrêt. Puis revérifier les numéros des ADR créés par la branche, quel
+   que soit leur `status`, contre `origin/main` et le travail en cours (étape 1.5) : une collision se corrige
+   par renumérotation (fichier, index, renvois), commitée avant le push.
 2. `git push -u origin <branche>:<branche>` ; après un rebase d'une branche déjà poussée,
    `git push --force-with-lease origin <branche>:<branche>`. Jamais vers `main`.
 3. Corps de PR écrit avec l'outil Write dans le dossier temporaire de la session (jamais dans le dépôt), dans un
@@ -187,8 +193,8 @@ nommait (ADR 0024). Commiter.
    « Pas fait » sans rien omettre ; « Suivis ». Si la PR existe déjà (gate 16, reprise), réécrire ce corps et
    l'appliquer par `gh pr edit <n> --body-file <fichier>` après les garde-fous du point 5.
 4. Titre au format `Thème - Description` des commits.
-5. Garde-fous de `CLAUDE.local.md`, juste avant de créer la PR : termes interdits absents des fichiers
-   suivis, des messages de commit, du titre et du corps de PR. Une seule occurrence : arrêt, sans citer le terme.
+5. Garde-fous de `CLAUDE.local.md`, juste avant de créer ou de modifier la PR : termes interdits absents des
+   fichiers suivis, des messages de commit, du titre et du corps de PR. Une seule occurrence : arrêt, sans citer le terme.
 6. Si aucune PR n'existe : `gh pr create --base main --title "<titre>" --body-file <fichier>`.
 
 ## 16. Gate CI
