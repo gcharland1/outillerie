@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-11-20
 decision-makers: Gabriel Charland
 ---
@@ -12,7 +12,7 @@ L'issue #46 permet à un utilisateur de supprimer son compte : ses données pers
 mais l'historique des prêts de ses anciens partenaires doit rester lisible, avec son nom suivi de
 « (supprimé) ». Aucune clé étrangère vers `user` n'a d'`ondelete`, et un outil prêté ne peut pas être
 supprimé (spec `prets`, « Historique des prêts conservé »). La session vit dans un cookie signé, sans
-état serveur (ADR 0006). Changement OpenSpec : `openspec/changes/modification-du-profil/`
+état serveur (ADR 0006). Changement OpenSpec : `openspec/changes/archive/2026-11-20-modification-du-profil/`
 (`questions.md` #4 à #8, #15, #17).
 
 ## Options considérées

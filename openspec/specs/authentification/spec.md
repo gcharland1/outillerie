@@ -10,7 +10,8 @@ volontairement ou après une période d'inactivité, sans exposer son mot de pas
 Le système MUST refuser de créer un compte avec un courriel déjà utilisé par un autre compte, sans
 égard à la casse ni aux espaces autour, et l'indiquer sur la page d'inscription. Le message révèle
 qu'un compte utilise ce courriel : la protection contre l'énumération des comptes ne vaut que pour
-la connexion (ADR 0020).
+la connexion (ADR 0020). Le courriel d'un compte supprimé est effacé (ADR 0023) : il est libre, et
+le nouveau compte n'a aucun lien avec l'ancien.
 
 #### Scenario: Courriel déjà utilisé
 - **WHEN** un compte existe avec le courriel `alice@example.com`
@@ -23,6 +24,11 @@ la connexion (ADR 0020).
 - **AND** un visiteur soumet le formulaire d'inscription avec le courriel « ␠alice@example.com␠ »
 - **THEN** aucun compte n'est créé
 - **AND** la page d'inscription affiche « Le courriel est déjà utilisé »
+
+#### Scenario: Courriel d'un compte supprimé
+- **WHEN** Alice, inscrite avec `alice@example.com`, a supprimé son compte
+- **AND** un visiteur s'inscrit avec `alice@example.com`
+- **THEN** un nouveau compte est créé, sans les contacts, outils ni prêts de l'ancien
 
 ### Requirement: Création de compte
 Le système SHALL créer un compte à partir d'un courriel, d'un mot de passe, d'un prénom et d'un
@@ -56,7 +62,7 @@ Le système SHALL ouvrir une session pour l'utilisateur qui soumet sur `/login` 
 mot de passe valides, puis le rediriger vers la page d'accueil. Le courriel est comparé sans égard
 à la casse ni aux espaces autour. La réponse à des identifiants invalides MUST NOT révéler, ni par
 son contenu ni par son délai, si le courriel a un compte ; elle réaffiche le courriel saisi, jamais
-le mot de passe.
+le mot de passe. Un compte supprimé MUST NOT ouvrir de session.
 
 #### Scenario: Identifiants valides
 - **WHEN** un utilisateur soumet son courriel et son mot de passe corrects
@@ -82,6 +88,11 @@ le mot de passe.
 - **WHEN** un visiteur soumet `alice` au lieu de son courriel
 - **THEN** aucune session n'est ouverte et la page affiche « Le courriel ou le mot de passe est invalide »
 
+#### Scenario: Compte supprimé
+- **WHEN** Alice a supprimé son compte et soumet son ancien courriel et son ancien mot de passe
+- **THEN** aucune session n'est ouverte
+- **AND** la page affiche « Le courriel ou le mot de passe est invalide », comme pour un courriel inconnu
+
 ### Requirement: Déconnexion
 Le système SHALL fermer la session de l'utilisateur sur une requête `POST /logout`, puis le
 rediriger vers la page de déconnexion avec le message « Vous êtes déconnecté ». La déconnexion
@@ -104,7 +115,8 @@ MUST NOT être possible par une requête `GET`.
 ### Requirement: Page de déconnexion
 Le système SHALL servir sur `GET /logged-out` une page qui confirme la fin de la session, avec un
 lien vers la connexion. Message : « Vous êtes déconnecté » par défaut ; pour le motif `inactivity`,
-« Votre session a expiré après N minutes d'inactivité », N étant la durée d'expiration en vigueur.
+« Votre session a expiré après N minutes d'inactivité », N étant la durée d'expiration en vigueur ;
+pour le motif `account-deleted`, « Votre compte a été supprimé ».
 Un utilisateur encore connecté MUST y être redirigé vers `/` sans être déconnecté.
 
 #### Scenario: Page après une déconnexion
@@ -114,6 +126,11 @@ Un utilisateur encore connecté MUST y être redirigé vers `/` sans être déco
 #### Scenario: Page après une expiration
 - **WHEN** un visiteur ouvre `/logged-out?reason=inactivity`
 - **THEN** la page affiche « Votre session a expiré après 30 minutes d'inactivité » et un lien vers `/login`
+
+#### Scenario: Page après la suppression du compte
+- **WHEN** un visiteur ouvre `/logged-out?reason=account-deleted`
+- **THEN** la page affiche « Votre compte a été supprimé » et un lien vers `/login`
+- **AND** elle n'affiche pas « Vous êtes déconnecté »
 
 #### Scenario: Durée affichée selon la configuration
 - **WHEN** la durée d'expiration est configurée à 15 minutes et un visiteur ouvre `/logged-out?reason=inactivity`
@@ -198,3 +215,16 @@ le prénom suivi du nom de l'utilisateur avec un bouton « Me déconnecter » à
 - **WHEN** Alice Tremblay, connectée, ouvre une page du site
 - **THEN** la navigation affiche « Alice Tremblay » et le bouton « Me déconnecter »
 - **AND** elle n'affiche ni « Connexion » ni « Inscription »
+
+### Requirement: Sessions d'un compte supprimé
+Toute session ouverte d'un compte supprimé, dans n'importe quel navigateur, MUST être traitée comme
+celle d'un visiteur dès sa requête suivante, sans attendre son expiration (ADR 0023).
+
+#### Scenario: Session ouverte dans un autre navigateur
+- **WHEN** Alice est connectée sur son ordinateur et sur son téléphone
+- **AND** elle supprime son compte depuis son ordinateur
+- **THEN** la requête suivante de son téléphone vers une page réservée la redirige vers `/login`
+
+#### Scenario: Cookie copié
+- **WHEN** une copie du cookie de session d'Alice est renvoyée après la suppression de son compte, avant 30 minutes
+- **THEN** le système la traite comme un visiteur

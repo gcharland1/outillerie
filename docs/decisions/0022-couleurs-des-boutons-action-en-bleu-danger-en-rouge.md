@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-11-20
 decision-makers: Gabriel Charland
 ---
@@ -12,7 +12,7 @@ L'ADR 0019 a mis les actions positives en bleu et tout le reste en neutre, sans 
 notait déjà qu'une action destructrice n'était plus signalée par sa couleur. L'issue #49, ouverte après son
 merge, demande l'inverse : les actions dangereuses en rouge, les actions courantes (« Rechercher »,
 « Filtrer », « Emprunter ») en bleu, les autres en gris. Remplace 0019.
-Changement OpenSpec : `openspec/changes/couleurs-des-boutons-et-liens/`.
+Changement OpenSpec : `openspec/changes/archive/2026-11-20-couleurs-des-boutons-et-liens/`.
 
 ## Options considérées
 

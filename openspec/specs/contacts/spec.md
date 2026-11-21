@@ -31,7 +31,8 @@ Les pages et actions de contact MUST exiger une session ouverte : un visiteur es
 ### Requirement: Envoi d'une demande de contact
 Un utilisateur connecté SHALL pouvoir envoyer une demande de contact à un autre compte. Une
 demande existe tant que le destinataire n'y a pas répondu. Entre deux voisins, il MUST exister au
-plus une demande, dans un sens ou dans l'autre.
+plus une demande, dans un sens ou dans l'autre. Une demande à un compte supprimé (ADR 0023) MUST
+être refusée par une réponse 404, sans rien enregistrer.
 
 #### Scenario: Demande envoyée
 - **WHEN** Alice envoie une demande à Bob
@@ -57,6 +58,12 @@ plus une demande, dans un sens ou dans l'autre.
 - **AND** Alice soumet une demande à Bob
 - **THEN** aucune nouvelle demande n'est enregistrée
 - **AND** Alice est redirigée vers « Mes contacts », où la demande de Bob attend sa réponse
+
+#### Scenario: Demande à un compte supprimé
+- **WHEN** Bob a supprimé son compte
+- **AND** Alice soumet une demande à Bob, par exemple depuis une page de résultats ouverte avant la suppression
+- **THEN** le système répond 404
+- **AND** aucune demande n'est enregistrée
 
 ### Requirement: Demandes reçues
 La page « Mes contacts » SHALL lister les demandes reçues de l'utilisateur, de la plus
@@ -226,7 +233,8 @@ portant le total de ses demandes de contact en attente et du nombre de la pastil
 La page d'un contact SHALL afficher en titre son prénom et son nom (« Bob Gagnon »), puis ses
 outils. Elle MUST NOT afficher son courriel, son adresse ni son
 téléphone. Elle exige une session ouverte ; pour un compte qui n'est pas un contact de
-l'utilisateur, l'utilisateur lui-même ou un compte inexistant, le système MUST répondre 404.
+l'utilisateur, l'utilisateur lui-même, un compte supprimé ou un compte inexistant, le système MUST
+répondre 404.
 
 #### Scenario: Page d'un contact
 - **WHEN** Alice et Bob Gagnon sont en contact et Alice ouvre la page de Bob
@@ -244,6 +252,11 @@ l'utilisateur, l'utilisateur lui-même ou un compte inexistant, le système MUST
 
 #### Scenario: Sa propre page
 - **WHEN** Alice demande la page de contact de son propre compte
+- **THEN** le système répond 404
+
+#### Scenario: Ancien contact supprimé
+- **WHEN** Alice et Bob étaient en contact et Bob a supprimé son compte
+- **AND** Alice demande la page de Bob
 - **THEN** le système répond 404
 
 #### Scenario: Visiteur
