@@ -31,6 +31,7 @@ Les variables à fournir sont dans `.env.example` ; ne jamais lire ni afficher `
 
 Pour une issue GitHub, de bout en bout : `/traiter-issue <n>` mène les étapes 1 à 3 ; une fois la spec
 validée, il enchaîne les étapes 4 à 6, puis la PR, la CI et le merge, derrière des gates (ADR 0024).
+`/traiter-issue livrer <changement>` reprend une livraison mise en attente ou arrêtée par une gate.
 
 Les ADR `accepted` dans `docs/decisions/` sont des contraintes : ne pas les contourner,
 en écrire un nouveau qui les remplace. Index : @docs/decisions/README.md

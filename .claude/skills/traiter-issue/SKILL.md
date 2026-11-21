@@ -15,9 +15,7 @@ une seule branche, étapes 1 à 7 menées pour chacune, une seule question à la
 ## 1. Cadrer
 
 1. Arguments : `$ARGUMENTS`. Les nombres sont les numéros d'issue ; le reste, ce sont des consignes
-   à suivre pendant tout le skill. Sans numéro : le demander. `livrer <changement>…` reprend une livraison
-   mise en attente (« sans livrer ») ou arrêtée par une gate : aller directement à l'étape 9, depuis la branche
-   de ces changements.
+   à suivre pendant tout le skill. Sans numéro : le demander. Consigne `livrer <changement>…` : voir § Reprise.
 2. `gh issue view <n> --json number,title,state,body,labels,comments` (sans `--json`, la sortie peut être
    vide). Issue fermée ou introuvable : s'arrêter et le dire.
 3. Choisir un nom de changement en kebab-case français.
@@ -111,7 +109,7 @@ Récapitulatif court :
 
 Terminer par : « Valider la spec pour lancer la livraison jusqu'à `main`. » Puis attendre. Seul un accord
 explicite sur ces changements ouvre l'étape 9 ; une remarque ou une question reprend à l'étape 4 ou 6.
-Consigne « sans livrer » : s'arrêter ici ; `/traiter-issue livrer <changement>…` reprendra à l'étape 9.
+Consigne « sans livrer » : s'arrêter ici ; `/traiter-issue livrer <changement>…` reprendra (§ Reprise).
 
 # Livraison
 
@@ -123,11 +121,10 @@ ci-dessous la font respecter. Chacune est un arrêt dur, pas un avertissement, e
 
 Arrêter sans rien écrire si l'une manque :
 
-- l'utilisateur a donné un accord explicite sur la spec de ces changements à l'étape 8 et, pour une reprise, demandé
-  la livraison ; une approbation
-  donnée pour un autre changement ne compte pas, et une remarque ou une question postérieure à l'accord
-  l'annule ;
-- chaque changement passe `openspec validate <nom> --strict --no-interactive` ;
+- l'utilisateur a donné un accord explicite sur la spec de ces changements, au récapitulatif de l'étape 8 ou
+  de la reprise ; une approbation donnée pour un autre changement ne compte pas, et une remarque ou une
+  question postérieure à l'accord l'annule ;
+- chaque changement non archivé passe `openspec validate <nom> --strict --no-interactive` ;
 - `tasks.md` ne contient aucune tâche qui exige un humain (QA à la main, décision, accès à la production) ;
   sinon arrêt : la spec est à corriger avant l'accord (étape 6) ;
 - la branche porte cette livraison et rien d'autre : `git log origin/main..HEAD` ne montre que des commits
@@ -216,12 +213,28 @@ worktree en place. Vérifier avec
 ## Arrêt
 
 Une gate qui échoue arrête tout : ni push, ni PR, ni merge de plus. Rendre à l'utilisateur l'étape, la cause
-avec sa sortie, ce qui est déjà fait (branche, commits, PR) et les options. Ne jamais contourner une gate :
+avec sa sortie, ce qui est déjà fait (branche, commits, PR) et les options, dont la reprise une fois la cause
+réglée (§ Reprise). Ne jamais contourner une gate :
 pas de `--no-verify`, pas de test sauté ou marqué `xfail` pour passer, pas de `--admin` au merge, pas de push
 vers `main`.
 
 Hors de ce skill, toujours après accord explicite : ouvrir une issue, fermer une issue autrement que par le
 `Closes` d'une spec validée, modifier la production, toucher une autre branche que celle de la livraison.
+
+## Reprise
+
+`/traiter-issue livrer <changement>…` reprend une livraison mise en attente (« sans livrer ») ou arrêtée par
+une gate. Seulement pour un changement mené par ce skill jusqu'à l'étape 8 : son `questions.md` existe, dans
+`openspec/changes/` ou son archive. Sinon arrêt.
+
+1. Se placer sur la branche de ces changements, ou dans leur worktree s'ils en ont un (`git worktree list`,
+   `EnterWorktree` avec `path`).
+2. Rebâtir le récapitulatif de l'étape 8 depuis `proposal.md` et `questions.md`, en indiquant ce qui est déjà
+   fait (commits, archivage, PR), le présenter et attendre l'accord explicite comme à l'étape 8 : la consigne
+   demande la livraison, elle ne vaut pas accord.
+3. Puis l'étape 9, et reprendre à la première étape non faite. Changement déjà archivé : ni `openspec
+   validate <nom>` (étape 9) ni archivage (étape 14). PR déjà ouverte : pas de `gh pr create`, son numéro par
+   `gh pr view`. Les gates 11 et 13 sont repassées dans tous les cas.
 
 ## Fin
 
