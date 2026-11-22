@@ -11,7 +11,34 @@ permissions:
   contents: read
 
 jobs:
+  # On a push to main, tells tests and specs whether the PR already tested this tree (ADR 0026).
+  already-tested:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      tested: ${{ steps.proof.outputs.tested }}
+    steps:
+      - name: Checkout
+        if: github.event_name == 'push'
+        uses: actions/checkout@v4
+
+      - name: Look for the PR run that tested this tree
+        id: proof
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            python3 deploiement/already_tested.py
+          else
+            echo "tested=false" >> "$GITHUB_OUTPUT"
+          fi
+
   tests:
+    needs: already-tested
+    # Runs even if already-tested failed: a skipped required check would count as passed.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
 
     services:
@@ -38,21 +65,25 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
+        if: needs.already-tested.outputs.tested != 'true'
         uses: actions/setup-python@v5
         with:
           python-version-file: application/.python-version
 
       - name: Install uv
+        if: needs.already-tested.outputs.tested != 'true'
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
           cache-dependency-glob: application/uv.lock
 
       - name: Install dependencies
+        if: needs.already-tested.outputs.tested != 'true'
         working-directory: application
         run: uv sync --locked
 
       - name: Lint
+        if: needs.already-tested.outputs.tested != 'true'
         working-directory: application
         run: |
           uv run --locked ruff check . ../deploiement
@@ -60,6 +91,7 @@ jobs:
 
       # Runs first, on a database that has never seen btree_gist or any table.
       - name: Check migrations
+        if: needs.already-tested.outputs.tested != 'true'
         working-directory: application
         run: |
           uv run --locked flask db upgrade
@@ -68,29 +100,36 @@ jobs:
           uv run --locked flask db check
 
       - name: Run unit tests
+        if: needs.already-tested.outputs.tested != 'true'
         working-directory: application
         run: uv run --locked pytest
 
       - name: Run deployment script tests
+        if: needs.already-tested.outputs.tested != 'true'
         working-directory: application
         run: uv run --locked pytest ../deploiement/tests
 
       - name: Check schema diagram
+        if: needs.already-tested.outputs.tested != 'true'
         working-directory: application
         run: uv run --locked paracelsus inject ../docs/schema.md --check
 
   specs:
+    needs: already-tested
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up Node
+        if: needs.already-tested.outputs.tested != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
       - name: Validate OpenSpec specs
+        if: needs.already-tested.outputs.tested != 'true'
         env:
           OPENSPEC_TELEMETRY: 0
         run: npx -y @fission-ai/openspec@1.14.3 validate --all --no-interactive

@@ -115,8 +115,10 @@ Consigne « sans livrer » : s'arrêter ici ; `/traiter-issue livrer <changement
 # Livraison
 
 Mène tous les changements validés jusqu'au merge dans `main`. **Merger `main`, c'est déployer** : le serveur
-déploie chaque commit vert de `main` (ADR 0017). GitHub n'exige pas la CI pour merger : seules les gates
-ci-dessous la font respecter. Chacune est un arrêt dur, pas un avertissement, et remplace toute question.
+déploie chaque commit vert de `main` (ADR 0017). Le ruleset de `main` exige une PR et les checks `tests` et
+`specs`, mais pas une branche à jour (`strict: false`), et un admin peut le contourner (ADR 0026) : seules les
+gates ci-dessous imposent la branche à jour et interdisent le contournement. Chacune est un arrêt dur, pas un
+avertissement, et remplace toute question.
 
 Avant chaque commit et chaque push, garde-fous de `CLAUDE.local.md`, avec le `.claude/forbidden-terms.local` du
 checkout principal (premier chemin de `git worktree list` ; un worktree n'a pas ce fichier non versionné,
@@ -218,7 +220,10 @@ Seulement si tout est vrai, vérifié juste avant :
 Alors `gh pr merge <n> --merge`. Hors worktree : `git switch main && git pull --ff-only`. Dans un worktree,
 `main` est extrait par le dépôt principal et `git switch main` y échoue : seulement `git fetch`, et laisser le
 worktree en place. Vérifier avec
-`gh run list --branch main --limit 1` que la CI de `main` démarre sur le commit de merge ; ne pas attendre le déploiement.
+`gh run list --branch main --event push --limit 1` que la CI de `main` tourne sur le commit de merge, puis
+`gh run watch <id> --exit-status` : le run réussit, et le journal de son job `already-tested` dit `tested=true`
+(`gh run view <id> --log | grep "tested="`), donc la suite n'a pas été rejouée (ADR 0026) ; `tested=false`
+n'est pas un échec, mais se signale dans le récapitulatif. Ne pas attendre le déploiement.
 
 ## Arrêt
 
