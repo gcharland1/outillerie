@@ -3,6 +3,17 @@
 
 {% block content %}
 <h2>Mon profil</h2>
+{% if not current_user.email_confirmed %}
+<section class="card">
+    <p>Votre courriel n'est pas confirmé. Confirmez-le avec le lien reçu à {{ current_user.email }} pour emprunter et accepter des demandes.</p>
+    <form action="{{ url_for('profile.resend_confirmation') }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="actions">
+            <button type="submit" class="button primary">Renvoyer le courriel</button>
+        </div>
+    </form>
+</section>
+{% endif %}
 <section class="card">
     <header>
         <h3>{{ user_name(current_user) }}</h3>

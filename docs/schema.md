@@ -61,6 +61,8 @@ erDiagram
     VARCHAR(250) address "nullable"
     VARCHAR(20) phone "nullable"
     DATETIME deleted_at "nullable"
+    DATETIME email_confirmed_at "nullable"
+    DATETIME email_confirmation_sent_at "nullable"
   }
 
   user ||--o| contact_relation : user_a_id

@@ -1,5 +1,6 @@
 """The user's own account: address and phone, and its deletion by anonymization (ADR 0023)."""
 
+import math
 import re
 import secrets
 from typing import NamedTuple
@@ -10,7 +11,7 @@ from sqlalchemy import delete, exists, func, or_, select, update
 from sqlalchemy.orm import joinedload
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from app import catalog, loans, photos, text_search
+from app import catalog, email_confirmation, loans, photos, text_search
 from app.extensions import db
 from models.contact import ContactRelation, ContactRequest
 from models.loan import Loan
@@ -37,6 +38,13 @@ class LoanInProgress(NamedTuple):
     tool: Tool
     other: User
     status: str
+
+
+@bp.app_context_processor
+def inject_email_to_confirm():
+    """1 while the logged-in user has not confirmed their email, for the menu's badge"""
+    unconfirmed = current_user.is_authenticated and not current_user.email_confirmed
+    return {"email_to_confirm": 1 if unconfirmed else 0}
 
 
 @bp.route("")
@@ -68,6 +76,37 @@ def save():
         logout_user()
         return redirect(url_for("auth.login"))
     flash(SAVED, "success")
+    return redirect(url_for("profile.show"))
+
+
+@bp.route("/courriel/renvoyer", methods=["POST"])
+@login_required
+def resend_confirmation():
+    # Locked until commit: of two resends at once, only one sends.
+    account = db.session.scalar(
+        select(User)
+        .where(User.id == current_user.id, User.deleted_at.is_(None))
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if account is None:
+        logout_user()
+        return redirect(url_for("auth.login"))
+    if account.email_confirmed:
+        db.session.rollback()
+        flash(email_confirmation.ALREADY_CONFIRMED)
+        return redirect(url_for("profile.show"))
+    now = db.session.scalar(select(func.now()))
+    sent_at = account.email_confirmation_sent_at
+    if sent_at is not None and now - sent_at < email_confirmation.RESEND_DELAY:
+        db.session.rollback()
+        remaining = email_confirmation.RESEND_DELAY - (now - sent_at)
+        flash(email_confirmation.TOO_SOON.format(minutes=math.ceil(remaining.total_seconds() / 60)))
+        return redirect(url_for("profile.show"))
+    account.email_confirmation_sent_at = now
+    db.session.commit()
+    email_confirmation.send_link(account)
+    flash(email_confirmation.SENT.format(email=account.email), "success")
     return redirect(url_for("profile.show"))
 
 

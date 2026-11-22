@@ -17,8 +17,13 @@ def make_tool(owner_id, name="Perceuse", description="Perceuse sans fil", **fiel
 
 
 def make_user(email, **fields):
-    """An unsaved account whose password value is not a real hash"""
-    fields = {"first_name": "Prénom", "last_name": "Nom", **fields}
+    """An unsaved, confirmed account whose password value is not a real hash"""
+    fields = {
+        "first_name": "Prénom",
+        "last_name": "Nom",
+        "email_confirmed_at": db.func.now(),
+        **fields,
+    }
     return User(password="hash", email=email, **fields)
 
 
