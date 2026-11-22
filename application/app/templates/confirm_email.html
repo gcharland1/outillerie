@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row is-center landing">
+    <div class="col-12 col-8-md card">
+        <header>
+            <h3>Confirmer mon courriel</h3>
+        </header>
+        {% if error %}
+        <p>{{ error }}</p>
+        {% else %}
+        <form action="{{ url_for('auth.confirm_email') }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="token" value="{{ token }}">
+            <div class="actions">
+                <button type="submit" class="button primary">Confirmer mon courriel</button>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

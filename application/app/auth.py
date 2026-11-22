@@ -2,6 +2,7 @@ from flask import (
     Blueprint,
     current_app,
     flash,
+    make_response,
     redirect,
     render_template,
     request,
@@ -9,9 +10,10 @@ from flask import (
     url_for,
 )
 from flask_login import current_user, login_user, logout_user
-from sqlalchemy import func
+from sqlalchemy import func, update
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from app import email_confirmation
 from app.extensions import db
 from models.user import User
 
@@ -41,11 +43,14 @@ def register():
             first_name=first_name,
             last_name=last_name,
             email=email,
+            email_confirmation_sent_at=func.now(),
         )
 
         db.session.add(new_user)
         db.session.commit()
+        email_confirmation.send_link(new_user)
 
+        flash(f"Compte créé. Un courriel de confirmation a été envoyé à {email}.", "success")
         return redirect(url_for("auth.login"))
 
     return render_template("sign_up.html")
@@ -73,6 +78,43 @@ def login():
 def _account_with(email):
     """The account of this email regardless of case, as the uq_user_email_lower index compares"""
     return User.query.filter(func.lower(User.email) == func.lower(email)).first()
+
+
+@bp.route("/confirmer-courriel/<token>")
+def confirm_email_page(token):
+    account, error = email_confirmation.account_of(token)
+    return _render_confirm_email(token if account else None, error)
+
+
+@bp.route("/confirmer-courriel", methods=["POST"])
+def confirm_email():
+    # The link's account, never the session's; confirming opens no session.
+    account, error = email_confirmation.account_of(request.form.get("token", ""))
+    if account is None:
+        return _render_confirm_email(None, error)
+    db.session.execute(
+        update(User)
+        .where(
+            User.id == account.id,
+            func.lower(User.email) == func.lower(account.email),
+            User.deleted_at.is_(None),
+            User.email_confirmed_at.is_(None),
+        )
+        .values(email_confirmed_at=func.now())
+        .execution_options(synchronize_session=False)
+    )
+    db.session.commit()
+    flash(email_confirmation.CONFIRMED, "success")
+    if current_user.is_authenticated:
+        return redirect(url_for("profile.show"))
+    return redirect(url_for("auth.login"))
+
+
+def _render_confirm_email(token, error):
+    response = make_response(render_template("confirm_email.html", token=token, error=error))
+    # The link holds the token: no page it leads to may receive it.
+    response.headers["Referrer-Policy"] = "no-referrer"
+    return response
 
 
 @bp.route("/logout", methods=["POST"])

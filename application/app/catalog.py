@@ -5,6 +5,7 @@ from typing import NamedTuple
 from zoneinfo import ZoneInfo
 
 from flask import url_for
+from flask_login import current_user
 from sqlalchemy import and_, case, exists, func, or_, select, update
 from sqlalchemy.orm import joinedload
 
@@ -74,6 +75,8 @@ class ToolCard(NamedTuple):
     condition: str
     status: str
     available: bool
+    # Available and the viewer's email confirmed.
+    borrowable: bool
     requested_by_viewer: bool
     borrow_url: str | None
     last_borrowed: str | None
@@ -245,6 +248,8 @@ def tool_cards(tools, viewer_id=None, origin=None):
     tool_ids = [tool.id for tool in tools]
     statuses, requested_by_viewer = _loan_states(tool_ids, viewer_id)
     photo_ids = photos.tool_ids_with_photo(tool_ids)
+    # The viewer is the logged-in user.
+    viewer_confirmed = viewer_id is not None and current_user.email_confirmed
     last_borrowed = (
         dict(db.session.execute(_last_borrowed().where(Loan.tool_id.in_(tool_ids))).all())
         if tool_ids
@@ -258,6 +263,7 @@ def tool_cards(tools, viewer_id=None, origin=None):
             condition=CONDITION_LABELS[tool.condition],
             status=statuses[tool.id],
             available=statuses[tool.id] == AVAILABLE,
+            borrowable=statuses[tool.id] == AVAILABLE and viewer_confirmed,
             requested_by_viewer=tool.id in requested_by_viewer,
             borrow_url=url_for("loans.new", tool_id=tool.id, **origin) if origin else None,
             last_borrowed=french_date(last_borrowed[tool.id]) if tool.id in last_borrowed else None,

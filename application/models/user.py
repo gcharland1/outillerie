@@ -17,5 +17,11 @@ class User(UserMixin, db.Model):
     address = db.Column(db.String(250), nullable=True)
     phone = db.Column(db.String(20), nullable=True)
     deleted_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    email_confirmed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    email_confirmation_sent_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
     __table_args__ = (db.Index("uq_user_email_lower", func.lower(email), unique=True),)
+
+    @property
+    def email_confirmed(self):
+        return self.email_confirmed_at is not None

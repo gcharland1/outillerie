@@ -5,7 +5,7 @@ from io import BytesIO
 import pytest
 from itsdangerous import TimestampSigner
 from PIL import ExifTags, Image
-from sqlalchemy import text
+from sqlalchemy import func, text
 from werkzeug.security import generate_password_hash
 
 from app import create_app
@@ -26,6 +26,12 @@ def app_config():
         "SQLALCHEMY_DATABASE_URI": os.getenv("TEST_DATABASE_URL", CI_DATABASE_URL),
         "SECRET_KEY": "test",
         "WTF_CSRF_ENABLED": False,
+        "SMTP_HOST": "smtp.example.com",
+        "SMTP_PORT": 587,
+        "SMTP_USERNAME": "outillerie",
+        "SMTP_PASSWORD": "smtp-secret",
+        "MAIL_SENDER": "outillerie@example.com",
+        "SITE_URL": "https://outillerie.example.com",
     }
 
 
@@ -73,6 +79,7 @@ def user(mock_app):
                 first_name="Alice",
                 last_name="Tremblay",
                 email="alice@example.com",
+                email_confirmed_at=func.now(),
             )
         )
         db.session.commit()
@@ -89,6 +96,7 @@ def bob(mock_app):
                 first_name="Bob",
                 last_name="Gagnon",
                 email="bob@example.com",
+                email_confirmed_at=func.now(),
             )
         )
         db.session.commit()
@@ -105,10 +113,33 @@ def carole(mock_app):
                 first_name="Carole",
                 last_name="Roy",
                 email="carole@example.com",
+                email_confirmed_at=func.now(),
             )
         )
         db.session.commit()
     return "carole@example.com"
+
+
+@pytest.fixture
+def unconfirmed(mock_app):
+    """Email of a registered user who has not confirmed it, whose password is USER_PASSWORD"""
+    with mock_app.app_context():
+        db.session.add(
+            User(
+                password=generate_password_hash(USER_PASSWORD, method="pbkdf2:sha256"),
+                first_name="Denis",
+                last_name="Côté",
+                email="denis@example.com",
+            )
+        )
+        db.session.commit()
+    return "denis@example.com"
+
+
+@pytest.fixture
+def mail_outbox(mock_app):
+    """The emails the app sends, kept in memory"""
+    return mock_app.extensions.setdefault("mail_outbox", [])
 
 
 @pytest.fixture

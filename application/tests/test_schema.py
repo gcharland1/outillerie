@@ -145,6 +145,33 @@ def test_account_deletion_columns_round_trip(migrated_app):
         db.session.commit()
 
 
+def test_email_confirmation_columns_round_trip(migrated_app):
+    with migrated_app.app_context():
+        flask_migrate.downgrade(revision="e7f59596b568")
+        db.session.execute(
+            text(
+                'INSERT INTO "user" (password, email, first_name, last_name) '
+                "VALUES ('hash', 'alice@example.com', 'Alice', 'Tremblay')"
+            )
+        )
+        db.session.commit()
+        db.session.remove()
+
+        flask_migrate.upgrade()
+        rows = db.session.execute(
+            text('SELECT email_confirmed_at, email_confirmation_sent_at FROM "user"')
+        ).all()
+        assert rows == [(None, None)]
+        db.session.remove()
+
+        flask_migrate.downgrade(revision="e7f59596b568")
+        assert not {"email_confirmed_at", "email_confirmation_sent_at"} & user_columns()
+        db.session.remove()
+
+        flask_migrate.upgrade()
+        assert {"email_confirmed_at", "email_confirmation_sent_at"} <= user_columns()
+
+
 def test_revisions_create_the_extensions(migrated_app):
     with migrated_app.app_context():
         installed = {row[0] for row in db.session.execute(text("SELECT extname FROM pg_extension"))}

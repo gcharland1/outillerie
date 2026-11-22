@@ -397,6 +397,7 @@ def add_account(mock_app, email, first_name, last_name):
             first_name=first_name,
             last_name=last_name,
             email=email,
+            email_confirmed_at=db.func.now(),
         )
         db.session.add(user)
         db.session.commit()

@@ -6,6 +6,8 @@
     <a class="button{% if button.style %} {{ button.style }}{% endif %}" href="{{ url_for('loans.confirm_cancel', loan_id=row.loan.id) }}">{{ button.label }}</a>
     {% elif button.action == "withdraw" %}
     <a class="button{% if button.style %} {{ button.style }}{% endif %}" href="{{ url_for('loans.confirm_withdraw', loan_id=row.loan.id, origin=origin) }}">{{ button.label }}</a>
+    {% elif button.disabled %}
+    <button type="button" class="button" disabled>{{ button.label }}</button>
     {% else %}
     <form action="{{ url_for('loans.act', loan_id=row.loan.id, action=button.action) }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

@@ -16,7 +16,7 @@
     <div class="actions">
         {% if card.requested_by_viewer %}
         <button type="button" class="button" disabled>Demande envoyée</button>
-        {% elif card.available %}
+        {% elif card.borrowable %}
         <a class="button primary" href="{{ card.borrow_url }}">Emprunter</a>
         {% else %}
         <button type="button" class="button" disabled>Emprunter</button>

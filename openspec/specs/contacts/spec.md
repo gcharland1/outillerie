@@ -201,8 +201,9 @@ Le menu du compte d'un utilisateur connecté SHALL contenir « Mes contacts », 
 ### Requirement: Pastille des demandes en attente
 Quand un utilisateur connecté a des demandes reçues en attente, chaque page SHALL afficher une
 pastille portant leur nombre à côté de « Mes contacts » dans le menu du compte, et une pastille
-portant le total de ses demandes de contact en attente et du nombre de la pastille de « Mes prêts »
-à côté de son nom. Sans rien en attente, aucune pastille n'est affichée.
+portant le total de ses demandes de contact en attente, du nombre de la pastille de « Mes prêts » et
+de celui de la pastille de « Mon profil » à côté de son nom. Sans rien en attente, aucune pastille
+n'est affichée.
 
 #### Scenario: Deux demandes en attente
 - **WHEN** Alice et Carole ont chacune envoyé une demande à Bob
@@ -220,12 +221,17 @@ portant le total de ses demandes de contact en attente et du nombre de la pastil
 - **AND** Bob ouvre une page du site
 - **THEN** une pastille « 2 » est affichée à côté de son nom
 
+#### Scenario: Courriel à confirmer
+- **WHEN** Bob, non confirmé, a une demande de contact de Carole en attente
+- **AND** Bob ouvre une page du site
+- **THEN** une pastille « 2 » est affichée à côté de son nom
+
 #### Scenario: Aucune demande en attente
-- **WHEN** Bob a accepté ou refusé toutes ses demandes reçues et aucun prêt n'attend son action
+- **WHEN** Bob, confirmé, a accepté ou refusé toutes ses demandes reçues et aucun prêt n'attend son action
 - **THEN** aucune pastille n'est affichée
 
 #### Scenario: Demande envoyée sans pastille
-- **WHEN** Alice a envoyé une demande à Bob
+- **WHEN** Alice, confirmée, a envoyé une demande à Bob
 - **AND** Alice ouvre une page du site
 - **THEN** aucune pastille n'est affichée pour Alice
 

@@ -8,16 +8,31 @@ from flask_wtf.csrf import CSRFError
 from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+from app import mail
 from app.extensions import csrf, db, login_manager, migrate
 
 # The value .env.example ships with.
 EXAMPLE_SECRET_KEY = "dev-seulement"
+MAIL_VARIABLES = (
+    "SMTP_HOST",
+    "SMTP_PORT",
+    "SMTP_USERNAME",
+    "SMTP_PASSWORD",
+    "MAIL_SENDER",
+    "SITE_URL",
+)
+DEVELOPMENT_MAIL_DEFAULTS = {
+    "SMTP_PORT": "587",
+    "MAIL_SENDER": "outillerie@localhost",
+    "SITE_URL": "http://localhost:5000",
+}
 
 
 def create_app(test_config=None):
     """Creates an app and sets it's routes, using test_config instead of the environment if given"""
 
     app = _initialize_app(test_config)
+    mail.mask_confirmation_tokens()
     # Trust only the scheme set by the single proxy in front of the app (ADR 0015).
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=0, x_proto=1)
     db.init_app(app)
@@ -101,6 +116,7 @@ def _initialize_app(test_config):
 
     app.config["SQLALCHEMY_DATABASE_URI"] = os.environ["DATABASE_URL"]
     app.config["SECRET_KEY"] = _secret_key(environment)
+    app.config.update(_mail_settings(environment))
 
     return app
 
@@ -113,3 +129,18 @@ def _secret_key(environment):
     if key in ("", EXAMPLE_SECRET_KEY):
         raise RuntimeError(f"FLASK_SECRET_KEY must hold a real secret in {environment}")
     return key
+
+
+def _mail_settings(environment):
+    """The SMTP settings, refusing outside development a missing or empty one (ADR 0027)"""
+    settings = {name: os.getenv(name, "").strip() for name in MAIL_VARIABLES}
+    for name, value in settings.items():
+        if value:
+            continue
+        if environment != "development":
+            raise RuntimeError(f"{name} must be set in {environment}")
+        settings[name] = DEVELOPMENT_MAIL_DEFAULTS.get(name)
+    if not settings["SMTP_PORT"].isdigit():
+        raise RuntimeError("SMTP_PORT must be a port number")
+    settings["SMTP_PORT"] = int(settings["SMTP_PORT"])
+    return settings

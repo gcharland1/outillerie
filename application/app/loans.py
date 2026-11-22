@@ -7,7 +7,7 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 
-from app import catalog, photos
+from app import catalog, email_confirmation, photos
 from app.contacts import lock_live_accounts
 from app.extensions import db
 from models.loan import Loan, LoanStatus
@@ -54,6 +54,7 @@ class Button(NamedTuple):
     action: str
     label: str
     style: str
+    disabled: bool = False
 
 
 class LoanRow(NamedTuple):
@@ -210,6 +211,8 @@ def new(tool_id):
     origin = _origin(request.args)
     if not catalog.is_available(tool.id):
         return _back_from_unavailable(tool, origin)
+    if not current_user.email_confirmed:
+        return _back_from_unconfirmed(tool, origin)
     values = {"start": catalog.site_today().isoformat(), "end": "", "message": ""}
     return _render_confirm(tool, values, origin)
 
@@ -231,6 +234,9 @@ def create(tool_id):
     }
     if not catalog.is_available(tool.id):
         return _back_from_unavailable(tool, origin)
+    if not current_user.email_confirmed:
+        db.session.rollback()
+        return _back_from_unconfirmed(tool, origin)
     dates, error = _read_dates(values)
     if error is None and len(values["message"]) > MESSAGE_MAX_LENGTH:
         error = MESSAGE_TOO_LONG
@@ -307,6 +313,10 @@ def act(loan_id, action):
     loan, transition = _loan_for(loan_id, action)
     if transition is None:
         flash(NO_LONGER_PENDING if action in REQUEST_ACTIONS else STATUS_CHANGED)
+        return back
+    if action == "accept" and not current_user.email_confirmed:
+        db.session.rollback()
+        flash(email_confirmation.TO_ACCEPT)
         return back
     target = transition.target
     if action == "not-received" and target == LoanStatus.ACCEPTED and not _still_lendable(loan):
@@ -447,6 +457,11 @@ def _back_from_unavailable(tool, origin):
     return redirect(_origin_url(origin, tool))
 
 
+def _back_from_unconfirmed(tool, origin):
+    flash(email_confirmation.TO_BORROW)
+    return redirect(_origin_url(origin, tool))
+
+
 def _loan_for(loan_id, action, lock=True):
     """The loan, locked until commit unless told not to, and the transition the user may make now
 
@@ -524,6 +539,8 @@ def _may(action, loan, by_owner, today):
 
 
 def _button(button, loan):
+    if button.action == "accept" and not current_user.email_confirmed:
+        return button._replace(style="", disabled=True)
     if button.action in ("receive", "take-back") and loan.status in (
         LoanStatus.HANDOVER_CLAIMED,
         LoanStatus.RETURN_CLAIMED,
