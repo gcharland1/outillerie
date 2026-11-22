@@ -96,7 +96,8 @@ def resend_confirmation():
         db.session.rollback()
         flash(email_confirmation.ALREADY_CONFIRMED)
         return redirect(url_for("profile.show"))
-    now = db.session.scalar(select(func.now()))
+    # Not now(), the transaction start: a concurrent resend may have committed since.
+    now = db.session.scalar(select(func.clock_timestamp()))
     sent_at = account.email_confirmation_sent_at
     if sent_at is not None and now - sent_at < email_confirmation.RESEND_DELAY:
         db.session.rollback()

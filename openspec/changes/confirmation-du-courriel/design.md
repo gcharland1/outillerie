@@ -18,7 +18,8 @@ production : le déploiement échouerait et reviendrait à l'image précédente 
 
 Module `app/mail.py` :
 
-- `send(app, message)` choisit l'envoi selon la configuration : en `TESTING`, le message va dans
+- `send(to, subject, body)` refuse un destinataire qui n'est pas une seule adresse (un « a@x, b@y »
+  saisi enverrait le lien à un tiers), puis choisit l'envoi selon la configuration : en `TESTING`, le message va dans
   `app.extensions["mail_outbox"]` (liste) ; en développement sans `SMTP_HOST`, il est écrit dans le
   journal de l'app, au niveau `WARNING` pour passer le niveau par défaut ; sinon `smtplib.SMTP(host, port)` avec `starttls()` puis `login`, ou
   `smtplib.SMTP_SSL` quand le port est 465.

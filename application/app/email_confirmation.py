@@ -46,7 +46,7 @@ def send_link(user):
         f"Ce lien est valide {days} jours.\n\n"
         "Si vous n'avez pas créé de compte sur L'Outillerie, ignorez ce courriel.\n"
     )
-    mail.send(mail.message(user.email, "Confirmez votre courriel", body))
+    mail.send(user.email, "Confirmez votre courriel", body)
 
 
 def account_of(token):

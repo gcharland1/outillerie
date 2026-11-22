@@ -51,7 +51,8 @@ def _is_successful_run_of(run, head):
     return (
         run["event"] == "pull_request"
         and run["head_sha"] == head
-        and run["head_repository"]["full_name"] == REPOSITORY
+        # None once the fork it came from is deleted.
+        and (run["head_repository"] or {}).get("full_name") == REPOSITORY
         and (run["status"], run["conclusion"]) == ("completed", "success")
     )
 

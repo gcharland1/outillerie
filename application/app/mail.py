@@ -4,6 +4,7 @@ import logging
 import re
 import smtplib
 from email.message import EmailMessage
+from email.utils import getaddresses
 
 from flask import current_app
 
@@ -11,32 +12,35 @@ SMTP_SSL_PORT = 465
 SMTP_TIMEOUT_SECONDS = 10
 
 
-def message(to, subject, body):
-    """An email from the configured sender"""
+def send(to, subject, body):
+    """Sends an email to one address; a failure is logged without its content and never raised"""
+    config = current_app.config
+    try:
+        email = _message(to, subject, body)
+        if config.get("TESTING"):
+            current_app.extensions.setdefault("mail_outbox", []).append(email)
+            return
+        if not config.get("SMTP_HOST"):
+            # Above the default WARNING level, so the link shows in the development log.
+            current_app.logger.warning("Courriel non envoyé, SMTP non configuré :\n%s", email)
+            return
+        with _connection(config) as smtp:
+            smtp.login(config["SMTP_USERNAME"], config["SMTP_PASSWORD"])
+            smtp.send_message(email, to_addrs=[to])
+    except Exception as error:  # noqa: BLE001 - a failed send never fails the caller
+        current_app.logger.error("Échec de l'envoi d'un courriel : %s", type(error).__name__)
+
+
+def _message(to, subject, body):
+    # A typed "a@x, b@y" would otherwise send the account's link to a second person.
+    if [address for _, address in getaddresses([to])] != [to]:
+        raise ValueError("not a single email address")
     email = EmailMessage()
     email["From"] = current_app.config["MAIL_SENDER"]
     email["To"] = to
     email["Subject"] = subject
     email.set_content(body)
     return email
-
-
-def send(email):
-    """Sends the email; a failure is logged without its content and never raised"""
-    config = current_app.config
-    if config.get("TESTING"):
-        current_app.extensions.setdefault("mail_outbox", []).append(email)
-        return
-    if not config.get("SMTP_HOST"):
-        # Above the default WARNING level, so the link shows in the development log.
-        current_app.logger.warning("Courriel non envoyé, SMTP non configuré :\n%s", email)
-        return
-    try:
-        with _connection(config) as smtp:
-            smtp.login(config["SMTP_USERNAME"], config["SMTP_PASSWORD"])
-            smtp.send_message(email)
-    except Exception as error:  # noqa: BLE001 - a failed send never fails the caller
-        current_app.logger.error("Échec de l'envoi d'un courriel : %s", type(error).__name__)
 
 
 def _connection(config):

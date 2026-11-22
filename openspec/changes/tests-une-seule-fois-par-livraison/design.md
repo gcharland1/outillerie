@@ -28,7 +28,7 @@ Toutes les lectures passent par l'API :
 
 - `GET /repos/{r}/commits/{M}` : parents et arbre ; `GET /repos/{r}/commits/{P2}` : arbre ;
 - `GET /repos/{r}/compare/{P1}...{P2}` : `behind_by == 0` ;
-- `GET /repos/{r}/actions/runs?head_sha={P2}&event=pull_request` puis les jobs de chaque run candidat.
+- `GET /repos/{r}/actions/workflows/ci.yml/runs?head_sha={P2}&event=pull_request` puis les jobs de chaque run candidat.
 
 Sortie : `tested=true` ou `tested=false` dans `$GITHUB_OUTPUT`, et une ligne de journal qui dit
 pourquoi. Toute erreur (HTTP, JSON, champ absent) donne `tested=false` : le doute rejoue les tests.

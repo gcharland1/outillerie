@@ -138,6 +138,28 @@ def test_failed_send_keeps_the_account_and_logs_without_the_link(
     assert "confirmer-courriel" not in caplog.text
 
 
+@pytest.mark.parametrize(
+    "email", ["eve@example.com, mallory@example.org", "eve@example.com\r\nBcc: m@example.org"]
+)
+def test_email_that_is_not_one_address_gets_no_link(mock_app, client, mail_outbox, email):
+    response = register(client, email=email)
+
+    assert response.headers["Location"] == "/login"
+    assert mail_outbox == []
+
+
+def test_any_send_failure_keeps_the_account(mock_app, client, monkeypatch):
+    mock_app.config["TESTING"] = False
+
+    def broken(*args, **kwargs):
+        raise RuntimeError("panne")
+
+    monkeypatch.setattr(smtplib, "SMTP", broken)
+
+    assert register(client).headers["Location"] == "/login"
+    assert account(mock_app, NEWCOMER["email"]) is not None
+
+
 # Sending
 
 
@@ -154,8 +176,8 @@ class FakeSmtp:
     def login(self, username, password):
         self.calls.append(("login", username, password))
 
-    def send_message(self, email):
-        self.calls.append(("send", email["To"]))
+    def send_message(self, email, to_addrs):
+        self.calls.append(("send", to_addrs))
 
     def close(self):
         self.calls.append(("close",))
@@ -182,13 +204,13 @@ def fake_smtp(mock_app, monkeypatch):
 def test_send_uses_smtp_with_the_configured_account(mock_app, fake_smtp, port, starttls):
     mock_app.config["SMTP_PORT"] = port
     with mock_app.app_context():
-        mail.send(mail.message("alice@example.com", "Sujet", "Corps"))
+        mail.send("alice@example.com", "Sujet", "Corps")
 
     assert fake_smtp[0].calls == [
         ("connect", "smtp.example.com", port),
         *starttls,
         ("login", "outillerie", "smtp-secret"),
-        ("send", "alice@example.com"),
+        ("send", ["alice@example.com"]),
         ("close",),
     ]
 
@@ -197,7 +219,7 @@ def test_development_without_smtp_logs_the_email(mock_app, caplog):
     mock_app.config.update(TESTING=False, SMTP_HOST=None)
 
     with mock_app.app_context():
-        mail.send(mail.message("alice@example.com", "Sujet", "Le lien"))
+        mail.send("alice@example.com", "Sujet", "Le lien")
 
     assert "Le lien" in caplog.text
 
@@ -330,7 +352,7 @@ def test_link_expired_between_opening_and_sending(mock_app, client, mail_outbox,
     assert not is_confirmed(mock_app, NEWCOMER["email"])
 
 
-def test_request_line_logged_without_the_token(caplog):
+def test_request_line_logged_without_the_token(mock_app, caplog):
     with caplog.at_level(logging.INFO, logger="werkzeug"):
         logging.getLogger("werkzeug").info(
             "%s - - [%s] %s",

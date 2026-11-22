@@ -123,6 +123,12 @@ def test_run_of_a_fork(api):
     assert not tested(api)
 
 
+def test_run_of_a_deleted_fork_does_not_hide_a_green_run(api):
+    api.runs = [{**pr_run(run_id=4), "head_repository": None}, pr_run(run_id=1)]
+
+    assert tested(api)
+
+
 @pytest.mark.parametrize("failed", ["tests", "specs"])
 def test_required_job_not_successful(api, failed):
     api.jobs_by_run = {
