@@ -46,5 +46,5 @@ structure de l'app, outil de dev, convention transverse. Un détail d'implément
 | 0023 | [Supprimer un compte par anonymisation](0023-supprimer-un-compte-par-anonymisation.md) | accepted |
 | 0024 | [Un seul skill, de l'issue jusqu'à `main`, derrière des gates](0024-un-seul-skill-de-l-issue-jusqu-a-main.md) | superseded by 0025 |
 | 0025 | [Trier les issues par étiquettes et livrer les lots approuvés](0025-trier-les-issues-par-etiquettes-et-livrer-les-lots-approuves.md) | accepted |
-| 0026 | [Ne pas rejouer les tests d'un arbre déjà testé par sa PR](0026-ne-pas-rejouer-les-tests-d-un-arbre-deja-teste-par-sa-pr.md) | proposed |
-| 0027 | [Confirmer le courriel par un lien signé envoyé en SMTP](0027-confirmer-le-courriel-par-un-lien-signe-envoye-en-smtp.md) | proposed |
+| 0026 | [Ne pas rejouer les tests d'un arbre déjà testé par sa PR](0026-ne-pas-rejouer-les-tests-d-un-arbre-deja-teste-par-sa-pr.md) | accepted |
+| 0027 | [Confirmer le courriel par un lien signé envoyé en SMTP](0027-confirmer-le-courriel-par-un-lien-signe-envoye-en-smtp.md) | accepted |

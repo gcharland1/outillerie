@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-11-21
 decision-makers: Gabriel Charland
 ---
@@ -11,7 +11,7 @@ decision-makers: Gabriel Charland
 L'issue #50 demande un courriel de confirmation à l'inscription et réserve les prêts aux comptes
 confirmés. L'app n'a jamais envoyé de courriel : il faut choisir le moyen d'envoi, le format du lien,
 la façon de marquer un compte confirmé et ce que ce lien expose. Changement OpenSpec :
-`openspec/changes/confirmation-du-courriel/` (décisions et sources dans `questions.md`).
+`openspec/changes/archive/2026-11-22-confirmation-du-courriel/` (décisions et sources dans `questions.md`).
 
 ## Options considérées
 

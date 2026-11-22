@@ -67,7 +67,7 @@ les outils visibles de ce contact, avec les mêmes cartes et les mêmes filtres 
 ### Requirement: Carte d'un outil
 Chaque outil SHALL être présenté par une carte qui affiche son nom, sa photo, le prénom et le nom
 de son propriétaire, menant à sa page, sa description, son état et son statut de prêt, ainsi qu'un
-bouton « Emprunter » : actif s'il est « Disponible », grisé sinon, ou « Demande envoyée » grisé sur
+bouton « Emprunter » : actif s'il est « Disponible » et que l'utilisateur a confirmé son courriel, grisé sinon, ou « Demande envoyée » grisé sur
 l'outil que l'utilisateur a lui-même demandé. Un outil déjà emprunté affiche « Dernier emprunt le
 <date> », la date de début de son dernier prêt remis (« Remise à confirmer », « Prêté », « Retour à
 confirmer » ou « Complété ») ; un outil jamais emprunté n'affiche aucune mention. La carte MUST NOT
@@ -109,6 +109,10 @@ affichées.
 #### Scenario: Jamais emprunté
 - **WHEN** la perceuse de Bob n'a eu que des demandes refusées, annulées ou expirées, et un prêt accepté jamais remis
 - **THEN** sa carte n'affiche aucune mention d'emprunt
+
+#### Scenario: Compte non confirmé
+- **WHEN** Alice n'a pas confirmé son courriel et la perceuse de Bob est « Disponible »
+- **THEN** la carte de la perceuse affiche, pour Alice, un bouton « Emprunter » grisé
 
 ### Requirement: Description abrégée
 La carte SHALL afficher la description entière si elle compte au plus 125 caractères ; sinon, ses

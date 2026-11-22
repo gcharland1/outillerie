@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-11-21
 decision-makers: Gabriel Charland
 ---
@@ -11,7 +11,7 @@ decision-makers: Gabriel Charland
 L'ADR 0017 ne déploie un commit de `main` qu'après un run `push` réussi avec les jobs `tests` et
 `specs`. La gate de merge de l'ADR 0025 exige une branche qui contient `main` : le commit de merge a
 donc l'arbre que la PR vient de tester, et chaque livraison attend deux fois la même suite (issue
-#53). Changement OpenSpec : `openspec/changes/tests-une-seule-fois-par-livraison/` (décisions et
+#53). Changement OpenSpec : `openspec/changes/archive/2026-11-22-tests-une-seule-fois-par-livraison/` (décisions et
 sources dans `questions.md`).
 
 Depuis le 2026-11-20, le ruleset « main no push » de GitHub exige une PR et les checks `tests` et
