@@ -32,8 +32,8 @@ Toutes les lectures passent par l'API :
 
 Sortie : `tested=true` ou `tested=false` dans `$GITHUB_OUTPUT`, et une ligne de journal qui dit
 pourquoi. Toute erreur (HTTP, JSON, champ absent) donne `tested=false` : le doute rejoue les tests.
-La décision est une fonction pure (`proves_tested(commit, head, comparison, runs, jobs_of)`), testée
-sans réseau.
+La décision est `proves_tested(sha, api)`, où `api` fait ces lectures et s'arrête à la première
+condition fausse ; testée sans réseau avec un faux `api`.
 
 ## CI
 

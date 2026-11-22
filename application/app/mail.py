@@ -28,13 +28,14 @@ def send(email):
         current_app.extensions.setdefault("mail_outbox", []).append(email)
         return
     if not config.get("SMTP_HOST"):
-        current_app.logger.info("Courriel non envoyé, SMTP non configuré :\n%s", email)
+        # Above the default WARNING level, so the link shows in the development log.
+        current_app.logger.warning("Courriel non envoyé, SMTP non configuré :\n%s", email)
         return
     try:
         with _connection(config) as smtp:
             smtp.login(config["SMTP_USERNAME"], config["SMTP_PASSWORD"])
             smtp.send_message(email)
-    except (smtplib.SMTPException, OSError) as error:
+    except Exception as error:  # noqa: BLE001 - a failed send never fails the caller
         current_app.logger.error("Échec de l'envoi d'un courriel : %s", type(error).__name__)
 
 

@@ -196,7 +196,7 @@ def test_send_uses_smtp_with_the_configured_account(mock_app, fake_smtp, port, s
 def test_development_without_smtp_logs_the_email(mock_app, caplog):
     mock_app.config.update(TESTING=False, SMTP_HOST=None)
 
-    with mock_app.app_context(), caplog.at_level(logging.INFO):
+    with mock_app.app_context():
         mail.send(mail.message("alice@example.com", "Sujet", "Le lien"))
 
     assert "Le lien" in caplog.text

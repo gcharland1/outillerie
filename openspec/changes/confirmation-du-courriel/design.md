@@ -20,14 +20,14 @@ Module `app/mail.py` :
 
 - `send(app, message)` choisit l'envoi selon la configuration : en `TESTING`, le message va dans
   `app.extensions["mail_outbox"]` (liste) ; en développement sans `SMTP_HOST`, il est écrit dans le
-  journal de l'app ; sinon `smtplib.SMTP(host, port)` avec `starttls()` puis `login`, ou
+  journal de l'app, au niveau `WARNING` pour passer le niveau par défaut ; sinon `smtplib.SMTP(host, port)` avec `starttls()` puis `login`, ou
   `smtplib.SMTP_SSL` quand le port est 465.
 - Configuration lue dans `_initialize_app`, comme `_secret_key` : hors `development`, une variable
   `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `MAIL_SENDER` ou `SITE_URL` absente ou
   vide lève une erreur qui la nomme, sans valeur. Les tests passent la leur par `app_config()`.
 - `compose.yaml` passe ces variables à l'app ; `.env.example` les liste vides, avec un commentaire.
-- Un échec (`smtplib.SMTPException`, `OSError`) est journalisé sans le corps ni le lien ; l'appelant
-  continue.
+- Un échec, quelle que soit l'exception, est journalisé par son type, sans le corps ni le lien ;
+  l'appelant continue.
 
 ## Jeton
 
