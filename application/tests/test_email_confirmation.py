@@ -327,6 +327,10 @@ def test_confirming_twice_confirms_once(mock_app, client, newcomer_link):
     assert account(mock_app, NEWCOMER["email"]).email_confirmed_at == first
 
 
+# How Cloudflare Tunnel relays every request to the app (ADR 0015).
+HTTPS_PROXY = {"X-Forwarded-Proto": "https"}
+
+
 def referer_sent_by_a_browser(page, page_url):
     """The Referer a browser sends to the same site from this page, following its policy"""
     policy = page.headers.get("Referrer-Policy", "strict-origin-when-cross-origin")
@@ -336,14 +340,13 @@ def referer_sent_by_a_browser(page, page_url):
 def test_confirming_over_https_passes_the_csrf_check(mock_app, client, newcomer_link):
     # Over HTTPS, Flask-WTF also requires a same-origin Referer (WTF_CSRF_SSL_STRICT).
     mock_app.config["WTF_CSRF_ENABLED"] = True
-    page_url = f"https://localhost{newcomer_link}"
-    page = client.get(page_url)
-    referer = referer_sent_by_a_browser(page, page_url)
+    page = client.get(newcomer_link, headers=HTTPS_PROXY)
+    referer = referer_sent_by_a_browser(page, f"https://localhost{newcomer_link}")
 
     response = client.post(
-        "https://localhost/confirmer-courriel",
+        "/confirmer-courriel",
         data={"token": token_field(page), "csrf_token": token_in(page)},
-        headers={"Referer": referer} if referer else {},
+        headers={**HTTPS_PROXY, **({"Referer": referer} if referer else {})},
     )
 
     assert response.status_code == 302
