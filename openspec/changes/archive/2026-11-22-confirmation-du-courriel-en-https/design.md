@@ -8,7 +8,7 @@ Motivation : [proposal.md](proposal.md).
   accepte en HTTPS.
 - Ce `Referer` contient le jeton et arrive au serveur de l'app ; Werkzeug ne journalise pas cet en-tête,
   seulement la ligne de requête, déjà masquée.
-- Test : client en `https://`, CSRF actif ; le POST porte le `Referer` qu'un navigateur enverrait selon
+- Test : requêtes relayées avec `X-Forwarded-Proto: https`, comme par Cloudflare Tunnel, CSRF actif ; le POST porte le `Referer` qu'un navigateur enverrait selon
   la politique lue dans la réponse de la page (aucun pour `no-referrer`). Il échoue avec `no-referrer`
   et passe avec `same-origin`.
 
