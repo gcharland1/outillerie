@@ -1,5 +1,5 @@
 ---
-status: superseded by 0028
+status: accepted
 date: 2026-10-20
 decision-makers: Gabriel Charland
 ---

@@ -47,8 +47,12 @@ vaut décochée. Le terme est appliqué par le navigateur seulement (ADR 0028).
 - **WHEN** le navigateur d'Alice n'envoie plus le cookie persistant, expiré, et que sa session a expiré
 - **THEN** elle est traitée comme une visiteuse, sans message particulier
 
-#### Scenario: Ancienne session au déploiement
+#### Scenario: Session ouverte avant le déploiement
 - **WHEN** une session ouverte avant le déploiement de ce changement envoie une requête
+- **THEN** elle reste ouverte
+
+#### Scenario: Identifiant de session altéré
+- **WHEN** une session porte un identifiant de compte d'un format inattendu
 - **THEN** elle est traitée comme celle d'un visiteur, sans erreur
 
 ## MODIFIED Requirements

@@ -21,8 +21,8 @@ qui remplace l'ADR 0006.
   l'appareil par une connexion antérieure est effacé.
 - « Me déconnecter » et la suppression du compte effacent le cookie persistant de l'appareil.
 - Colonne `user.session_version` (entier, 0 par défaut), portée par l'identifiant de session : la
-  faire changer invalidera toutes les sessions du compte (issue #61). Au déploiement, les sessions
-  en cours sont fermées une fois.
+  faire changer invalidera toutes les sessions du compte (issue #61). À la version 0, l'identifiant
+  reste celui d'aujourd'hui : les sessions en cours survivent au déploiement et à un retour arrière.
 - Limite acceptée : le serveur n'impose pas les 30 jours ; une copie volée du cookie persistant reste
   valide jusqu'à la suppression du compte ou un changement de `session_version`.
 

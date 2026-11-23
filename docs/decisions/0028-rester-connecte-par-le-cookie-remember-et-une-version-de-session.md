@@ -40,7 +40,10 @@ développement (ADR 0015), et n'est prolongé que s'il est déjà présent.
   fonction n'offre avant l'issue #61. Limite acceptée sur l'issue #56.
 * Mauvais, parce qu'une session restée connectée garde son utilisateur mais perd son jeton CSRF après
   30 minutes d'inactivité : un formulaire ouvert avant est refusé (« Rechargez la page »).
-* Mauvais, parce que l'identifiant de session passe de `<id>` à `<id>:<version>` : les sessions
-  ouvertes au déploiement sont fermées une fois, et un retour arrière d'image exige de changer
-  `FLASK_SECRET_KEY`, sinon l'ancien code échoue sur le nouveau format.
+* Bon, parce qu'à la version 0 l'identifiant de session reste `<id>` : les sessions ouvertes
+  survivent au déploiement, et une image antérieure relit sessions et cookies persistants
+  (retour arrière de l'ADR 0017).
+* Mauvais, parce que la première fonction qui change la version (issue #61) émettra
+  `<id>:<version>`, que seule une image de ce changement ou plus récente sait lire : elle devra
+  traiter ce retour arrière.
 * Mauvais, parce que changer `FLASK_SECRET_KEY` invalide aussi tous les cookies persistants.

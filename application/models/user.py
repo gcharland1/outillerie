@@ -30,4 +30,7 @@ class User(UserMixin, db.Model):
 
     def get_id(self):
         """The id the session and the remember cookie keep: the account and its session version"""
+        # Version 0 keeps the former "<id>", which an image rolled back still reads (ADR 0017).
+        if self.session_version == 0:
+            return str(self.id)
         return f"{self.id}:{self.session_version}"

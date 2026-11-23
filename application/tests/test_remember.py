@@ -5,10 +5,9 @@ from sqlalchemy import update
 from app.extensions import db
 from models.user import User
 from tests.conftest import MINUTE, USER_PASSWORD, login, user_id_in
+from tests.test_navigation import REFRESH_TAG
 from tests.test_profile import delete_account
 from tests.test_session import is_logged_in, page_text
-
-REFRESH_TAG = 'http-equiv="refresh"'
 
 
 def login_remembered(client, email, remember="1"):
@@ -59,14 +58,18 @@ def test_remembered_user_is_recognized_after_the_session_expires(clock, client, 
     assert 29.9 < days_left(remember_cookie(client)) <= 30
 
 
-def test_restored_session_expires_like_any_other(clock, client, user):
+def test_expired_remember_cookie_leads_to_login_without_message(clock, client, user):
     login_remembered(client, user)
     clock.advance(31 * MINUTE)
     client.get("/")
     client.delete_cookie("remember_token")
     clock.advance(31 * MINUTE)
 
-    assert not is_logged_in(client)
+    response = client.get("/", follow_redirects=True)
+
+    assert response.request.path == "/login"
+    assert 'class="account-menu"' not in page_text(response)
+    assert 'class="flash' not in page_text(response)
 
 
 def test_each_page_renews_the_remember_cookie(client, user):
@@ -77,10 +80,12 @@ def test_each_page_renews_the_remember_cookie(client, user):
 
 
 def test_unchecked_login_sets_no_remember_cookie(clock, client, user):
-    login(client, user)
-    client.get("/")
-    client.get("/profile")
+    data = {"email": user, "password": USER_PASSWORD}
+    responses = [client.post("/login", data=data), client.get("/"), client.get("/profile")]
 
+    for response in responses:
+        header = remember_cookie_header(response)
+        assert header is None or header.startswith("remember_token=;")
     assert remember_cookie(client) is None
     clock.advance(31 * MINUTE)
     assert not is_logged_in(client)
@@ -113,9 +118,16 @@ def test_failed_login_keeps_the_box_checked_and_sets_no_cookie(client, user):
     assert remember_cookie_header(response) is None
 
 
-def test_session_of_the_former_id_format_is_a_visitors(mock_app, client, user):
+def test_session_opened_before_the_deployment_stays_open(mock_app, client, user):
     with client.session_transaction() as session:
         session["_user_id"] = str(user_id_in(mock_app, user))
+
+    assert is_logged_in(client)
+
+
+def test_malformed_session_id_is_a_visitors(mock_app, client, user):
+    with client.session_transaction() as session:
+        session["_user_id"] = f"{user_id_in(mock_app, user)}:x"
 
     response = client.get("/")
 

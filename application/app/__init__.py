@@ -87,9 +87,10 @@ def create_app(test_config=None):
     @login_manager.user_loader
     def load_user(session_id):
         # None makes it a visitor's session: a deleted account's end everywhere (ADR 0023), and
-        # an id of another session version or of the format before it (ADR 0028).
+        # an id of another session version (ADR 0028). "<id>" alone is version 0.
+        user_id, _, version = session_id.partition(":")
         try:
-            user_id, version = (int(part) for part in session_id.split(":"))
+            user_id, version = int(user_id), int(version or 0)
         except ValueError:
             return None
         user = db.session.get(User, user_id)
