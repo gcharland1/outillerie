@@ -26,7 +26,7 @@ structure de l'app, outil de dev, convention transverse. Un détail d'implément
 | 0003 | [uv et Docker Compose pour le développement](0003-uv-et-docker-compose.md) | accepted |
 | 0004 | [OpenSpec pour le développement piloté par spec](0004-openspec.md) | accepted |
 | 0005 | [Archiver les sessions Claude dans le dépôt](0005-archiver-les-sessions-claude.md) | accepted |
-| 0006 | [Sessions dans le cookie signé de Flask, expiration d'inactivité](0006-sessions-dans-le-cookie-signe-de-flask.md) | accepted |
+| 0006 | [Sessions dans le cookie signé de Flask, expiration d'inactivité](0006-sessions-dans-le-cookie-signe-de-flask.md) | superseded by 0028 |
 | 0007 | [Règles d'évolution du schéma de persistance](0007-regles-d-evolution-du-schema-de-persistance.md) | accepted |
 | 0008 | [Photos des outils en `bytea`](0008-photos-des-outils-en-bytea.md) | accepted |
 | 0009 | [Diagramme du schéma généré par paracelsus](0009-diagramme-du-schema-genere-par-paracelsus.md) | accepted |
@@ -48,3 +48,4 @@ structure de l'app, outil de dev, convention transverse. Un détail d'implément
 | 0025 | [Trier les issues par étiquettes et livrer les lots approuvés](0025-trier-les-issues-par-etiquettes-et-livrer-les-lots-approuves.md) | accepted |
 | 0026 | [Ne pas rejouer les tests d'un arbre déjà testé par sa PR](0026-ne-pas-rejouer-les-tests-d-un-arbre-deja-teste-par-sa-pr.md) | accepted |
 | 0027 | [Confirmer le courriel par un lien signé envoyé en SMTP](0027-confirmer-le-courriel-par-un-lien-signe-envoye-en-smtp.md) | accepted |
+| 0028 | [Rester connecté par le cookie remember de Flask-Login et une version de session](0028-rester-connecte-par-le-cookie-remember-et-une-version-de-session.md) | accepted |

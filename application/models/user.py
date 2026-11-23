@@ -19,9 +19,18 @@ class User(UserMixin, db.Model):
     deleted_at = db.Column(db.DateTime(timezone=True), nullable=True)
     email_confirmed_at = db.Column(db.DateTime(timezone=True), nullable=True)
     email_confirmation_sent_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    # Part of the session id: changing it ends every session of the account (ADR 0028).
+    session_version = db.Column(db.Integer, nullable=False, default=0, server_default="0")
 
     __table_args__ = (db.Index("uq_user_email_lower", func.lower(email), unique=True),)
 
     @property
     def email_confirmed(self):
         return self.email_confirmed_at is not None
+
+    def get_id(self):
+        """The id the session and the remember cookie keep: the account and its session version"""
+        # Version 0 keeps the former "<id>", which an image rolled back still reads (ADR 0017).
+        if self.session_version == 0:
+            return str(self.id)
+        return f"{self.id}:{self.session_version}"

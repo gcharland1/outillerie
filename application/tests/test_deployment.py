@@ -41,6 +41,21 @@ def test_session_cookie_is_not_secure_in_development(app_in, user, environment):
     assert "Secure" not in session_cookie_after_login(app_in(environment), user)
 
 
+def remember_cookie_after_login(app, email):
+    data = {"email": email, "password": USER_PASSWORD, "remember": "1"}
+    response = app.test_client().post("/login", data=data)
+    return next(c for c in response.headers.getlist("Set-Cookie") if "remember_token=" in c)
+
+
+def test_remember_cookie_is_secure_in_production(app_in, user):
+    assert "Secure" in remember_cookie_after_login(app_in("production"), user)
+
+
+@pytest.mark.parametrize("environment", ["development", None])
+def test_remember_cookie_is_not_secure_in_development(app_in, user, environment):
+    assert "Secure" not in remember_cookie_after_login(app_in(environment), user)
+
+
 @pytest.fixture
 def scheme_client(mock_app):
     """A client of an app with a route reporting how it sees the request"""

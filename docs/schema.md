@@ -63,6 +63,7 @@ erDiagram
     DATETIME deleted_at "nullable"
     DATETIME email_confirmed_at "nullable"
     DATETIME email_confirmation_sent_at "nullable"
+    INTEGER session_version
   }
 
   user ||--o| contact_relation : user_a_id
