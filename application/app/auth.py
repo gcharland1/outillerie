@@ -112,8 +112,9 @@ def confirm_email():
 
 def _render_confirm_email(token, error):
     response = make_response(render_template("confirm_email.html", token=token, error=error))
-    # The link holds the token: no page it leads to may receive it.
-    response.headers["Referrer-Policy"] = "no-referrer"
+    # The link holds the token: no other site may receive it. Not no-referrer: over HTTPS,
+    # Flask-WTF refuses the button's POST without a same-origin Referer.
+    response.headers["Referrer-Policy"] = "same-origin"
     return response
 
 

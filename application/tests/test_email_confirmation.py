@@ -235,7 +235,7 @@ def test_link_opens_a_page_with_the_button_without_confirming(mock_app, client, 
     assert '<button type="submit" class="button primary">Confirmer mon courriel' in (
         page_text(response)
     )
-    assert response.headers["Referrer-Policy"] == "no-referrer"
+    assert response.headers["Referrer-Policy"] == "same-origin"
     assert not is_confirmed(mock_app, NEWCOMER["email"])
 
 
@@ -325,6 +325,29 @@ def test_confirming_twice_confirms_once(mock_app, client, newcomer_link):
     assert second.headers["Location"] == "/login"
     assert email_confirmation.CONFIRMED in page_text(client.get("/login"))
     assert account(mock_app, NEWCOMER["email"]).email_confirmed_at == first
+
+
+def referer_sent_by_a_browser(page, page_url):
+    """The Referer a browser sends to the same site from this page, following its policy"""
+    policy = page.headers.get("Referrer-Policy", "strict-origin-when-cross-origin")
+    return None if policy == "no-referrer" else page_url
+
+
+def test_confirming_over_https_passes_the_csrf_check(mock_app, client, newcomer_link):
+    # Over HTTPS, Flask-WTF also requires a same-origin Referer (WTF_CSRF_SSL_STRICT).
+    mock_app.config["WTF_CSRF_ENABLED"] = True
+    page_url = f"https://localhost{newcomer_link}"
+    page = client.get(page_url)
+    referer = referer_sent_by_a_browser(page, page_url)
+
+    response = client.post(
+        "https://localhost/confirmer-courriel",
+        data={"token": token_field(page), "csrf_token": token_in(page)},
+        headers={"Referer": referer} if referer else {},
+    )
+
+    assert response.status_code == 302
+    assert is_confirmed(mock_app, NEWCOMER["email"])
 
 
 def test_confirming_requires_the_csrf_token(mock_app, client, newcomer_link):
