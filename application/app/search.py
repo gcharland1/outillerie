@@ -9,6 +9,7 @@ from app.contacts import (
     read_expanded,
     read_relation_filter,
     relation_states,
+    search_results_url,
 )
 from app.extensions import db
 from models.user import User
@@ -69,12 +70,7 @@ def _users_section(search_text, normalized_text, relation, expanded):
         "results": [(user, states[user.id]) for user in shown],
         "count": f"{len(shown)} de {total}",
         "more_url": (
-            url_for(
-                "search.results",
-                q=search_text,
-                relation=relation if relation != "all" else None,
-                more="1",
-            )
+            search_results_url({"q": search_text, "relation": relation, "more": "1"})
             if not expanded and len(users) > USERS_SHOWN
             else None
         ),

@@ -167,7 +167,9 @@ def too_many(text):
 
 @pytest.fixture
 def cap_of_three(monkeypatch):
+    # The collapsed view never shows more than the cap.
     monkeypatch.setattr(search_module, "USER_RESULTS_MAX", 3)
+    monkeypatch.setattr(search_module, "USERS_SHOWN", 2)
 
 
 def test_more_than_the_cap_lists_the_first_ones(as_alice, named, cap_of_three):

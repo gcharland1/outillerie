@@ -359,3 +359,6 @@ def test_filter_and_each_see_more_are_blue_in_their_own_group(mock_app, bob_is_a
     groups = re.findall(r'<div class="actions">\s*(<a [^>]*>Voir plus</a>)\s*</div>', text)
     assert len(groups) == 2
     assert all('class="button primary"' in group for group in groups)
+    [form] = re.findall(r'<form class="tool-filters".*?</form>', text, re.DOTALL)
+    assert form.count("primary") == 1
+    assert '<button type="submit" class="button primary">Filtrer</button>' in form

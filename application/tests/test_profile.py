@@ -906,6 +906,7 @@ def test_deleted_account_does_not_count_in_the_cap(mock_app, ids):
 
     assert len(names) == 25
     assert "Aaron Gagnon" not in names
+    assert "<p>25 de 25</p>" in text
     assert "précisez votre recherche" not in text
 
 
