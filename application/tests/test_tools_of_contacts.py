@@ -191,7 +191,7 @@ def test_without_contacts(mock_app, ids, as_alice):
     text = find(as_alice)
 
     assert "Vous n'avez encore aucun contact" in text
-    assert 'href="/search?type=user"' in text
+    assert "Cherchez un utilisateur avec la barre de recherche" in text
 
 
 def test_contacts_without_tools(mock_app, contacts, as_alice):

@@ -156,7 +156,7 @@ def test_search_results_link_contacts_only(mock_app, ids, as_alice):
         db.session.get(User, ids["carole"]).last_name = "Gagnon"
         db.session.commit()
 
-    text = page_text(as_alice.get("/search", query_string={"type": "user", "q": "Gagnon"}))
+    text = page_text(as_alice.get("/search", query_string={"q": "Gagnon"}))
 
     assert f"<td>{bob_link(ids)}</td>" in text
     assert "<td>Carole Gagnon</td>" in text

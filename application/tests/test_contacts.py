@@ -227,7 +227,7 @@ def send(client, recipient_id, q="bob"):
 def test_request_is_sent_and_goes_back_to_the_search(mock_app, ids, as_alice):
     response = send(as_alice, ids["bob"], q="gagnon")
 
-    assert response.headers["Location"] == "/search?type=user&q=gagnon"
+    assert response.headers["Location"] == "/search?q=gagnon"
     assert request_pairs(mock_app) == [(ids["alice"], ids["bob"])]
 
 

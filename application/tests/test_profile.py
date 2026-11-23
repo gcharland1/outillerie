@@ -864,7 +864,7 @@ def test_deleted_accounts_email_is_free(mock_app, ids, as_alice):
 
 
 def search_names(client, q):
-    text = page_text(client.get("/search", query_string={"type": "user", "q": q}))
+    text = page_text(client.get("/search", query_string={"q": q, "more": "1"}))
     return re.findall(r"<tr>\s*<td>(.*?)</td>", text), text
 
 
@@ -876,7 +876,7 @@ def test_deleted_account_is_not_found(mock_app, ids):
     names, text = search_names(as_alice, "gagnon")
 
     assert names == []
-    assert "Aucun utilisateur ne correspond à « gagnon »" in text
+    assert "Aucun résultat d'utilisateur" in text
 
 
 def test_deleted_account_does_not_count_in_the_cap(mock_app, ids):

@@ -169,7 +169,7 @@ td .actions {
     padding: 0 calc(var(--gap) * 2);
 }
 
-/* Type, text and button read as one rectangle: [ Utilisateur | Rechercher… | Rechercher ]. */
+/* Text and button read as one rectangle: [ Rechercher… | Rechercher ]. */
 .search-bar {
     display: flex;
     align-items: stretch;
@@ -184,23 +184,12 @@ td .actions {
     border-color: var(--color-primary);
 }
 
-.search-bar select,
 .search-bar input[type="search"],
 .search-bar .button {
     margin: 0;
     border: none;
     border-radius: 0;
     box-shadow: none;
-}
-
-/* Wide enough for the longest option and the arrow drawn in its right padding. */
-.search-bar select {
-    flex: 0 0 auto;
-    width: auto;
-    padding-right: 3rem;
-    background-origin: padding-box;
-    background-position: right 1.2rem center;
-    border-right: 1px solid var(--color-lightGrey);
 }
 
 .search-bar input[type="search"] {
@@ -385,6 +374,11 @@ form:has(#photo-replace:checked):has(#photo-remove:checked) [type="submit"] {
     color: var(--color-grey);
 }
 
-.dashboard-section {
+.dashboard-section,
+.search-section {
     margin-bottom: calc(2 * var(--gap));
+}
+
+.upcoming {
+    color: var(--color-grey);
 }

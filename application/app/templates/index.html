@@ -26,7 +26,7 @@
         </table>
     {% if group.more %}
         <div class="actions">
-            <a class="button primary" href="{{ url_for('loans.mine') }}">Voir tous mes prêts</a>
+            <a class="button primary" href="{{ url_for('loans.mine') }}">Voir plus</a>
         </div>
     {% endif %}
 {% else %}
@@ -66,7 +66,7 @@
         <p>{{ no_new_tool }}</p>
 {% else %}
         <p>{{ no_contact }}</p>
-        <p>Cherchez un utilisateur avec la barre de recherche, ou <a href="{{ url_for('search.results', type='user') }}">ouvrez la recherche d'utilisateurs</a>.</p>
+        <p>Cherchez un utilisateur avec la barre de recherche</p>
 {% endif %}
     </section>
 {% endblock %}

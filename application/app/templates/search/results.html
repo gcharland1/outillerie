@@ -5,37 +5,98 @@
     <h2>Résultats de recherche</h2>
 {% if message %}
     <p>{{ message }}</p>
-{% endif %}
-{% if results %}
-    <table>
-        <thead>
-            <tr><th>Nom</th><th></th></tr>
-        </thead>
-        <tbody>
-        {% for user, state in results %}
-            <tr>
-                <td>{{ user_name(user) }}</td>
-                <td>
-                    <div class="actions">
-                    {% if state == "none" %}
-                        <form action="{{ url_for('contacts.send_request') }}" method="post">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="hidden" name="recipient_id" value="{{ user.id }}">
-                            <input type="hidden" name="q" value="{{ search_text }}">
-                            <button type="submit" class="button primary">Envoyer une demande</button>
-                        </form>
-                    {% elif state == "sent" %}
-                        <button type="button" class="button" disabled>Demande envoyée</button>
-                    {% elif state == "received" %}
-                        <a class="button primary" href="{{ url_for('contacts.mine') }}">Répondre à sa demande</a>
-                    {% else %}
-                        <button type="button" class="button" disabled>Déjà en contact</button>
-                    {% endif %}
-                    </div>
-                </td>
-            </tr>
+{% else %}
+    <section class="search-section">
+        <h3>Utilisateurs</h3>
+        <form class="tool-filters" action="{{ url_for('search.results') }}" method="get">
+            <input type="hidden" name="q" value="{{ search_text }}">
+    {% if expanded %}
+            <input type="hidden" name="more" value="1">
+    {% endif %}
+            <label class="tool-sort">
+                Afficher
+                <select name="relation">
+    {% for value, label in relation_filters.items() %}
+                    <option value="{{ value }}"{% if value == relation %} selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+                </select>
+            </label>
+            <label class="tool-sort">
+                Dans un rayon de
+                <select disabled aria-describedby="distance-upcoming">
+    {% for distance in distances %}
+                    <option{% if loop.last %} selected{% endif %}>{{ distance }}</option>
+    {% endfor %}
+                </select>
+                <span id="distance-upcoming" class="upcoming">à venir</span>
+            </label>
+            <button type="submit" class="button primary">Filtrer</button>
+        </form>
+    {% if users.results %}
+        <p>{{ users.count }}</p>
+        {% if users.message %}
+        <p>{{ users.message }}</p>
+        {% endif %}
+        <table>
+            <thead>
+                <tr><th>Nom</th><th></th></tr>
+            </thead>
+            <tbody>
+        {% for user, state in users.results %}
+                <tr>
+                    <td>{{ user_name(user) }}</td>
+                    <td>
+                        <div class="actions">
+                        {% if state == "none" %}
+                            <form action="{{ url_for('contacts.send_request') }}" method="post">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="recipient_id" value="{{ user.id }}">
+                                <input type="hidden" name="q" value="{{ search_text }}">
+                                <input type="hidden" name="relation" value="{{ relation }}">
+                            {% if expanded %}
+                                <input type="hidden" name="more" value="1">
+                            {% endif %}
+                                <button type="submit" class="button primary">Envoyer une demande</button>
+                            </form>
+                        {% elif state == "sent" %}
+                            <button type="button" class="button" disabled>Demande envoyée</button>
+                        {% elif state == "received" %}
+                            <a class="button primary" href="{{ url_for('contacts.mine') }}">Répondre à sa demande</a>
+                        {% else %}
+                            <button type="button" class="button" disabled>Déjà en contact</button>
+                        {% endif %}
+                        </div>
+                    </td>
+                </tr>
         {% endfor %}
-        </tbody>
-    </table>
+            </tbody>
+        </table>
+        {% if users.more_url %}
+        <div class="actions">
+            <a class="button primary" href="{{ users.more_url }}">Voir plus</a>
+        </div>
+        {% endif %}
+    {% else %}
+        <p>Aucun résultat d'utilisateur</p>
+    {% endif %}
+    </section>
+    <section class="search-section">
+        <h3>Outils</h3>
+    {% if tools.cards %}
+        <p>{{ tools.count }}</p>
+        <div class="tool-cards">
+        {% for card in tools.cards %}
+            {% include "tools/_card.html" %}
+        {% endfor %}
+        </div>
+        {% if tools.more_url %}
+        <div class="actions">
+            <a class="button primary" href="{{ tools.more_url }}">Voir plus</a>
+        </div>
+        {% endif %}
+    {% else %}
+        <p>Aucun résultat d'outil</p>
+    {% endif %}
+    </section>
 {% endif %}
 {% endblock %}

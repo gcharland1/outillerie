@@ -126,7 +126,7 @@ def is_contact(user_id, other_id):
 
 def contact_ids(user_id):
     """The ids of the user's contacts"""
-    return set(db.session.scalars(_contact_ids(user_id)))
+    return set(db.session.scalars(contact_ids_query(user_id)))
 
 
 def visible_tool(user_id, tool_id):
@@ -313,7 +313,8 @@ def _relations_of(user_id):
     return or_(ContactRelation.user_a_id == user_id, ContactRelation.user_b_id == user_id)
 
 
-def _contact_ids(user_id):
+def contact_ids_query(user_id):
+    """A select of the ids of the user's contacts, to filter on in SQL"""
     other = case(
         (ContactRelation.user_a_id == user_id, ContactRelation.user_b_id),
         else_=ContactRelation.user_a_id,
@@ -354,7 +355,7 @@ def _visible(user_id):
     return and_(
         Tool.is_active,
         Tool.condition != ToolCondition.OUT_OF_ORDER,
-        Tool.owner_id.in_(_contact_ids(user_id)),
+        Tool.owner_id.in_(contact_ids_query(user_id)),
     )
 
 
