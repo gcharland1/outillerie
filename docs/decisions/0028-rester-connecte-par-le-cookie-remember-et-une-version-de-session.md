@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-11-22
 decision-makers: Gabriel Charland
 ---
@@ -11,7 +11,8 @@ decision-makers: Gabriel Charland
 L'ADR 0006 ferme toute session après 30 minutes d'inactivité, vérifiées par le serveur. L'issue #56
 demande une case « Rester connecté sur cet appareil » qui supprime cette déconnexion sur l'appareil où
 elle est cochée. Flask applique une seule durée à tout cookie de session : un second mécanisme est
-nécessaire. Changement OpenSpec : `openspec/changes/rester-connecte/`.
+nécessaire. Remplace 0006, dont il reprend les règles pour une session sans la case. Changement
+OpenSpec : `openspec/changes/archive/2026-11-22-rester-connecte/`.
 
 ## Options considérées
 
@@ -26,8 +27,8 @@ nécessaire. Changement OpenSpec : `openspec/changes/rester-connecte/`.
 Option retenue : « cookie remember de Flask-Login et `user.session_version` », parce que Flask-Login
 est déjà une dépendance, qu'une seule colonne s'ajoute, et que changer la version invalidera d'un coup
 toutes les sessions et tous les cookies persistants d'un compte (« Déconnecter tous mes appareils »,
-issue #61). Sans la case, l'ADR 0006 vaut toujours : cookie de session signé, 30 minutes glissantes,
-`HttpOnly`, `SameSite=Lax`. Le cookie persistant porte les mêmes attributs, `Secure` hors
+issue #61). Sans la case, les règles de l'ADR 0006 restent : cookie de session signé, 30 minutes
+glissantes, `HttpOnly`, `SameSite=Lax`. Le cookie persistant porte les mêmes attributs, `Secure` hors
 développement (ADR 0015), et n'est prolongé que s'il est déjà présent.
 
 ### Conséquences
