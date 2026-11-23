@@ -22,8 +22,10 @@ de `contacts.relation_states`. « Trouver un outil » s'appuie sur `catalog.visi
 ### Paramètres de la page
 `q` (texte), `relation` (`all`, `contacts`, `others` ; autre valeur ou absence : `all`) et `more`
 (`1` déplie ; autre valeur : replié). `type` et une distance éventuelle sont ignorés. Les valeurs
-connues et leurs libellés vivent dans `contacts` (`RELATION_FILTERS`, `read_relation_filter`), que
-`search` importe déjà ; `contacts.send_request` les relit ainsi sans import circulaire.
+connues et leurs libellés vivent dans `contacts` (`RELATION_FILTERS`, `read_relation_filter`,
+`read_expanded`), que `search` importe déjà ; `contacts.send_request` les relit ainsi sans import
+circulaire. `contacts.search_results_url` construit l'adresse des résultats pour le « Voir plus » des
+utilisateurs comme pour le retour après une demande.
 
 ### Section « Utilisateurs »
 `_matching_users(text, fuzzy, relation)` garde la requête et son `LIMIT 26`, et ajoute
@@ -48,7 +50,7 @@ Les cartes sont incluses une à une (`tools/_card.html`), comme sur l'accueil, s
 ### Retour après « Envoyer une demande »
 Le formulaire de chaque résultat porte `q`, `relation` et `more` en champs cachés. `send_request`
 relit `relation` et `more` par les mêmes listes blanches et reconstruit l'URL par
-`url_for("search.results", …)`, sans `type`. Une demande déjà reçue mène toujours à « Mes contacts ».
+`search_results_url` (`url_for`), sans `type`. Une demande déjà reçue mène toujours à « Mes contacts ».
 
 ### Gabarits et styles
 `base.html` perd le `select` ; `site.css` perd les règles `.search-bar select`. Les filtres

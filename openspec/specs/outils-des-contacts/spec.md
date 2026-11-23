@@ -296,14 +296,14 @@ filtrer. Deux outils à égalité gardent toujours le même ordre. Une valeur de
 
 ### Requirement: Listes vides
 Une liste d'outils vide SHALL afficher un message selon le cas. Sur « Trouver un outil » :
-« Vous n'avez encore aucun contact » avec un lien vers la recherche d'utilisateurs, sans contact ;
-« Vos contacts n'ont encore aucun outil à prêter » sans outil visible. Sur la page d'un contact :
-« <prénom> <nom> n'a encore aucun outil à prêter ». Partout : « Aucun outil ne correspond à ces
-filtres » quand les filtres écartent tous les outils.
+« Vous n'avez encore aucun contact » et « Cherchez un utilisateur avec la barre de recherche », sans
+contact ; « Vos contacts n'ont encore aucun outil à prêter » sans outil visible. Sur la page d'un
+contact : « <prénom> <nom> n'a encore aucun outil à prêter ». Partout : « Aucun outil ne correspond
+à ces filtres » quand les filtres écartent tous les outils.
 
 #### Scenario: Aucun contact
 - **WHEN** Alice n'a aucun contact et ouvre « Trouver un outil »
-- **THEN** la page affiche « Vous n'avez encore aucun contact »
+- **THEN** la page affiche « Vous n'avez encore aucun contact » et « Cherchez un utilisateur avec la barre de recherche »
 
 #### Scenario: Contacts sans outil
 - **WHEN** Bob, seul contact d'Alice, n'a aucun outil visible
