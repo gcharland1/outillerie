@@ -7,7 +7,7 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Outillerie</title>
-        {% if current_user.is_authenticated %}
+        {% if expires_on_inactivity %}
         <meta http-equiv="refresh" content="{{ config.PERMANENT_SESSION_LIFETIME.total_seconds() | int + 5 }};url=/logged-out?reason=inactivity">
         {% endif %}
 

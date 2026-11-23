@@ -5,13 +5,13 @@ import re
 import secrets
 from typing import NamedTuple
 
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required, logout_user
 from sqlalchemy import delete, exists, func, or_, select, update
 from sqlalchemy.orm import joinedload
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from app import catalog, email_confirmation, loans, photos, text_search
+from app import auth, catalog, email_confirmation, loans, photos, text_search
 from app.extensions import db
 from models.contact import ContactRelation, ContactRequest
 from models.loan import Loan
@@ -181,8 +181,7 @@ def delete_account():
 
 
 def _logged_out_after_deletion():
-    logout_user()
-    session.clear()
+    auth.end_session()
     return redirect(url_for("auth.logged_out", reason="account-deleted"))
 
 

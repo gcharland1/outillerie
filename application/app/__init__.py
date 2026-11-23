@@ -85,10 +85,17 @@ def create_app(test_config=None):
         return render_template("too_large.html"), 413
 
     @login_manager.user_loader
-    def load_user(user_id):
-        # None makes it a visitor's session: a deleted account's end everywhere (ADR 0023).
-        user = db.session.get(User, int(user_id))
-        return user if user is not None and user.deleted_at is None else None
+    def load_user(session_id):
+        # None makes it a visitor's session: a deleted account's end everywhere (ADR 0023), and
+        # an id of another session version or of the format before it (ADR 0028).
+        try:
+            user_id, version = (int(part) for part in session_id.split(":"))
+        except ValueError:
+            return None
+        user = db.session.get(User, user_id)
+        if user is None or user.deleted_at is not None or user.session_version != version:
+            return None
+        return user
 
     return app
 
@@ -102,6 +109,11 @@ def _initialize_app(test_config):
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
     # Behind Cloudflare Tunnel, the browser only ever talks HTTPS (ADR 0015).
     app.config["SESSION_COOKIE_SECURE"] = environment != "development"
+    # "Rester connecté sur cet appareil" (ADR 0028); Flask-Login defaults to a year, SameSite=None.
+    app.config["REMEMBER_COOKIE_DURATION"] = timedelta(days=30)
+    app.config["REMEMBER_COOKIE_SAMESITE"] = "Lax"
+    app.config["REMEMBER_COOKIE_SECURE"] = environment != "development"
+    app.config["REMEMBER_COOKIE_HTTPONLY"] = True
     # The token lives as long as the session that holds it (ADR 0012).
     app.config["WTF_CSRF_TIME_LIMIT"] = None
     # Safety cap on any request; the photo's own 10 MB limit is checked by the view (ADR 0014).
