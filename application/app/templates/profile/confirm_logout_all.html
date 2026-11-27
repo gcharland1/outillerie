@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row is-center">
+    <div class="col-12 col-8-md card">
+        <header>
+            <h3>Déconnecter tous mes appareils ?</h3>
+        </header>
+        <p>Tous vos appareils, celui-ci compris, seront déconnectés. Vous devrez vous reconnecter.</p>
+        <form action="{{ url_for('profile.logout_all') }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="actions">
+                <a class="button" href="{{ url_for('profile.show') }}">Annuler</a>
+                <button type="submit" class="button error">Déconnecter tous mes appareils</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

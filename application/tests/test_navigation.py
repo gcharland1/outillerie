@@ -179,6 +179,7 @@ DESTRUCTIVE_LABELS = {
     "Retirer ma demande",
     "Supprimer mon compte",
     "Confirmer la suppression",
+    "Déconnecter tous mes appareils",
 }
 
 

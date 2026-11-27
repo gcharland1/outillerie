@@ -1,4 +1,4 @@
-"""The user's own account: address and phone, and its deletion by anonymization (ADR 0023)."""
+"""The user's own account: address, phone, sessions, and deletion by anonymization (ADR 0023)."""
 
 import math
 import re
@@ -11,7 +11,7 @@ from sqlalchemy import delete, exists, func, or_, select, update
 from sqlalchemy.orm import joinedload
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from app import auth, catalog, email_confirmation, loans, photos, text_search
+from app import auth, catalog, email_confirmation, loans, mail, photos, text_search
 from app.extensions import db
 from models.contact import ContactRelation, ContactRequest
 from models.loan import Loan
@@ -30,6 +30,14 @@ PHONE_INVALID = (
 )
 LOANS_IN_PROGRESS = "Tous vos prêts en cours doivent être complétés avant de supprimer votre compte"
 MISMATCH = "Le nom ou le mot de passe ne correspond pas"
+LOGGED_OUT_SUBJECT = "Vos appareils ont été déconnectés"
+LOGGED_OUT_BODY = (
+    "Bonjour {name},\n\n"
+    "Tous les appareils connectés à votre compte L'Outillerie viennent d'être déconnectés, "
+    "à votre demande.\n\n"
+    "Si vous n'êtes pas à l'origine de cette demande, quelqu'un a pu utiliser l'un de vos "
+    "appareils connectés.\n"
+)
 
 bp = Blueprint("profile", __name__, url_prefix="/profile")
 
@@ -109,6 +117,34 @@ def resend_confirmation():
     email_confirmation.send_link(account)
     flash(email_confirmation.SENT.format(email=account.email), "success")
     return redirect(url_for("profile.show"))
+
+
+@bp.route("/logout-all", methods=["GET"])
+@login_required
+def confirm_logout_all():
+    return render_template("profile/confirm_logout_all.html")
+
+
+@bp.route("/logout-all", methods=["POST"])
+@login_required
+def logout_all():
+    # Every session and remember cookie carries the version: changing it refuses them all.
+    result = db.session.execute(
+        update(User)
+        .where(User.id == current_user.id, User.deleted_at.is_(None))
+        .values(session_version=User.session_version + 1)
+        .execution_options(synchronize_session=False)
+    )
+    db.session.commit()
+    if result.rowcount == 0:
+        logout_user()
+        return redirect(url_for("auth.login"))
+    account = db.session.get(User, current_user.id)
+    if account.email_confirmed:
+        body = LOGGED_OUT_BODY.format(name=account.first_name)
+        mail.send(account.email, LOGGED_OUT_SUBJECT, body)
+    auth.end_session()
+    return redirect(url_for("auth.logged_out", reason="all-devices"))
 
 
 @bp.route("/delete", methods=["GET"])

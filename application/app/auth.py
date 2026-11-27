@@ -144,6 +144,7 @@ def logged_out():
     reasons = {
         "inactivity": f"Votre session a expiré après {minutes} minutes d'inactivité",
         "account-deleted": "Votre compte a été supprimé",
+        "all-devices": "Tous vos appareils ont été déconnectés",
     }
     message = reasons.get(request.args.get("reason"), "Vous êtes déconnecté")
     return render_template("logged_out.html", message=message)
