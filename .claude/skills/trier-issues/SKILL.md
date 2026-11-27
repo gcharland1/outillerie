@@ -32,8 +32,8 @@ gh issue view <n> --json number,title,body,labels,author,comments \
 ```
 
 Liste : `gh issue list --state open --author <propriétaire> --limit 200 --json number,title,labels`.
-Arguments `$ARGUMENTS` : seulement ces issues, triées même sans changement, sauf celles d'un tiers ou qui
-portent `delivery-blocked`, signalées à la fin.
+Arguments `$ARGUMENTS` : seulement ces issues, triées même sans changement, sauf celles d'un tiers, qui
+portent `delivery-blocked` ou dont le titre commence par `WIP`, signalées à la fin.
 
 L'agent publie avec le compte du propriétaire ; ses commentaires se reconnaissent à leur première ligne :
 
@@ -50,7 +50,8 @@ Un commentaire du propriétaire sans aucun de ces marqueurs est un commentaire h
 - ou un commentaire humain suit le dernier commentaire de tri ;
 - ou l'empreinte du corps diffère de celle du dernier commentaire de tri.
 
-Ignorée : `delivery-blocked`, que l'utilisateur retire lui-même. Un titre modifié ou un commentaire humain
+Ignorée : `delivery-blocked`, que l'utilisateur retire lui-même ; un titre qui commence par `WIP`, pas
+encore prête : l'utilisateur retire ce préfixe pour la soumettre au tri. Un titre modifié ou un commentaire humain
 édité n'est pas détecté : l'utilisateur ajoute alors un commentaire pour relancer le tri.
 
 ## 3. Analyser
