@@ -203,7 +203,7 @@ def test_each_group_shows_five_rows(mock_app, ids, as_alice, count, more):
     received = group(loans_section(as_alice), "Demandes reçues")
 
     assert len(row_names(received)) == 5
-    assert ("Voir tous mes prêts" in received) == more
+    assert ("Voir plus" in received) == more
     if more:
         assert 'href="/loans"' in received
 
@@ -216,8 +216,8 @@ def test_more_button_under_its_group_only(mock_app, ids, as_alice):
 
     html = loans_section(as_alice)
 
-    assert "Voir tous mes prêts" in group(html, "Mes emprunts")
-    assert "Voir tous mes prêts" not in group(html, "Mes prêts")
+    assert "Voir plus" in group(html, "Mes emprunts")
+    assert "Voir plus" not in group(html, "Mes prêts")
 
 
 # Gestion des contacts
@@ -390,7 +390,7 @@ def test_buttons_to_see_more_are_blue(mock_app, contacts, as_alice):
     text = page_text(as_alice.get("/"))
 
     assert '<a class="button primary" href="/tools/find?sort=added-desc">Voir plus</a>' in text
-    assert '<a class="button primary" href="/loans">Voir tous mes prêts</a>' in text
+    assert '<a class="button primary" href="/loans">Voir plus</a>' in text
     assert '<a class="button primary" href="/contacts">Mes contacts</a>' in text
 
 
@@ -405,7 +405,7 @@ def test_new_account(mock_app, ids, as_alice):
     assert "Aucun prêt en cours" in text
     assert "Aucune demande de contact" in text
     assert "Vous n'avez encore aucun contact" in section(text, "Nouveaux outils")
-    assert "ouvrez la recherche d'utilisateurs" in text
+    assert "Cherchez un utilisateur avec la barre de recherche" in text
 
 
 def test_contacts_without_new_tools(mock_app, contacts, as_alice):

@@ -19,7 +19,11 @@ bouton MUST NOT être vert. Un lien SHALL avoir le bleu des boutons.
 
 #### Scenario: Voir plus en bleu
 - **WHEN** l'accueil d'Alice a plus de nouveaux outils qu'il n'en montre et plus de prêts qu'un groupe n'en montre
-- **THEN** « Voir plus », « Voir tous mes prêts » et « Mes contacts » sont bleus
+- **THEN** les deux « Voir plus » et « Mes contacts » sont bleus
+
+#### Scenario: Voir plus et Filtrer des résultats en bleu
+- **WHEN** Alice cherche un texte qui correspond à plus de 5 comptes et plus de 6 outils
+- **THEN** « Filtrer » et les deux « Voir plus » de la page de résultats sont bleus, chacun dans son propre groupe
 
 #### Scenario: Retrait d'un outil en rouge
 - **WHEN** Alice ouvre « Mes outils » puis clique « Retirer » sur sa perceuse

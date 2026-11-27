@@ -28,8 +28,10 @@ def names(text):
     return re.findall(r"<tr>\s*<td>(.*?)</td>", text)
 
 
-def search(client, q, search_type="user"):
-    return page_text(client.get("/search", query_string={"type": search_type, "q": q}))
+def search(client, q, **params):
+    """The results page of the text, users expanded unless the parameters say otherwise"""
+    params.setdefault("more", "1")
+    return page_text(client.get("/search", query_string={"q": q, **params}))
 
 
 @pytest.fixture
@@ -43,7 +45,7 @@ def ids(mock_app, *first_names):
 
 
 def test_visitor_is_sent_to_login(client):
-    response = client.get("/search?type=user&q=bob")
+    response = client.get("/search?q=bob")
 
     assert response.status_code == 302
     assert response.headers["Location"].startswith("/login")
@@ -129,7 +131,7 @@ def test_wildcards_are_searched_literally(mock_app, as_alice, q):
     text = search(as_alice, q)
 
     assert names(text) == []
-    assert f"Aucun utilisateur ne correspond à « {q} »" in text
+    assert "Aucun résultat d'utilisateur" in text
 
 
 def test_results_are_sorted_by_first_then_last_name(as_alice, named):
@@ -165,7 +167,9 @@ def too_many(text):
 
 @pytest.fixture
 def cap_of_three(monkeypatch):
+    # The collapsed view never shows more than the cap.
     monkeypatch.setattr(search_module, "USER_RESULTS_MAX", 3)
+    monkeypatch.setattr(search_module, "USERS_SHOWN", 2)
 
 
 def test_more_than_the_cap_lists_the_first_ones(as_alice, named, cap_of_three):
@@ -196,7 +200,7 @@ def test_the_cap_keeps_contained_names(as_alice, named, cap_of_three):
 def test_cap_message_escapes_the_text(as_alice, named, cap_of_three):
     named(*[("<b>gagnon</b>", str(number)) for number in range(4)])
 
-    raw = as_alice.get("/search", query_string={"type": "user", "q": "<b>gagnon</b>"})
+    raw = as_alice.get("/search", query_string={"q": "<b>gagnon</b>", "more": "1"})
 
     assert "&lt;b&gt;gagnon&lt;/b&gt; » ; précisez" in raw.get_data(as_text=True)
 
@@ -235,49 +239,35 @@ def test_tool_search_of_hyphens_only_is_too_short(as_alice):
 
 
 def test_no_result(as_alice):
-    assert "Aucun utilisateur ne correspond à « zzz »" in search(as_alice, "zzz")
+    assert "Aucun résultat d'utilisateur" in search(as_alice, "zzz")
 
 
-def test_tool_search_leads_to_find_a_tool(as_alice):
-    response = as_alice.get("/search", query_string={"type": "tool", "q": "  perceuse  "})
-
-    assert response.status_code == 302
-    assert response.location == "/tools/find?q=perceuse"
+SECTIONS = ("<h3>Utilisateurs</h3>", "<h3>Outils</h3>")
 
 
-def test_tool_search_lands_on_the_filtered_page(as_alice):
-    response = as_alice.get(
-        "/search", query_string={"type": "tool", "q": "perceuse"}, follow_redirects=True
-    )
+@pytest.mark.parametrize("search_type", ["tool", "user", "lieu"])
+def test_former_type_parameter_is_ignored(as_alice, search_type):
+    response = as_alice.get("/search", query_string={"type": search_type, "q": "  bob  "})
 
+    assert response.status_code == 200
     text = page_text(response)
-    assert "<h2>Trouver un outil</h2>" in text
-    assert 'name="q" value="perceuse"' in text
-    assert 'name="available" value="1">' in text
+    assert all(section in text for section in SECTIONS)
+    assert names(text) == ["Bob Gagnon"]
+    assert "Ce type de recherche n'est pas disponible" not in text
 
 
-def test_tool_search_needs_three_characters(as_alice):
-    assert TOO_SHORT in search(as_alice, "pe", search_type="tool")
+def test_too_short_search_shows_no_section(as_alice):
+    text = search(as_alice, "pe", type="tool")
+
+    assert TOO_SHORT in text
+    assert not any(section in text for section in SECTIONS)
 
 
-def test_unknown_search_type_is_not_available(as_alice):
-    text = search(as_alice, "bob", search_type="lieu")
-
-    assert "Ce type de recherche n'est pas disponible" in text
-    assert names(text) == []
-    assert '<option value="tool" selected>Outil</option>' in text
-
-
-def test_search_text_and_type_are_kept_in_the_search_bar(as_alice):
+def test_search_text_is_kept_in_the_search_bar(as_alice):
     text = search(as_alice, " gagnon ")
 
     assert 'type="search" name="q" value="gagnon"' in text
-    assert '<option value="user" selected>Utilisateur</option>' in text
-    assert '<option value="tool">Outil</option>' in text
-
-
-def test_short_tool_search_keeps_the_tool_type(as_alice):
-    assert '<option value="tool" selected>Outil</option>' in search(as_alice, "pe", "tool")
+    assert 'name="type"' not in text
 
 
 # Action selon la relation de contact

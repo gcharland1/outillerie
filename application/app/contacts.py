@@ -12,6 +12,12 @@ from models.user import User
 NO_LONGER_PENDING = "Cette demande n'est plus en attente"
 NOT_A_CONTACT = "Cette personne ne fait pas partie de vos contacts"
 REFUSED = "Demande refusée"
+# A pending request, sent or received, is not a contact yet: it falls under "others".
+RELATION_FILTERS = {
+    "all": "Tous les utilisateurs",
+    "contacts": "Mes contacts uniquement",
+    "others": "Pas en contact uniquement",
+}
 
 bp = Blueprint("contacts", __name__, url_prefix="/contacts")
 
@@ -94,7 +100,7 @@ def send_request():
     recipient_id = request.form.get("recipient_id", type=int) or 0
     if recipient_id == current_user.id or not lock_live_accounts(current_user.id, recipient_id):
         abort(404)
-    back_to_search = redirect(url_for("search.results", type="user", q=request.form.get("q", "")))
+    back_to_search = redirect(search_results_url(request.form))
 
     state = relation_states([recipient_id])[recipient_id]
     if state == "received":
@@ -174,6 +180,28 @@ def remove(user_id):
     db.session.delete(relation)
     db.session.commit()
     return redirect(url_for("contacts.mine"))
+
+
+def read_relation_filter(params):
+    """The relation filter asked for, among RELATION_FILTERS; all users for anything else"""
+    relation = params.get("relation")
+    return relation if relation in RELATION_FILTERS else "all"
+
+
+def read_expanded(params):
+    """Whether the users of the search results are shown up to the cap"""
+    return params.get("more") == "1"
+
+
+def search_results_url(params):
+    """The search results with the text, filter and expanded state these parameters hold"""
+    relation = read_relation_filter(params)
+    return url_for(
+        "search.results",
+        q=params.get("q", ""),
+        relation=relation if relation != "all" else None,
+        more="1" if read_expanded(params) else None,
+    )
 
 
 def relation_states(user_ids):
